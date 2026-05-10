@@ -1,3 +1,5 @@
+import 'server-only';
+
 /**
  * Motor de evaluación de salud financiera
  *

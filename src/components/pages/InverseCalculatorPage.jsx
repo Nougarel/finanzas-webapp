@@ -58,7 +58,7 @@ function InverseCalculatorForm() {
             <p className="text-muted-foreground mb-4">
               El modelo "{modelId}" no existe. Por favor, selecciona un modelo válido.
             </p>
-            <Button onClick={() => router.push("/model-selector?flow=inverse")}>
+            <Button onClick={() => router.push("/profile")}>
               Volver a la selección
             </Button>
           </CardContent>
@@ -217,7 +217,7 @@ function InverseCalculatorForm() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => router.push("/model-selector?flow=inverse")}
+                onClick={() => router.push("/profile")}
                 className="flex-1"
               >
                 Volver

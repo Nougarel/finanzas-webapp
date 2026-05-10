@@ -1,24 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { useState, Suspense } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 /**
- * Subcomponente que contiene el formulario
- * Separado en su propio componente para poder usar useSearchParams dentro de Suspense,
- * requisito de Next.js App Router cuando se leen query params en un Client Component
+ * Subcomponente del formulario separado para mantener la compatibilidad con Suspense.
  */
 function CalculatorForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-
-  // Leer el modelo elegido en el paso anterior — fallback a "50_30_20" si no viene en la URL
-  const modelId = searchParams.get("model") || "50_30_20";
 
   // Estado para el ingreso mensual
   const [income, setIncome] = useState("");
@@ -58,8 +51,7 @@ function CalculatorForm() {
       return;
     }
 
-    // Navegar a resultados pasando tanto el ingreso como el modelo elegido
-    router.push(`/results?income=${incomeNumber}&model=${modelId}`);
+    router.push(`/results?income=${incomeNumber}`);
   };
 
   return (
@@ -98,7 +90,7 @@ function CalculatorForm() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => router.push(`/model-selector`)}
+                onClick={() => router.push("/profile")}
                 className="flex-1"
               >
                 Volver

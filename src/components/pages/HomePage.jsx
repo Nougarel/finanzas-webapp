@@ -32,7 +32,7 @@ export default function HomePage() {
             </CardHeader>
             <CardContent className="flex-1 flex items-end">
               <Button asChild className="w-full">
-                <Link href="/model-selector?flow=direct">
+                <Link href="/profile">
                   Comenzar
                 </Link>
               </Button>
@@ -49,7 +49,7 @@ export default function HomePage() {
             </CardHeader>
             <CardContent className="flex-1 flex items-end">
               <Button asChild variant="outline" className="w-full">
-                <Link href="/model-selector?flow=inverse">
+                <Link href="/profile">
                   Comenzar
                 </Link>
               </Button>

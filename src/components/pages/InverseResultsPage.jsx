@@ -1,16 +1,11 @@
 "use client";
 
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Suspense } from "react";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { calculateDistribution } from "@/lib/calculators/distributionCalculator";
-import { getFinancialModel } from "@/lib/models/financialModels";
 
-/**
- * Componente de error reutilizable dentro de esta página.
- */
 function ErrorCard({ title, message, onBack }) {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-8">
@@ -27,30 +22,57 @@ function ErrorCard({ title, message, onBack }) {
   );
 }
 
-/**
- * Subcomponente que contiene la lógica y UI de los resultados del cálculo inverso.
- * Separado para poder usar useSearchParams dentro de Suspense.
- */
 function InverseResultsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Leer parámetros de la URL — son la única fuente de verdad entre páginas
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+  const [calcError, setCalcError] = useState(null);
+
   const modelId = searchParams.get("model") || "50_30_20";
   const amountsParam = searchParams.get("amounts");
   const mode = searchParams.get("mode") || "manual";
 
-  // Deserializar los importes deseados desde el JSON codificado en la URL
-  let desiredAmounts = null;
-  if (amountsParam) {
+  useEffect(() => {
+    if (!amountsParam) return;
+
+    let desiredAmounts;
     try {
       desiredAmounts = JSON.parse(decodeURIComponent(amountsParam));
     } catch {
-      desiredAmounts = null;
+      setCalcError("Los importes deseados no son válidos. Por favor, rellena el formulario de nuevo.");
+      return;
     }
-  }
 
-  if (!amountsParam || !desiredAmounts) {
+    if (!desiredAmounts || typeof desiredAmounts !== "object") {
+      setCalcError("Los importes deseados no son válidos. Por favor, rellena el formulario de nuevo.");
+      return;
+    }
+
+    setLoading(true);
+    setCalcError(null);
+
+    fetch("/api/calculate-inverse", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ modelId, desiredAmounts, mode })
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.error) {
+          setCalcError(data.error);
+        } else {
+          setResult(data);
+        }
+      })
+      .catch(() => {
+        setCalcError("Error al conectar con el servidor. Inténtalo de nuevo.");
+      })
+      .finally(() => setLoading(false));
+  }, [amountsParam, modelId, mode]);
+
+  if (!amountsParam) {
     return (
       <ErrorCard
         title="Error"
@@ -60,35 +82,25 @@ function InverseResultsContent() {
     );
   }
 
-  const model = getFinancialModel(modelId);
-  if (!model) {
+  if (loading || (!result && !calcError)) {
     return (
-      <ErrorCard
-        title="Modelo no encontrado"
-        message={`El modelo "${modelId}" no existe. Por favor, selecciona un modelo válido.`}
-        onBack={() => router.push("/model-selector?flow=inverse")}
-      />
+      <main className="flex min-h-screen items-center justify-center">
+        <p className="text-muted-foreground">Calculando...</p>
+      </main>
     );
   }
 
-  // Ejecutar el cálculo inverso pasando el modo al motor
-  let result;
-  try {
-    result = calculateDistribution({
-      calculationType: "inverse",
-      desiredAmounts: desiredAmounts,
-      model: model,
-      mode: mode
-    });
-  } catch (error) {
+  if (calcError) {
     return (
       <ErrorCard
         title="Error en el cálculo"
-        message={error.message}
+        message={calcError}
         onBack={() => router.push(`/inverse-calculator?model=${modelId}`)}
       />
     );
   }
+
+  if (!result) return null;
 
   const formatCurrency = (amount) =>
     new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(amount);
@@ -96,7 +108,6 @@ function InverseResultsContent() {
   const formatPercentage = (percentage) =>
     `${(percentage * 100).toFixed(0)}%`;
 
-  // Frase explicativa y advertencia de desproporción solo tienen sentido en modo manual
   const mostRestrictiveItem = mode === "manual"
     ? result.distribution.find((b) => b.key === result.summary.mostRestrictiveBlock)
     : null;
@@ -109,12 +120,10 @@ function InverseResultsContent() {
       const otherBlocks = result.distribution.filter(
         (b) => b.key !== result.summary.mostRestrictiveBlock
       );
-
       if (otherBlocks.length > 0) {
         incomeWithoutRestrictive = Math.max(
           ...otherBlocks.map((b) => b.desiredAmount / b.percentage)
         );
-
         if (incomeWithoutRestrictive > 0) {
           const disproportion = result.summary.requiredIncome / incomeWithoutRestrictive;
           showWarning = disproportion > 1.30;
@@ -128,6 +137,7 @@ function InverseResultsContent() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-8">
       <div className="w-full max-w-4xl space-y-6">
+
         {/* Encabezado */}
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">
@@ -147,7 +157,6 @@ function InverseResultsContent() {
             <p className="text-5xl font-bold">
               {formatCurrency(result.summary.requiredIncome)}
             </p>
-            {/* Frase explicativa — diferente según el modo */}
             {mode === "auto" ? (
               <p className="text-muted-foreground">
                 Para sostener este estilo de vida de forma financieramente saludable,
@@ -182,64 +191,57 @@ function InverseResultsContent() {
           </div>
         )}
 
-        {/* Desglose por bloque — generado dinámicamente desde result.distribution */}
+        {/* Desglose por bloque */}
         <div className="grid gap-4 md:grid-cols-3">
-          {result.distribution.map((block) => {
-            const blockType = model.blocks.find((b) => b.key === block.key)?.type;
-
-            return (
-              <Card key={block.key} className="flex flex-col">
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    {block.label}
-                    <span className="text-sm font-normal text-muted-foreground">
-                      {formatPercentage(block.percentage)}
-                    </span>
-                  </CardTitle>
-                  <CardDescription>{block.description}</CardDescription>
-                </CardHeader>
-                <CardContent className="flex-1 space-y-2">
-                  {mode === "auto" ? (
-                    blockType === "savings" ? (
-                      /* Ahorro en modo auto: solo el importe calculado */
-                      <div>
-                        <span className="inline-block text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 mb-2">
-                          Calculado automáticamente
-                        </span>
-                        <p className="text-xl font-bold">{formatCurrency(block.recommendedAmount)}</p>
-                      </div>
-                    ) : (
-                      /* Gasto en modo auto: solo el importe deseado */
-                      <div>
-                        <p className="text-xs text-muted-foreground">Deseado</p>
-                        <p className="text-xl font-semibold">{formatCurrency(block.desiredAmount)}</p>
-                      </div>
-                    )
+          {result.distribution.map((block) => (
+            <Card key={block.key} className="flex flex-col">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  {block.label}
+                  <span className="text-sm font-normal text-muted-foreground">
+                    {formatPercentage(block.percentage)}
+                  </span>
+                </CardTitle>
+                <CardDescription>{block.description}</CardDescription>
+              </CardHeader>
+              <CardContent className="flex-1 space-y-2">
+                {mode === "auto" ? (
+                  block.isAutoCalculated ? (
+                    <div>
+                      <span className="inline-block text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 mb-2">
+                        Calculado automáticamente
+                      </span>
+                      <p className="text-xl font-bold">{formatCurrency(block.recommendedAmount)}</p>
+                    </div>
                   ) : (
-                    /* Modo manual: comportamiento completo */
-                    <>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Deseado</p>
+                      <p className="text-xl font-semibold">{formatCurrency(block.desiredAmount)}</p>
+                    </div>
+                  )
+                ) : (
+                  <>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Deseado</p>
+                      <p className="text-xl font-semibold">{formatCurrency(block.desiredAmount)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Recomendado</p>
+                      <p className="text-xl font-bold">{formatCurrency(block.recommendedAmount)}</p>
+                    </div>
+                    {block.difference > 0 && (
                       <div>
-                        <p className="text-xs text-muted-foreground">Deseado</p>
-                        <p className="text-xl font-semibold">{formatCurrency(block.desiredAmount)}</p>
+                        <p className="text-xs text-muted-foreground">Extra disponible</p>
+                        <p className="text-sm font-medium text-muted-foreground">
+                          +{formatCurrency(block.difference)}
+                        </p>
                       </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Recomendado</p>
-                        <p className="text-xl font-bold">{formatCurrency(block.recommendedAmount)}</p>
-                      </div>
-                      {block.difference > 0 && (
-                        <div>
-                          <p className="text-xs text-muted-foreground">Extra disponible</p>
-                          <p className="text-sm font-medium text-muted-foreground">
-                            +{formatCurrency(block.difference)}
-                          </p>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         {/* Botones de acción */}
@@ -259,11 +261,6 @@ function InverseResultsContent() {
   );
 }
 
-/**
- * Componente de la página de resultados del cálculo inverso.
- * Envuelve InverseResultsContent en Suspense, requerido por Next.js cuando
- * un Client Component usa useSearchParams().
- */
 export default function InverseResultsPage() {
   return (
     <Suspense fallback={

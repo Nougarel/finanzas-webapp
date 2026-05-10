@@ -1,229 +1,410 @@
 /**
- * Catálogo global de categorías de gasto e inversión.
+ * Catálogo global de categorías financieras.
  *
- * Las categorías son datos puros: no conocen React ni Next.js.
- * Cada categoría pertenece a un bloque macro sugerido (suggestedBlock),
- * aunque cada modelo puede asignarlas libremente según su lógica.
+ * 20 categorías organizadas en tres bloques: needs, wants, savings.
+ * CATEGORIES_CATALOG es un array para permitir iteración y filtrado en el motor.
+ * Los helpers getCategoryById y getCategoriesByIds mantienen la interfaz existente.
  *
- * Estructura de cada categoría:
- *   id            — identificador único
- *   label         — nombre legible para la UI
- *   description   — qué incluye la categoría
- *   suggestedBlock — bloque macro al que pertenece típicamente
- *   examples      — ejemplos concretos para orientar al usuario
+ * Campos de cada categoría:
+ *   id, label, description         — identidad
+ *   block                          — 'needs' | 'wants' | 'savings'
+ *   isAnchor                       — porcentaje fijado por el motor (no ajustable por residuo)
+ *   isInsurance / isDebt           — marcadores para indicadores transversales
+ *   healthyRange { min, max }      — % sobre ingreso neto considerado saludable
+ *   alerts { mild, severe, critical } — umbrales de alerta (% sobre ingreso neto)
+ *   alertDirection                 — 'above' alerta por exceso | 'below' por defecto
+ *   referenceSource                — fuente de los umbrales
+ *   referenceReliability           — fiabilidad de la fuente
+ *   ineReference                   — dato INE EPF 2024 corregido a ingreso neto (×0.86)
+ *   ineWeight                      — peso relativo dentro del bloque deseos (null si no es wants)
+ *   examples                       — ejemplos concretos para el usuario
  */
 
-// ─── Necesidades ────────────────────────────────────────────────────────────
+export const CATEGORIES_CATALOG = [
 
-const housing = {
-  id: "housing",
-  label: "Vivienda",
-  description: "Alquiler o hipoteca mensual",
-  suggestedBlock: "needs",
-  examples: ["Alquiler del piso", "Cuota hipoteca"]
-};
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BLOQUE NECESIDADES
+  // ═══════════════════════════════════════════════════════════════════════════
 
-const utilities = {
-  id: "utilities",
-  label: "Suministros",
-  description: "Electricidad, gas, agua e internet",
-  suggestedBlock: "needs",
-  examples: ["Factura de luz", "Gas", "Internet y móvil"]
-};
+  {
+    id: "housing",
+    label: "Vivienda",
+    description: "Alquiler o cuota hipotecaria, comunidad, IBI y mantenimiento del hogar",
+    block: "needs",
+    isAnchor: true,
+    isInsurance: false,
+    isDebt: false,
+    healthyRange: { min: 3, max: 30 },
+    alerts: { mild: 35, severe: 40, critical: 40 },
+    alertDirection: "above",
+    referenceSource: "Banco de España / Finanzas para Todos / Eurostat EU-SILC",
+    referenceReliability: "very_high",
+    ineReference: 27.9,
+    ineWeight: null,
+    examples: ["Alquiler mensual", "Cuota hipotecaria", "Comunidad de propietarios", "IBI", "Seguro del hogar"]
+  },
 
-const groceries = {
-  id: "groceries",
-  label: "Alimentación",
-  description: "Compra del supermercado y alimentación básica del hogar",
-  suggestedBlock: "needs",
-  examples: ["Supermercado", "Mercado"]
-};
+  {
+    id: "utilities",
+    label: "Suministros",
+    description: "Electricidad, gas, agua, internet y telefonía móvil",
+    block: "needs",
+    isAnchor: false,
+    isInsurance: false,
+    isDebt: false,
+    healthyRange: { min: 4, max: 10 },
+    alerts: { mild: 10, severe: 13, critical: null },
+    alertDirection: "above",
+    referenceSource: "Directiva UE Eficiencia Energética / Umbral Boardman",
+    referenceReliability: "medium",
+    ineReference: 6.7,
+    ineWeight: null,
+    examples: ["Factura de luz", "Factura de gas", "Agua", "Internet", "Teléfono móvil"]
+  },
 
-const transport = {
-  id: "transport",
-  label: "Transporte",
-  description: "Transporte público y gastos del vehículo propio",
-  suggestedBlock: "needs",
-  examples: ["Abono transporte", "Gasolina", "Seguro del coche"]
-};
+  {
+    id: "groceries",
+    label: "Alimentación",
+    description: "Compra en supermercado y mercado para consumo en el hogar",
+    block: "needs",
+    isAnchor: true,
+    isInsurance: false,
+    isDebt: false,
+    healthyRange: { min: 8, max: 20 },
+    alerts: { mild: 20, severe: 25, critical: null },
+    alertDirection: "above",
+    referenceSource: "INE EPF 2024 / BLS Consumer Expenditure Survey",
+    referenceReliability: "medium",
+    ineReference: 13.6,
+    ineWeight: null,
+    examples: ["Supermercado", "Mercado", "Carnicería", "Frutería"]
+  },
 
-const insurance = {
-  id: "insurance",
-  label: "Seguros",
-  description: "Seguros de salud, hogar y vida",
-  suggestedBlock: "needs",
-  examples: ["Seguro médico", "Seguro del hogar"]
-};
+  {
+    id: "transport",
+    label: "Transporte",
+    description: "Transporte público, combustible, mantenimiento del vehículo y seguro",
+    block: "needs",
+    isAnchor: true,
+    isInsurance: false,
+    isDebt: false,
+    healthyRange: { min: 3, max: 18 },
+    alerts: { mild: 18, severe: 22, critical: null },
+    alertDirection: "above",
+    referenceSource: "INE EPF 2024 / Regla 20/4/10",
+    referenceReliability: "medium",
+    ineReference: 9.8,
+    ineWeight: null,
+    examples: ["Abono transporte", "Gasolina", "Seguro del vehículo", "ITV y mantenimiento", "Renting o leasing"]
+  },
 
-const health = {
-  id: "health",
-  label: "Salud",
-  description: "Farmacia, médico y copagos no cubiertos por seguro",
-  suggestedBlock: "needs",
-  examples: ["Farmacia", "Dentista"]
-};
+  {
+    id: "health",
+    label: "Salud",
+    description: "Seguro médico privado, farmacia, dental, óptica y copagos",
+    block: "needs",
+    isAnchor: true,
+    isInsurance: false,
+    isDebt: false,
+    healthyRange: { min: 1, max: 10 },
+    alerts: { mild: 10, severe: 13, critical: null },
+    alertDirection: "above",
+    referenceSource: "OMS SDG 3.8.2 / INE EPF 2024",
+    referenceReliability: "high",
+    ineReference: 3.4,
+    ineWeight: null,
+    examples: ["Seguro médico privado", "Farmacia", "Dentista", "Óptica", "Copagos médicos"]
+  },
 
-const education = {
-  id: "education",
-  label: "Educación",
-  description: "Matrículas, libros y formación",
-  suggestedBlock: "needs",
-  examples: ["Matrícula", "Libros", "Cursos"]
-};
+  {
+    id: "education",
+    label: "Educación",
+    description: "Matrículas, libros, material escolar, cursos y formación continua",
+    block: "needs",
+    isAnchor: true,
+    isInsurance: false,
+    isDebt: false,
+    healthyRange: { min: 0, max: 20 },
+    alerts: { mild: 20, severe: 25, critical: null },
+    alertDirection: "above",
+    referenceSource: "INE EPF 2024",
+    referenceReliability: "very_low",
+    ineReference: 1.4,
+    ineWeight: null,
+    examples: ["Matrícula universitaria", "Libros de texto", "Cursos de idiomas", "Actividades extraescolares", "Máster o postgrado"]
+  },
 
-const debt_minimum = {
-  id: "debt_minimum",
-  label: "Pagos mínimos de deuda",
-  description: "Cuotas mínimas de préstamos y tarjetas",
-  suggestedBlock: "needs",
-  examples: ["Cuota mínima tarjeta", "Cuota préstamo"]
-};
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BLOQUE DESEOS — los 8 pesos INE suman 101 por redondeo; el motor normaliza
+  // ═══════════════════════════════════════════════════════════════════════════
 
-// ─── Deseos ─────────────────────────────────────────────────────────────────
+  {
+    id: "dining_out",
+    label: "Restaurantes y bares",
+    description: "Cenas fuera, cafeterías, bares y comida a domicilio",
+    block: "wants",
+    isAnchor: false,
+    isInsurance: false,
+    isDebt: false,
+    healthyRange: { min: 0, max: 15 },
+    alerts: { mild: null, severe: null, critical: null },
+    alertDirection: "above",
+    referenceSource: "INE EPF 2024 (descriptivo)",
+    referenceReliability: "low",
+    ineReference: 4.7,
+    ineWeight: 22,
+    examples: ["Restaurantes", "Bares y cafeterías", "Delivery y comida a domicilio"]
+  },
 
-const dining_out = {
-  id: "dining_out",
-  label: "Restaurantes y bares",
-  description: "Cenas fuera, cafeterías y comida a domicilio",
-  suggestedBlock: "wants",
-  examples: ["Restaurantes", "Cafeterías", "Delivery"]
-};
+  {
+    id: "travel",
+    label: "Viajes y vacaciones",
+    description: "Viajes, vacaciones, hoteles y alojamiento turístico",
+    block: "wants",
+    isAnchor: false,
+    isInsurance: false,
+    isDebt: false,
+    healthyRange: { min: 0, max: 15 },
+    alerts: { mild: null, severe: null, critical: null },
+    alertDirection: "above",
+    referenceSource: "INE EPF 2024 (descriptivo)",
+    referenceReliability: "very_low",
+    ineReference: 3.8,
+    ineWeight: 17,
+    examples: ["Vuelos", "Hoteles", "Apartamentos turísticos", "Paquetes vacacionales"]
+  },
 
-const entertainment = {
-  id: "entertainment",
-  label: "Ocio y entretenimiento",
-  description: "Actividades de tiempo libre y cultura",
-  suggestedBlock: "wants",
-  examples: ["Cine", "Conciertos", "Museos"]
-};
+  {
+    id: "clothing",
+    label: "Ropa y calzado",
+    description: "Ropa, calzado y complementos para toda la familia",
+    block: "wants",
+    isAnchor: false,
+    isInsurance: false,
+    isDebt: false,
+    healthyRange: { min: 0, max: 10 },
+    alerts: { mild: null, severe: null, critical: null },
+    alertDirection: "above",
+    referenceSource: "INE EPF 2024 (descriptivo)",
+    referenceReliability: "low",
+    ineReference: 3.4,
+    ineWeight: 16,
+    examples: ["Ropa", "Calzado", "Accesorios", "Ropa deportiva"]
+  },
 
-const subscriptions = {
-  id: "subscriptions",
-  label: "Suscripciones digitales",
-  description: "Streaming, música y apps",
-  suggestedBlock: "wants",
-  examples: ["Netflix", "Spotify", "Amazon Prime"]
-};
+  {
+    id: "personal_care",
+    label: "Belleza y cuidado personal",
+    description: "Peluquería, cosmética, perfumería y cuidado personal",
+    block: "wants",
+    isAnchor: false,
+    isInsurance: false,
+    isDebt: false,
+    healthyRange: { min: 0, max: 10 },
+    alerts: { mild: null, severe: null, critical: null },
+    alertDirection: "above",
+    referenceSource: "INE EPF 2024 (descriptivo)",
+    referenceReliability: "very_low",
+    ineReference: 3.1,
+    ineWeight: 14,
+    examples: ["Peluquería", "Cosmética y perfumería", "Productos de higiene premium"]
+  },
 
-const travel = {
-  id: "travel",
-  label: "Viajes y vacaciones",
-  description: "Vuelos, hoteles y gastos de viaje",
-  suggestedBlock: "wants",
-  examples: ["Vuelos", "Hotel", "Airbnb"]
-};
+  {
+    id: "entertainment",
+    label: "Ocio y entretenimiento",
+    description: "Cine, teatro, conciertos, eventos y actividades culturales",
+    block: "wants",
+    isAnchor: false,
+    isInsurance: false,
+    isDebt: false,
+    healthyRange: { min: 0, max: 10 },
+    alerts: { mild: null, severe: null, critical: null },
+    alertDirection: "above",
+    referenceSource: "INE EPF 2024 (descriptivo)",
+    referenceReliability: "low",
+    ineReference: 2.2,
+    ineWeight: 10,
+    examples: ["Cine y teatro", "Conciertos", "Museos", "Parques de atracciones"]
+  },
 
-const clothing = {
-  id: "clothing",
-  label: "Ropa y calzado",
-  description: "Compras de moda y accesorios",
-  suggestedBlock: "wants",
-  examples: ["Ropa de temporada", "Zapatillas"]
-};
+  {
+    id: "hobbies",
+    label: "Hobbies y deporte",
+    description: "Equipamiento deportivo, actividades recreativas y aficiones",
+    block: "wants",
+    isAnchor: false,
+    isInsurance: false,
+    isDebt: false,
+    healthyRange: { min: 0, max: 10 },
+    alerts: { mild: null, severe: null, critical: null },
+    alertDirection: "above",
+    referenceSource: "INE EPF 2024 (descriptivo)",
+    referenceReliability: "very_low",
+    ineReference: 2.2,
+    ineWeight: 10,
+    examples: ["Cuota del gimnasio", "Material deportivo", "Equipamiento para hobbies"]
+  },
 
-const hobbies = {
-  id: "hobbies",
-  label: "Hobbies y deporte",
-  description: "Aficiones, equipamiento y gimnasio",
-  suggestedBlock: "wants",
-  examples: ["Gimnasio", "Material de hobbies"]
-};
+  {
+    id: "subscriptions",
+    label: "Suscripciones digitales",
+    description: "Streaming, aplicaciones, software y servicios digitales",
+    block: "wants",
+    isAnchor: false,
+    isInsurance: false,
+    isDebt: false,
+    healthyRange: { min: 0, max: 5 },
+    alerts: { mild: null, severe: null, critical: null },
+    alertDirection: "above",
+    referenceSource: "INE EPF 2024 / Deloitte Digital Media Trends (estimado)",
+    referenceReliability: "very_low",
+    ineReference: 1.3,
+    ineWeight: 6,
+    examples: ["Netflix, Spotify, Disney+", "Aplicaciones y software", "Servicios en la nube"]
+  },
 
-const personal_care = {
-  id: "personal_care",
-  label: "Belleza y cuidado personal",
-  description: "Peluquería, cosmética y bienestar",
-  suggestedBlock: "wants",
-  examples: ["Peluquería", "Cosmética"]
-};
+  {
+    id: "gifts",
+    label: "Regalos y donaciones",
+    description: "Regalos, donaciones a ONGs y ayuda a personas del entorno",
+    block: "wants",
+    isAnchor: false,
+    isInsurance: false,
+    isDebt: false,
+    healthyRange: { min: 0, max: 5 },
+    alerts: { mild: null, severe: null, critical: null },
+    alertDirection: "above",
+    referenceSource: "INE EPF 2024 / Ley 49/2002 (estimado)",
+    referenceReliability: "low",
+    ineReference: 1.3,
+    ineWeight: 6,
+    examples: ["Regalos de cumpleaños y navidad", "Donaciones a ONGs", "Ayuda a familia o amigos"]
+  },
 
-const gifts_donations = {
-  id: "gifts_donations",
-  label: "Regalos y donaciones",
-  description: "Regalos y donaciones a causas",
-  suggestedBlock: "wants",
-  examples: ["Regalos", "Donaciones ONG"]
-};
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BLOQUE AHORRO
+  // ═══════════════════════════════════════════════════════════════════════════
 
-// ─── Ahorro ─────────────────────────────────────────────────────────────────
+  {
+    id: "life_insurance",
+    label: "Seguro de vida",
+    description: "Prima mensual del seguro de vida o seguro vinculado a hipoteca",
+    block: "savings",
+    isAnchor: false,
+    isInsurance: true,
+    isDebt: false,
+    healthyRange: { min: 0.5, max: 3 },
+    alerts: { mild: null, severe: null, critical: null },
+    alertDirection: "above",
+    referenceSource: "Charles Schwab / Ramsey Solutions",
+    referenceReliability: "low",
+    ineReference: null,
+    ineWeight: null,
+    examples: ["Seguro de vida temporal", "Seguro de vida vinculado a hipoteca"]
+  },
 
-const emergency_fund = {
-  id: "emergency_fund",
-  label: "Fondo de emergencia",
-  description: "Colchón equivalente a 3-6 meses de gastos fijos",
-  suggestedBlock: "savings",
-  examples: ["Cuenta de ahorro de emergencia"]
-};
+  {
+    id: "emergency_fund",
+    label: "Fondo de emergencia",
+    description: "Aportación mensual para alcanzar o mantener el colchón de emergencias",
+    block: "savings",
+    isAnchor: true,
+    isInsurance: false,
+    isDebt: false,
+    healthyRange: { min: 1, max: 10 },
+    alerts: { mild: null, severe: null, critical: null },
+    alertDirection: "below",
+    referenceSource: "Banco de España / Finanzas para Todos / OCDE",
+    referenceReliability: "very_high",
+    ineReference: null,
+    ineWeight: null,
+    examples: ["Cuenta de ahorro líquida", "Depósito a la vista"]
+  },
 
-const short_term_savings = {
-  id: "short_term_savings",
-  label: "Ahorro a corto plazo",
-  description: "Objetivos financieros en menos de 2 años",
-  suggestedBlock: "savings",
-  examples: ["Vacaciones grandes", "Electrodoméstico"]
-};
+  {
+    id: "short_term_savings",
+    label: "Ahorro a corto plazo",
+    description: "Ahorro para objetivos en menos de 2 años: vacaciones, electrodomésticos, reparaciones",
+    block: "savings",
+    isAnchor: false,
+    isInsurance: false,
+    isDebt: false,
+    healthyRange: { min: 2, max: 6 },
+    alerts: { mild: null, severe: null, critical: null },
+    alertDirection: "below",
+    referenceSource: "Fidelity 50/15/5",
+    referenceReliability: "medium",
+    ineReference: null,
+    ineWeight: null,
+    examples: ["Ahorro para vacaciones", "Fondo para reparaciones del hogar", "Electrónica y electrodomésticos"]
+  },
 
-const long_term_savings = {
-  id: "long_term_savings",
-  label: "Ahorro a largo plazo",
-  description: "Objetivos financieros en más de 2 años",
-  suggestedBlock: "savings",
-  examples: ["Entrada para vivienda", "Coche"]
-};
+  {
+    id: "long_term_savings",
+    label: "Ahorro a largo plazo",
+    description: "Ahorro para objetivos a más de 2 años, principalmente entrada de vivienda",
+    block: "savings",
+    isAnchor: true,
+    isInsurance: false,
+    isDebt: false,
+    healthyRange: { min: 0, max: 15 },
+    alerts: { mild: null, severe: null, critical: null },
+    alertDirection: "below",
+    referenceSource: "Banco de España (normativa LTV 80%)",
+    referenceReliability: "medium_high",
+    ineReference: null,
+    ineWeight: null,
+    examples: ["Ahorro para entrada de vivienda", "Cuenta ahorro a largo plazo"]
+  },
 
-const investment = {
-  id: "investment",
-  label: "Inversión y jubilación",
-  description: "Fondos de inversión y planes de pensiones",
-  suggestedBlock: "savings",
-  examples: ["Plan de pensiones", "Fondos indexados"]
-};
+  {
+    id: "investment",
+    label: "Inversión y jubilación",
+    description: "Aportaciones a planes de pensiones, fondos de inversión y otros vehículos a largo plazo",
+    block: "savings",
+    isAnchor: true,
+    isInsurance: false,
+    isDebt: false,
+    healthyRange: { min: 4, max: 15 },
+    alerts: { mild: null, severe: null, critical: null },
+    alertDirection: "below",
+    referenceSource: "OCDE Pensions at a Glance 2025 / Wade Pfau (JFP 2011)",
+    referenceReliability: "medium_high",
+    ineReference: null,
+    ineWeight: null,
+    examples: ["Plan de pensiones", "Fondo de inversión indexado", "ETFs"]
+  },
 
-const debt_extra = {
-  id: "debt_extra",
-  label: "Amortización extra de deuda",
-  description: "Pagos adicionales para liquidar deuda antes",
-  suggestedBlock: "savings",
-  examples: ["Amortización anticipada hipoteca"]
-};
+  {
+    id: "debt_extra",
+    label: "Amortización extra de deuda",
+    description: "Pagos adicionales voluntarios para reducir deuda más rápido de lo pactado",
+    block: "savings",
+    isAnchor: true,
+    isInsurance: false,
+    isDebt: true,
+    healthyRange: { min: 0, max: 5 },
+    alerts: { mild: null, severe: null, critical: null },
+    alertDirection: "above",
+    referenceSource: "Bogleheads (principio financiero)",
+    referenceReliability: "medium",
+    ineReference: null,
+    ineWeight: null,
+    examples: ["Amortización anticipada de hipoteca", "Pago adelantado de préstamo personal"]
+  }
 
-// ─── Registro global ─────────────────────────────────────────────────────────
+];
+
+// ─── Funciones de acceso ──────────────────────────────────────────────────────
 
 /**
- * Catálogo completo de categorías indexado por ID.
- * Usar esta estructura para búsquedas O(1) por clave.
- */
-export const CATEGORIES_CATALOG = {
-  housing,
-  utilities,
-  groceries,
-  transport,
-  insurance,
-  health,
-  education,
-  debt_minimum,
-  dining_out,
-  entertainment,
-  subscriptions,
-  travel,
-  clothing,
-  hobbies,
-  personal_care,
-  gifts_donations,
-  emergency_fund,
-  short_term_savings,
-  long_term_savings,
-  investment,
-  debt_extra
-};
-
-/**
- * Obtiene una categoría por su ID.
+ * Obtiene una categoría por su ID. Devuelve null si no existe.
  * @param {string} id
  * @returns {object|null}
  */
 export function getCategoryById(id) {
-  return CATEGORIES_CATALOG[id] || null;
+  return CATEGORIES_CATALOG.find((c) => c.id === id) || null;
 }
 
 /**
@@ -233,5 +414,5 @@ export function getCategoryById(id) {
  * @returns {object[]}
  */
 export function getCategoriesByIds(ids) {
-  return ids.map((id) => CATEGORIES_CATALOG[id]).filter(Boolean);
+  return ids.map((id) => CATEGORIES_CATALOG.find((c) => c.id === id)).filter(Boolean);
 }

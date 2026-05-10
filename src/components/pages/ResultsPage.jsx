@@ -1,96 +1,129 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { calculateDistribution } from "@/lib/calculators/distributionCalculator";
-import { getModelWithCategories } from "@/lib/models/financialModels";
 
-/**
- * Componente que muestra los resultados del cálculo directo.
- * Separado para manejar Suspense con useSearchParams.
- */
+const BLOCK_ORDER = ["needs", "wants", "savings"];
+
+function AlertDot({ level }) {
+  if (!level) return null;
+  const color = level === "mild" ? "bg-amber-400" : "bg-red-500";
+  return <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${color}`} title={level} />;
+}
+
+function dtiColorClass(total) {
+  if (total < 35) return "text-green-700";
+  if (total < 40) return "text-amber-600";
+  return "text-red-600";
+}
+
 function ResultsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Vista activa: "detailed" (categorías, por defecto) o "macro" (bloques)
   const [viewMode, setViewMode] = useState("detailed");
+  const [profile, setProfile] = useState(null);
+  const [profileMissing, setProfileMissing] = useState(false);
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [calcError, setCalcError] = useState(null);
 
-  // Obtener ingreso y modelo de los parámetros de URL
   const incomeParam = searchParams.get("income");
   const income = parseFloat(incomeParam);
-  const modelId = searchParams.get("model") || "50_30_20";
 
-  // Validar ingreso
+  useEffect(() => {
+    const stored = localStorage.getItem("financialProfile");
+    if (stored) {
+      try {
+        setProfile(JSON.parse(stored));
+      } catch {
+        setProfileMissing(true);
+      }
+    } else {
+      setProfileMissing(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!profile || !income || isNaN(income) || income <= 0) return;
+
+    setLoading(true);
+    setCalcError(null);
+
+    fetch("/api/calculate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ profile, income })
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.error) {
+          setCalcError(data.error);
+        } else {
+          setResult(data);
+        }
+      })
+      .catch(() => {
+        setCalcError("Error al conectar con el servidor. Inténtalo de nuevo.");
+      })
+      .finally(() => setLoading(false));
+  }, [profile, income]);
+
   if (!incomeParam || isNaN(income) || income <= 0) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center p-8">
         <Card className="w-full max-w-2xl">
           <CardHeader>
-            <CardTitle>Error</CardTitle>
-            <CardDescription>Ingreso inválido</CardDescription>
+            <CardTitle>Ingreso no válido</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground mb-4">
               No se pudo calcular la distribución. Por favor, introduce un ingreso válido.
             </p>
-            <Button onClick={() => router.push("/calculator")}>
-              Volver al formulario
-            </Button>
+            <Button onClick={() => router.push("/calculator")}>Volver al formulario</Button>
           </CardContent>
         </Card>
       </main>
     );
   }
 
-  // Obtener el modelo hidratado con sus categorías
-  const model = getModelWithCategories(modelId);
-
-  if (!model) {
+  if (!profile && !profileMissing) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center p-8">
-        <Card className="w-full max-w-2xl">
-          <CardHeader>
-            <CardTitle>Error</CardTitle>
-            <CardDescription>Modelo financiero no encontrado</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground mb-4">
-              El modelo "{modelId}" no existe. Por favor, selecciona un modelo válido.
-            </p>
-            <Button onClick={() => router.push("/model-selector")}>
-              Volver a la selección
-            </Button>
-          </CardContent>
-        </Card>
+      <main className="flex min-h-screen items-center justify-center">
+        <p className="text-muted-foreground">Cargando tu perfil...</p>
       </main>
     );
   }
 
-  // Calcular la distribución usando el motor de cálculo
-  let result;
-  try {
-    result = calculateDistribution({
-      calculationType: "direct",
-      income: income,
-      model: model
-    });
-  } catch (error) {
+  if (profileMissing) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center p-8">
-        <Card className="w-full max-w-2xl">
-          <CardHeader>
-            <CardTitle>Error en el cálculo</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground mb-4">{error.message}</p>
-            <Button onClick={() => router.push("/calculator")}>
-              Volver al formulario
-            </Button>
-          </CardContent>
-        </Card>
+      <main className="flex min-h-screen flex-col items-center justify-center gap-4 text-center px-4">
+        <h2 className="text-xl font-semibold">Perfil no encontrado</h2>
+        <p className="text-muted-foreground max-w-sm">
+          Para calcular tu distribución personalizada necesitamos conocer tu situación.
+          Completa el cuestionario de perfil primero.
+        </p>
+        <Button onClick={() => router.push("/profile")}>Completar cuestionario</Button>
+      </main>
+    );
+  }
+
+  if (loading || (!result && !calcError)) {
+    return (
+      <main className="flex min-h-screen items-center justify-center">
+        <p className="text-muted-foreground">Calculando tu distribución...</p>
+      </main>
+    );
+  }
+
+  if (calcError) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center gap-4 text-center px-4">
+        <h2 className="text-xl font-semibold">Error en el cálculo</h2>
+        <p className="text-muted-foreground max-w-sm">{calcError}</p>
+        <Button onClick={() => router.push("/calculator")}>Volver al formulario</Button>
       </main>
     );
   }
@@ -98,42 +131,33 @@ function ResultsContent() {
   const formatCurrency = (amount) =>
     new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(amount);
 
-  const formatPercentage = (percentage) =>
-    `${(percentage * 100).toFixed(0)}%`;
-
-  // Combinar los bloques del modelo (con categorías) con los importes calculados
-  // result.distribution tiene los importes; model.blocks tiene las categorías
-  const blocksWithAmounts = model.blocks.map((block) => {
-    const calculated = result.distribution.find((d) => d.key === block.key);
-    return { ...block, amount: calculated?.formattedAmount ?? 0 };
-  });
+  const formatPct = (pct) => `${pct.toFixed(1)}%`;
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-8">
       <div className="w-full max-w-4xl space-y-6">
+
         {/* Encabezado */}
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">
-            Tu Distribución Financiera
-          </h1>
-          <p className="text-muted-foreground">
-            Basado en el modelo {result.model.name}
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight">Tu Distribución Financiera</h1>
+          <p className="text-muted-foreground">Distribución personalizada según tu perfil</p>
+          <span className="inline-block text-xs border rounded-full px-3 py-1 text-muted-foreground">
+            Tu distribución se aproxima al modelo:{" "}
+            <strong>{result.closestModel.label}</strong>
+          </span>
         </div>
 
-        {/* Card con resumen de ingreso */}
+        {/* Ingreso mensual */}
         <Card>
           <CardHeader>
             <CardTitle>Ingreso Mensual</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-4xl font-bold">
-              {formatCurrency(result.summary.totalIncome)}
-            </p>
+            <p className="text-4xl font-bold">{formatCurrency(income)}</p>
           </CardContent>
         </Card>
 
-        {/* Selector de vista — dos tabs */}
+        {/* Selector de vista */}
         <div className="space-y-2">
           <div className="flex gap-2">
             <button
@@ -159,56 +183,52 @@ function ResultsContent() {
               Por bloques
             </button>
           </div>
-          {/* Texto de ayuda — solo visible en la vista detallada */}
           {viewMode === "detailed" && (
             <p className="text-xs text-muted-foreground">
-              Los importes por categoría son orientativos. Te muestran cómo podría distribuirse
-              tu presupuesto dentro de cada bloque.
+              Los importes por categoría están calculados en base a tu perfil. Úsalos como referencia orientativa.
             </p>
           )}
         </div>
 
-        {/* Vista detallada: cabecera de bloque + lista de categorías */}
+        {/* Vista detallada: bloque → categorías */}
         {viewMode === "detailed" && (
-          <div className="space-y-6">
-            {blocksWithAmounts.map((block) => {
-              const categoryCount = block.categories.length;
-              // Reparto equitativo del importe del bloque entre sus categorías
-              const amountPerCategory = categoryCount > 0
-                ? block.amount / categoryCount
-                : 0;
+          <div className="space-y-8">
+            {BLOCK_ORDER.map((blockKey) => {
+              const block = result.blocks[blockKey];
+              const cats = Object.values(result.categories).filter((c) => c.block === blockKey);
 
               return (
-                <div key={block.key}>
-                  {/* Cabecera del bloque — actúa como separador visual prominente */}
+                <div key={blockKey}>
                   <div className="flex items-baseline justify-between border-b-2 border-foreground/10 pb-2 mb-3">
                     <div className="flex items-baseline gap-3">
                       <h2 className="text-lg font-bold">{block.label}</h2>
-                      <span className="text-sm text-muted-foreground">
-                        {formatPercentage(block.percentage)}
-                      </span>
+                      <span className="text-sm text-muted-foreground">{formatPct(block.percentage)}</span>
                     </div>
-                    <span className="text-xl font-bold">
-                      {formatCurrency(block.amount)}
-                    </span>
+                    <span className="text-xl font-bold">{formatCurrency(block.amount)}</span>
                   </div>
 
-                  {/* Lista de categorías del bloque */}
                   <div className="grid gap-2 sm:grid-cols-2">
-                    {block.categories.map((category) => (
-                      <div
-                        key={category.id}
-                        className="flex items-start justify-between rounded-lg bg-muted/40 px-4 py-3"
-                      >
-                        <div className="space-y-0.5 pr-4">
-                          <p className="text-sm font-medium">{category.label}</p>
-                          <p className="text-xs text-muted-foreground">{category.description}</p>
+                    {cats.map((cat) => {
+                      const alert = result.alerts[cat.id];
+                      return (
+                        <div
+                          key={cat.id}
+                          className="flex items-start justify-between rounded-lg bg-muted/40 px-4 py-3"
+                        >
+                          <div className="space-y-0.5 pr-4">
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-sm font-medium">{cat.label}</p>
+                              {alert && <AlertDot level={alert.level} />}
+                            </div>
+                            <p className="text-xs text-muted-foreground">{cat.description}</p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="text-sm font-semibold">{formatCurrency(cat.amount)}</p>
+                            <p className="text-xs text-muted-foreground">{formatPct(cat.percentage)}</p>
+                          </div>
                         </div>
-                        <p className="text-sm font-semibold shrink-0">
-                          {formatCurrency(amountPerCategory)}
-                        </p>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               );
@@ -216,29 +236,74 @@ function ResultsContent() {
           </div>
         )}
 
-        {/* Vista macro: cards de bloque, comportamiento original sin cambios */}
+        {/* Vista macro: cards de bloque */}
         {viewMode === "macro" && (
           <div className="grid gap-4 md:grid-cols-3">
-            {result.distribution.map((block) => (
-              <Card key={block.key} className="flex flex-col">
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    {block.label}
-                    <span className="text-sm font-normal text-muted-foreground">
-                      {formatPercentage(block.percentage)}
-                    </span>
-                  </CardTitle>
-                  <CardDescription>{block.description}</CardDescription>
-                </CardHeader>
-                <CardContent className="flex-1 flex items-end">
-                  <p className="text-3xl font-bold">
-                    {formatCurrency(block.formattedAmount)}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
+            {BLOCK_ORDER.map((blockKey) => {
+              const block = result.blocks[blockKey];
+              return (
+                <Card key={blockKey} className="flex flex-col">
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      {block.label}
+                      <span className="text-sm font-normal text-muted-foreground">
+                        {formatPct(block.percentage)}
+                      </span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex-1 flex items-end">
+                    <p className="text-3xl font-bold">{formatCurrency(block.amount)}</p>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
+
+        {/* Indicadores de referencia */}
+        <div className="space-y-3">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+            Indicadores de referencia
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Ratio de deuda (DTI)</CardTitle>
+                <CardDescription className="text-xs">
+                  Amortización extra como proxy de deuda activa
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className={`text-2xl font-bold ${dtiColorClass(result.transversal.dti.total)}`}>
+                  {formatPct(result.transversal.dti.total)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {formatCurrency(result.transversal.dti.amount)} / mes ·{" "}
+                  {result.transversal.dti.total < result.transversal.dti.mild
+                    ? "dentro del rango saludable"
+                    : result.transversal.dti.total < result.transversal.dti.severe
+                    ? "en zona de atención"
+                    : "en zona crítica"}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Gasto total en seguros</CardTitle>
+                <CardDescription className="text-xs">
+                  Seguros explícitos en el cálculo actual (seguro de vida)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">{formatPct(result.transversal.insurance.total)}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {formatCurrency(result.transversal.insurance.amount)} / mes
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
 
         {/* Botones de acción */}
         <div className="flex flex-wrap gap-4 justify-center pt-4">
@@ -248,7 +313,11 @@ function ResultsContent() {
           <Button variant="outline" onClick={() => router.push("/")}>
             Volver al inicio
           </Button>
-          <Button onClick={() => router.push(`/diagnosis-form?income=${income}&model=${modelId}`)}>
+          <Button
+            onClick={() =>
+              router.push(`/diagnosis-form?income=${income}&model=${result.closestModel.id}`)
+            }
+          >
             Analizar mi situación real
           </Button>
         </div>
@@ -257,18 +326,15 @@ function ResultsContent() {
   );
 }
 
-/**
- * Componente de la página de resultados.
- * Envuelve ResultsContent en Suspense, requerido por Next.js cuando
- * un Client Component usa useSearchParams().
- */
 export default function ResultsPage() {
   return (
-    <Suspense fallback={
-      <main className="flex min-h-screen items-center justify-center">
-        <p>Cargando resultados...</p>
-      </main>
-    }>
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center">
+          <p>Cargando resultados...</p>
+        </main>
+      }
+    >
       <ResultsContent />
     </Suspense>
   );
