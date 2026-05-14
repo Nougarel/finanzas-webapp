@@ -2,17 +2,26 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { CATEGORIES_CATALOG } from "@/lib/models/categories";
+
+const BLOCK_LABELS = { needs: "Necesidades", wants: "Deseos", savings: "Ahorro" };
+const BLOCK_ORDER  = ["needs", "wants", "savings"];
+
+function fmt(n) {
+  return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(n);
+}
+function fmtPct(n) {
+  return `${n.toFixed(1)} %`;
+}
 
 function ErrorCard({ title, message, onBack }) {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-8">
       <Card className="w-full max-w-2xl">
-        <CardHeader>
-          <CardTitle>{title}</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle>{title}</CardTitle></CardHeader>
         <CardContent>
           <p className="text-muted-foreground mb-4">{message}</p>
           <Button onClick={onBack}>Volver al formulario</Button>
@@ -23,239 +32,213 @@ function ErrorCard({ title, message, onBack }) {
 }
 
 function InverseResultsContent() {
-  const router = useRouter();
+  const router      = useRouter();
   const searchParams = useSearchParams();
 
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
+  const [loading,   setLoading]   = useState(true);
+  const [result,    setResult]    = useState(null);
   const [calcError, setCalcError] = useState(null);
 
-  const modelId = searchParams.get("model") || "50_30_20";
   const amountsParam = searchParams.get("amounts");
-  const mode = searchParams.get("mode") || "manual";
 
   useEffect(() => {
-    if (!amountsParam) return;
+    if (!amountsParam) { setLoading(false); return; }
 
-    let desiredAmounts;
-    try {
-      desiredAmounts = JSON.parse(decodeURIComponent(amountsParam));
-    } catch {
-      setCalcError("Los importes deseados no son válidos. Por favor, rellena el formulario de nuevo.");
+    let specifiedAmounts;
+    try { specifiedAmounts = JSON.parse(decodeURIComponent(amountsParam)); }
+    catch { setCalcError("Los importes no son válidos."); setLoading(false); return; }
+
+    const profile = (() => {
+      try { return JSON.parse(localStorage.getItem("userProfile") ?? "null"); }
+      catch { return null; }
+    })();
+
+    if (!profile) {
+      setCalcError("No se encontró el perfil. Vuelve a completarlo.");
+      setLoading(false);
       return;
     }
-
-    if (!desiredAmounts || typeof desiredAmounts !== "object") {
-      setCalcError("Los importes deseados no son válidos. Por favor, rellena el formulario de nuevo.");
-      return;
-    }
-
-    setLoading(true);
-    setCalcError(null);
 
     fetch("/api/calculate-inverse", {
-      method: "POST",
+      method:  "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ modelId, desiredAmounts, mode })
+      body:    JSON.stringify({ profile, specifiedAmounts }),
     })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.error) {
-          setCalcError(data.error);
-        } else {
-          setResult(data);
-        }
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) { setCalcError(data.error); }
+        else            { setResult(data); }
       })
-      .catch(() => {
-        setCalcError("Error al conectar con el servidor. Inténtalo de nuevo.");
-      })
+      .catch(() => setCalcError("Error al conectar con el servidor."))
       .finally(() => setLoading(false));
-  }, [amountsParam, modelId, mode]);
+  }, [amountsParam]);
+
+  const goBack = () => {
+    const suffix = amountsParam ? `?amounts=${amountsParam}` : "";
+    router.push(`/inverse-calculator${suffix}`);
+  };
 
   if (!amountsParam) {
-    return (
-      <ErrorCard
-        title="Error"
-        message="Los importes deseados no son válidos. Por favor, rellena el formulario de nuevo."
-        onBack={() => router.push(`/inverse-calculator?model=${modelId}`)}
-      />
-    );
+    return <ErrorCard title="Sin datos" message="No se han recibido importes." onBack={() => router.push("/inverse-calculator")} />;
   }
-
-  if (loading || (!result && !calcError)) {
+  if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground">Calculando...</p>
+        <p className="text-muted-foreground">Calculando ingreso mínimo...</p>
       </main>
     );
   }
-
   if (calcError) {
-    return (
-      <ErrorCard
-        title="Error en el cálculo"
-        message={calcError}
-        onBack={() => router.push(`/inverse-calculator?model=${modelId}`)}
-      />
-    );
+    return <ErrorCard title="Error en el cálculo" message={calcError} onBack={goBack} />;
   }
-
   if (!result) return null;
 
-  const formatCurrency = (amount) =>
-    new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(amount);
+  const { requiredIncome, monthlyDebtPayment, healthyDistribution, specifiedAmounts, comparison, warnings } = result;
 
-  const formatPercentage = (percentage) =>
-    `${(percentage * 100).toFixed(0)}%`;
-
-  const mostRestrictiveItem = mode === "manual"
-    ? result.distribution.find((b) => b.key === result.summary.mostRestrictiveBlock)
-    : null;
-
-  let incomeWithoutRestrictive = null;
-  let showWarning = false;
-
-  if (mode === "manual") {
-    try {
-      const otherBlocks = result.distribution.filter(
-        (b) => b.key !== result.summary.mostRestrictiveBlock
-      );
-      if (otherBlocks.length > 0) {
-        incomeWithoutRestrictive = Math.max(
-          ...otherBlocks.map((b) => b.desiredAmount / b.percentage)
-        );
-        if (incomeWithoutRestrictive > 0) {
-          const disproportion = result.summary.requiredIncome / incomeWithoutRestrictive;
-          showWarning = disproportion > 1.30;
-        }
-      }
-    } catch {
-      showWarning = false;
-    }
+  // Agrupar categorías por bloque para la tabla de distribución saludable
+  const catsByBlock = {};
+  for (const block of BLOCK_ORDER) {
+    catsByBlock[block] = CATEGORIES_CATALOG.filter(c => c.block === block);
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-8">
-      <div className="w-full max-w-4xl space-y-6">
+    <main className="flex min-h-screen flex-col items-center py-12 px-4">
+      <div className="w-full max-w-3xl space-y-6">
 
         {/* Encabezado */}
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">
-            Tu ingreso mensual necesario
-          </h1>
-          <p className="text-muted-foreground">
-            Basado en el modelo {result.model.name}
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold tracking-tight">Resultado</h1>
+          <p className="text-sm text-muted-foreground">
+            Ingreso mínimo mensual necesario para sostener los importes especificados
           </p>
         </div>
 
-        {/* Resultado principal */}
+        {/* Ingreso requerido */}
         <Card>
           <CardHeader>
-            <CardTitle>Ingreso necesario</CardTitle>
+            <CardTitle>Ingreso mínimo necesario</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-5xl font-bold">
-              {formatCurrency(result.summary.requiredIncome)}
+          <CardContent>
+            <p className="text-5xl font-bold tracking-tight">{fmt(requiredIncome)}</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Con este ingreso neto mensual, los importes que has fijado son financieramente sostenibles.
             </p>
-            {mode === "auto" ? (
-              <p className="text-muted-foreground">
-                Para sostener este estilo de vida de forma financieramente saludable,
-                necesitas un ingreso mensual de{" "}
-                <strong>{formatCurrency(result.summary.requiredIncome)}</strong>.
+            {monthlyDebtPayment > 0 && (
+              <p className="text-sm text-muted-foreground mt-2">
+                Incluye {fmt(monthlyDebtPayment)}/mes de cuotas de deuda fija.
               </p>
-            ) : mostRestrictiveItem ? (
-              <p className="text-muted-foreground">
-                Para que tu bloque de <strong>{mostRestrictiveItem.label}</strong> represente
-                el <strong>{formatPercentage(mostRestrictiveItem.percentage)}</strong> de tu ingreso,
-                necesitas ingresar al menos <strong>{formatCurrency(result.summary.requiredIncome)}</strong> al mes.
-              </p>
-            ) : null}
+            )}
           </CardContent>
         </Card>
 
-        {/* Advertencia de desproporción — solo en modo manual */}
-        {showWarning && mostRestrictiveItem && (
-          <div className="flex gap-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-4">
-            <AlertTriangle className="shrink-0 size-5 mt-0.5" />
-            <div className="space-y-1">
-              <p className="font-medium">Importe desproporcionado detectado</p>
-              <p className="text-sm">
-                El importe que has indicado para <strong>{mostRestrictiveItem.label}</strong> es
-                proporcionalmente más alto que el resto de bloques. Esto ha elevado el ingreso
-                necesario a <strong>{formatCurrency(result.summary.requiredIncome)}</strong>.
-                Sin ese bloque como limitante, el ingreso necesario sería
-                de <strong>{formatCurrency(incomeWithoutRestrictive)}</strong>. Ajusta ese importe
-                si quieres un resultado más representativo de tu estilo de vida.
-              </p>
-            </div>
+        {/* Advertencias */}
+        {warnings && warnings.length > 0 && (
+          <div className="space-y-2">
+            {warnings.map((w, i) => (
+              <div key={i} className="flex gap-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-4 py-3">
+                <AlertTriangle className="shrink-0 size-5 mt-0.5" />
+                <p className="text-sm">{w}</p>
+              </div>
+            ))}
           </div>
         )}
 
-        {/* Desglose por bloque */}
-        <div className="grid gap-4 md:grid-cols-3">
-          {result.distribution.map((block) => (
-            <Card key={block.key} className="flex flex-col">
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  {block.label}
-                  <span className="text-sm font-normal text-muted-foreground">
-                    {formatPercentage(block.percentage)}
-                  </span>
-                </CardTitle>
-                <CardDescription>{block.description}</CardDescription>
+        {/* Comparativa: especificado vs. saludable */}
+        {comparison && Object.keys(comparison).length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Comparativa</CardTitle>
+              <CardDescription>Tus importes frente a la distribución saludable con el ingreso calculado</CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/30">
+                    <th className="text-left px-4 py-2 font-medium text-muted-foreground">Categoría</th>
+                    <th className="text-right px-4 py-2 font-medium text-muted-foreground">Especificado</th>
+                    <th className="text-right px-4 py-2 font-medium text-muted-foreground">Saludable</th>
+                    <th className="text-right px-4 py-2 font-medium text-muted-foreground">Diferencia</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(comparison).map(([catId, row]) => {
+                    const cat  = CATEGORIES_CATALOG.find(c => c.id === catId);
+                    const diff = row.diff; // positivo = especificado > saludable
+                    return (
+                      <tr key={catId} className="border-b last:border-0">
+                        <td className="px-4 py-2">{cat?.label ?? catId}</td>
+                        <td className="text-right px-4 py-2 font-medium">{fmt(row.specifiedAmount)}</td>
+                        <td className="text-right px-4 py-2 text-muted-foreground">
+                          {fmt(row.healthyAmount)}
+                          <span className="ml-1 text-xs text-muted-foreground/70">({fmtPct(row.healthyPct)})</span>
+                        </td>
+                        <td className="text-right px-4 py-2">
+                          {diff === 0 ? (
+                            <span className="inline-flex items-center gap-1 text-muted-foreground"><Minus className="size-3" /> —</span>
+                          ) : diff > 0 ? (
+                            <span className="inline-flex items-center gap-1 text-amber-600">
+                              <TrendingUp className="size-3" />{fmt(diff)}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-emerald-600">
+                              <TrendingDown className="size-3" />{fmt(Math.abs(diff))}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Distribución saludable completa */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold">Distribución saludable completa</h2>
+          {BLOCK_ORDER.map(block => (
+            <Card key={block}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">{BLOCK_LABELS[block]}</CardTitle>
               </CardHeader>
-              <CardContent className="flex-1 space-y-2">
-                {mode === "auto" ? (
-                  block.isAutoCalculated ? (
-                    <div>
-                      <span className="inline-block text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 mb-2">
-                        Calculado automáticamente
-                      </span>
-                      <p className="text-xl font-bold">{formatCurrency(block.recommendedAmount)}</p>
-                    </div>
-                  ) : (
-                    <div>
-                      <p className="text-xs text-muted-foreground">Deseado</p>
-                      <p className="text-xl font-semibold">{formatCurrency(block.desiredAmount)}</p>
-                    </div>
-                  )
-                ) : (
-                  <>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Deseado</p>
-                      <p className="text-xl font-semibold">{formatCurrency(block.desiredAmount)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Recomendado</p>
-                      <p className="text-xl font-bold">{formatCurrency(block.recommendedAmount)}</p>
-                    </div>
-                    {block.difference > 0 && (
-                      <div>
-                        <p className="text-xs text-muted-foreground">Extra disponible</p>
-                        <p className="text-sm font-medium text-muted-foreground">
-                          +{formatCurrency(block.difference)}
-                        </p>
-                      </div>
-                    )}
-                  </>
-                )}
+              <CardContent className="p-0">
+                <table className="w-full text-sm">
+                  <tbody>
+                    {catsByBlock[block].map(cat => {
+                      const h = healthyDistribution[cat.id];
+                      if (!h) return null;
+                      const isSpecified = catId => catId in (specifiedAmounts ?? {});
+                      return (
+                        <tr key={cat.id} className="border-b last:border-0">
+                          <td className="px-4 py-2">
+                            {cat.label}
+                            {isSpecified(cat.id) && (
+                              <span className="ml-2 text-xs rounded-full bg-primary/10 text-primary px-1.5 py-0.5">fijado</span>
+                            )}
+                          </td>
+                          <td className="text-right px-4 py-2 text-muted-foreground">{fmtPct(h.percentage)}</td>
+                          <td className="text-right px-4 py-2 font-medium">{fmt(h.amount)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </CardContent>
             </Card>
           ))}
         </div>
 
-        {/* Botones de acción */}
-        <div className="flex gap-4 justify-center pt-4">
-          <Button
-            variant="outline"
-            onClick={() => router.push(`/inverse-calculator?model=${modelId}`)}
-          >
-            Calcular de nuevo
+        {/* Acciones */}
+        <div className="flex gap-3 justify-center pt-2">
+          <Button variant="outline" onClick={goBack}>
+            Volver y ajustar
           </Button>
           <Button variant="outline" onClick={() => router.push("/")}>
-            Volver al inicio
+            Inicio
           </Button>
         </div>
+
       </div>
     </main>
   );
@@ -265,7 +248,7 @@ export default function InverseResultsPage() {
   return (
     <Suspense fallback={
       <main className="flex min-h-screen items-center justify-center">
-        <p>Cargando resultados...</p>
+        <p className="text-muted-foreground">Cargando resultados...</p>
       </main>
     }>
       <InverseResultsContent />

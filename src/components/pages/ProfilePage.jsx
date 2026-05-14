@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Fragment, useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Briefcase, Clock, Laptop, PauseCircle,
@@ -14,7 +14,7 @@ import {
   BookOpen, GraduationCap, School,
   AlertCircle, CheckCircle2, Sparkles,
   X, TrendingDown, Minus,
-  Building,
+  Building, Info,
 } from "lucide-react";
 
 // ─── Metadatos de las 4 secciones ───────────────────────────────────────────
@@ -71,7 +71,9 @@ const SECTION_QUESTIONS = [
         { value: 0, label: "No tengo dependientes",  subtext: "Vivo de forma independiente",                      Icon: User  },
         { value: 1, label: "1 dependiente",          subtext: "Hijo, familiar u otra persona a cargo",            Icon: Users },
         { value: 2, label: "2 dependientes",                                                                       Icon: Users },
-        { value: 3, label: "3 o más dependientes",                                                                 Icon: Users },
+        { value: 3, label: "3 dependientes",                                                                       Icon: Users },
+        { value: 4, label: "4 dependientes",                                                                       Icon: Users },
+        { value: 5, label: "5 o más dependientes",   subtext: "Se usa el valor 5 en todos los cálculos",          Icon: Users },
       ],
     },
   ],
@@ -176,8 +178,8 @@ const SECTION_QUESTIONS = [
   ],
 ];
 
-// Campos que deben estar respondidos para habilitar "Siguiente" en cada sección.
-// pensionRegime es opcional, nunca aparece aquí.
+// Campos obligatorios para habilitar "Siguiente" en cada sección.
+// Los campos condicionales de la sección 0 se validan aparte en isNextDisabled.
 const REQUIRED_FIELDS_BY_SECTION = [
   ["employmentStatus", "ageRange", "dependents"],
   ["housingStatus", "geographicZone"],
@@ -185,16 +187,13 @@ const REQUIRED_FIELDS_BY_SECTION = [
   ["emergencyFundStatus", "housingPurchaseGoal", "consumerDebt"],
 ];
 
-// Mapa { field → { value → label } } construido a partir de SECTION_QUESTIONS.
-// Permite buscar la etiqueta de cualquier respuesta en O(1) para el resumen.
+// Mapa { field → { value → label } } para el resumen, construido desde SECTION_QUESTIONS.
 const LABEL_MAP = (() => {
   const map = {};
   for (const section of SECTION_QUESTIONS) {
     for (const question of section) {
       map[question.field] = {};
       for (const opt of question.options) {
-        // Los valores boolean y number se coercionan a string como clave de objeto,
-        // y también al leerlos, así que la comparación es consistente.
         map[question.field][opt.value] = opt.label;
       }
     }
@@ -202,7 +201,8 @@ const LABEL_MAP = (() => {
   return map;
 })();
 
-// Agrupación de campos por sección para renderizar el resumen
+// Agrupación de campos estándar por sección para el resumen.
+// Los campos condicionales de la sección 0 se añaden aparte en renderSummary.
 const SUMMARY_SECTIONS = [
   { sectionIndex: 0, fields: ["employmentStatus", "ageRange", "dependents"] },
   { sectionIndex: 1, fields: ["housingStatus", "geographicZone"] },
@@ -271,53 +271,165 @@ function ProgressBar({ currentStep }) {
 
 // ─── Componente principal ────────────────────────────────────────────────────
 
-export default function ProfilePage() {
+function ProfileForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const mode = searchParams.get("mode"); // null = directo, "inverse" = inverso
 
   // currentStep: 0-3 → secciones del cuestionario, 4 → pantalla de resumen
   const [currentStep, setCurrentStep] = useState(0);
 
   const [profileData, setProfileData] = useState({
-    // Sección 1 — Sobre ti
-    employmentStatus: null,    // 'permanent' | 'temporary' | 'freelance' | 'unemployed'
-    ageRange: null,            // 'under35' | '35to50' | 'over50'
-    dependents: null,          // 0 | 1 | 2 | 3
+    // Sección 0 — Sobre ti
+    employmentStatus:    null, // 'permanent' | 'temporary' | 'freelance' | 'unemployed'
+    ageRange:            null, // 'under35' | '35to50' | 'over50'
+    dependents:          null, // 0 | 1 | 2 | 3 | 4 | 5
+    hasPartner:          null, // true | false — visible si dependents > 0
+    partnerHasIncome:    null, // true | false — visible si dependents > 0
+    childrenAtUniversity: null, // 0 | 1 | 2 | 3 — visible si hay hijos
+    childrenStudyingAway: null, // 0 | 1 | 2 | 3 — visible si childrenAtUniversity > 0
 
-    // Sección 2 — Tu vivienda
-    housingStatus: null,       // 'rent' | 'mortgage' | 'owned' | 'family'
-    geographicZone: null,      // 'expensive_city' | 'standard' | 'rural'
+    // Sección 1 — Tu vivienda
+    housingStatus:       null, // 'rent' | 'mortgage' | 'owned' | 'family'
+    geographicZone:      null, // 'expensive_city' | 'standard' | 'rural'
 
-    // Sección 3 — Movilidad, salud y formación
-    vehicleStatus: null,       // 'none' | 'owned_paid' | 'financed' | 'leasing'
-    privateHealthInsurance: null, // 'none' | 'basic' | 'complete'
-    ownEducation: null,        // 'none' | 'continuous' | 'formal'
+    // Sección 2 — Movilidad, salud y formación
+    vehicleStatus:           null, // 'none' | 'owned_paid' | 'financed' | 'leasing'
+    freelanceRegularTravel:  null, // true | false — visible si autónomo con vehículo
+    privateHealthInsurance:  null, // 'none' | 'basic' | 'complete'
+    ownEducation:            null, // 'none' | 'continuous' | 'formal'
 
-    // Sección 4 — Tu ahorro y deuda
-    emergencyFundStatus: null, // 'none' | 'building' | 'partial' | 'complete'
-    housingPurchaseGoal: null, // false | true
-    consumerDebt: null,        // 'none' | 'low' | 'medium' | 'high'
-    pensionRegime: null,       // 'social_security' | 'mutual' | 'none' — opcional
+    // Sección 3 — Tu ahorro y deuda
+    emergencyFundStatus:  null, // 'none' | 'building' | 'partial' | 'complete'
+    housingPurchaseGoal:  null, // false | true
+    consumerDebt:         null, // 'none' | 'low' | 'medium' | 'high'
+    monthlyDebtPayment:   0,    // €/mes — visible si consumerDebt !== 'none'
+    pensionRegime:        null, // 'social_security' | 'mutual' | 'none' — opcional
   });
 
+  // ── Lógica de selección con limpieza de campos dependientes ─────────────
+
   const handleSelect = (field, value) => {
-    setProfileData((prev) => ({ ...prev, [field]: value }));
+    setProfileData((prev) => {
+      const next = { ...prev, [field]: value };
+
+      if (field === "dependents") {
+        if (value === 0) {
+          // Sin dependientes: limpiar todos los subcampos
+          next.hasPartner = null;
+          next.partnerHasIncome = null;
+          next.childrenAtUniversity = null;
+          next.childrenStudyingAway = null;
+        } else {
+          // Con dependientes: inicializar subcampos de hijos si aún no se han tocado
+          if (next.childrenAtUniversity === null) next.childrenAtUniversity = 0;
+          if (next.childrenStudyingAway === null) next.childrenStudyingAway = 0;
+          // Si hasPartner ya está definido, comprobar consistencia de hijos
+          if (prev.hasPartner !== null) {
+            const numChildren = value - (prev.hasPartner ? 1 : 0);
+            if (numChildren <= 0 || prev.childrenAtUniversity > numChildren) {
+              next.childrenAtUniversity = 0;
+              next.childrenStudyingAway = 0;
+            }
+          }
+        }
+      }
+
+      if (field === "hasPartner") {
+        const numChildren = (prev.dependents ?? 0) - (value ? 1 : 0);
+        // Si con el nuevo valor no hay hijos, o childrenAtUniversity excede el nuevo máximo
+        if (numChildren <= 0 || prev.childrenAtUniversity > numChildren) {
+          next.childrenAtUniversity = 0;
+          next.childrenStudyingAway = 0;
+        } else if (next.childrenStudyingAway > next.childrenAtUniversity) {
+          next.childrenStudyingAway = 0;
+        }
+      }
+
+      if (field === "childrenAtUniversity") {
+        // childrenStudyingAway no puede superar childrenAtUniversity
+        if ((prev.childrenStudyingAway ?? 0) > value) {
+          next.childrenStudyingAway = 0;
+        }
+      }
+
+      if (field === "employmentStatus" && value !== "freelance") {
+        next.freelanceRegularTravel = null;
+      }
+
+      if (field === "vehicleStatus" && value === "none") {
+        next.freelanceRegularTravel = null;
+      }
+
+      if (field === "consumerDebt" && value === "none") {
+        next.monthlyDebtPayment = 0;
+      }
+
+      return next;
+    });
   };
 
-  // El botón "Siguiente" se deshabilita si algún campo obligatorio de la sección actual
-  // sigue en null. Se usa === null para no confundir 0 y false con "sin responder".
+  // ── Condiciones de visibilidad de las preguntas condicionales ────────────
+
+  const showFreelanceTravel =
+    profileData.employmentStatus === 'freelance' &&
+    profileData.vehicleStatus !== null &&
+    profileData.vehicleStatus !== 'none';
+
+  const showQ5a = (profileData.dependents ?? 0) > 0;
+  const showPartnerIncome = showQ5a && profileData.hasPartner !== null;
+
+  const numChildren =
+    profileData.dependents !== null && profileData.hasPartner !== null
+      ? profileData.dependents - (profileData.hasPartner ? 1 : 0)
+      : 0;
+
+  const showQ5b = showQ5a && profileData.hasPartner !== null && numChildren > 0;
+  const showQ5c = showQ5b && (profileData.childrenAtUniversity ?? 0) > 0;
+
+  // ── Opciones dinámicas para Q5b y Q5c ───────────────────────────────────
+
+  const q5bOptions = [
+    { value: 0, label: "Ninguno", Icon: BookOpen },
+    ...Array.from({ length: numChildren }, (_, i) => ({
+      value: i + 1,
+      label: String(i + 1),
+      Icon: GraduationCap,
+    })),
+  ];
+
+  const numAtUniversity = profileData.childrenAtUniversity ?? 0;
+  const q5cOptions = [
+    { value: 0, label: "Ninguno", Icon: Home },
+    ...Array.from({ length: numAtUniversity }, (_, i) => ({
+      value: i + 1,
+      label: String(i + 1),
+      Icon: MapPin,
+    })),
+  ];
+
+  // ── Validación del botón Siguiente ──────────────────────────────────────
+
   const isNextDisabled =
     currentStep < 4 &&
-    REQUIRED_FIELDS_BY_SECTION[currentStep].some(
-      (field) => profileData[field] === null
+    (
+      REQUIRED_FIELDS_BY_SECTION[currentStep].some(
+        (field) => profileData[field] === null
+      ) ||
+      // Q5a es obligatoria si hay dependientes
+      (currentStep === 0 && showQ5a && profileData.hasPartner === null) ||
+      // Pregunta de ingresos de pareja es obligatoria si aplica
+      (currentStep === 0 && showPartnerIncome && profileData.partnerHasIncome === null) ||
+      // Pregunta de desplazamiento autónomo es obligatoria si aplica
+      (currentStep === 2 && showFreelanceTravel && profileData.freelanceRegularTravel === null)
     );
 
   const handleNext = () => setCurrentStep((s) => s + 1);
   const handlePrev = () => setCurrentStep((s) => s - 1);
 
   const handleConfirm = () => {
-    console.log("Profile data:", profileData);
-    localStorage.setItem("financialProfile", JSON.stringify(profileData));
-    router.push("/calculator");
+    localStorage.setItem("userProfile", JSON.stringify(profileData));
+    router.push(mode === "inverse" ? "/inverse-calculator" : "/calculator");
   };
 
   // ── Renderizado de una sección de preguntas ──────────────────────────────
@@ -337,38 +449,179 @@ export default function ProfilePage() {
 
         {questions.map((question) => {
           const isOptional = question.optional === true;
-          // Rejilla de 2 columnas en pantallas sm+ solo cuando hay 4 opciones
           const gridClass = question.options.length >= 4 ? "grid gap-2 sm:grid-cols-2" : "grid gap-2";
 
           return (
-            <div key={question.field} className="space-y-3">
-              {/* Enunciado + badge opcional */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <p className="text-sm font-medium">{question.label}</p>
-                {isOptional && (
-                  <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full leading-none">
-                    Opcional
-                  </span>
+            <Fragment key={question.field}>
+              {/* Pregunta estándar */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-sm font-medium">{question.label}</p>
+                  {isOptional && (
+                    <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full leading-none">
+                      Opcional
+                    </span>
+                  )}
+                </div>
+
+                {question.helpText && (
+                  <p className="text-xs text-muted-foreground">{question.helpText}</p>
                 )}
+
+                <div className={gridClass}>
+                  {question.options.map((option) => (
+                    <OptionCard
+                      key={String(option.value)}
+                      option={option}
+                      selected={profileData[question.field] === option.value}
+                      onSelect={() => handleSelect(question.field, option.value)}
+                    />
+                  ))}
+                </div>
               </div>
 
-              {/* Texto de ayuda contextual */}
-              {question.helpText && (
-                <p className="text-xs text-muted-foreground">{question.helpText}</p>
+              {/* Subpregunta condicional — cuota mensual de deuda en sección 3 */}
+              {sectionIndex === 3 && question.field === "consumerDebt" &&
+                profileData.consumerDebt !== null && profileData.consumerDebt !== 'none' && (
+                <div className="space-y-3 pl-4 border-l-2 border-muted animate-in fade-in duration-200">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">
+                      ¿Cuánto pagas en total al mes en cuotas de préstamos o deudas?
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Sin contar hipoteca ni vehículo. Incluye préstamos personales, financiaciones de productos, tarjetas con saldo pendiente, deudas con familiares, etc.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={0}
+                      step={10}
+                      value={profileData.monthlyDebtPayment || ""}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value);
+                        setProfileData((prev) => ({
+                          ...prev,
+                          monthlyDebtPayment: isNaN(val) ? 0 : Math.max(0, val),
+                        }));
+                      }}
+                      placeholder="0"
+                      className="w-32 rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    <span className="text-sm text-muted-foreground">€/mes</span>
+                  </div>
+                </div>
               )}
 
-              {/* Tarjetas de opción */}
-              <div className={gridClass}>
-                {question.options.map((option) => (
-                  <OptionCard
-                    key={String(option.value)}
-                    option={option}
-                    selected={profileData[question.field] === option.value}
-                    onSelect={() => handleSelect(question.field, option.value)}
-                  />
-                ))}
-              </div>
-            </div>
+              {/* Subpregunta condicional — autónomo con vehículo en sección 2 */}
+              {sectionIndex === 2 && question.field === "vehicleStatus" && showFreelanceTravel && (
+                <div className="space-y-3 pl-4 border-l-2 border-muted animate-in fade-in duration-200">
+                  <p className="text-sm font-medium">
+                    ¿Tu actividad requiere desplazamientos regulares para visitar clientes o realizar tu trabajo en distintas ubicaciones?
+                  </p>
+                  <div className="grid gap-2">
+                    {[
+                      { value: true,  label: "Sí", subtext: "Visito clientes, obras u otros lugares de trabajo habitualmente", Icon: MapPin   },
+                      { value: false, label: "No", subtext: "Trabajo principalmente desde un único lugar fijo",                Icon: Building },
+                    ].map((option) => (
+                      <OptionCard
+                        key={String(option.value)}
+                        option={option}
+                        selected={profileData.freelanceRegularTravel === option.value}
+                        onSelect={() => handleSelect("freelanceRegularTravel", option.value)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Subpreguntas condicionales — solo tras 'dependents' en sección 0 */}
+              {sectionIndex === 0 && question.field === "dependents" && (
+                <>
+                  {/* Q5a: ¿incluye pareja? */}
+                  {showQ5a && (
+                    <div className="space-y-3 pl-4 border-l-2 border-muted animate-in fade-in duration-200">
+                      <p className="text-sm font-medium">
+                        ¿Incluye una pareja o adulto a tu cargo?
+                      </p>
+                      <div className="grid gap-2">
+                        {[
+                          { value: true,  label: "Sí", subtext: "Uno de los dependientes es mi pareja u otro adulto", Icon: Heart },
+                          { value: false, label: "No", subtext: "Todos los dependientes son hijos u otros menores",   Icon: User  },
+                        ].map((option) => (
+                          <OptionCard
+                            key={String(option.value)}
+                            option={option}
+                            selected={profileData.hasPartner === option.value}
+                            onSelect={() => handleSelect("hasPartner", option.value)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Q5a.2: ¿la pareja aporta ingresos? */}
+                  {showPartnerIncome && (
+                    <div className="space-y-3 pl-4 border-l-2 border-muted animate-in fade-in duration-200">
+                      <p className="text-sm font-medium">
+                        ¿Tu pareja aporta ingresos propios al hogar?
+                      </p>
+                      <div className="grid gap-2">
+                        {[
+                          { value: true,  label: "Sí", subtext: "Mi pareja trabaja o tiene ingresos propios",       Icon: TrendingUp  },
+                          { value: false, label: "No", subtext: "Mi pareja no tiene ingresos o no tengo pareja",    Icon: PauseCircle },
+                        ].map((option) => (
+                          <OptionCard
+                            key={String(option.value)}
+                            option={option}
+                            selected={profileData.partnerHasIncome === option.value}
+                            onSelect={() => handleSelect("partnerHasIncome", option.value)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Q5b: ¿cuántos hijos en universidad? */}
+                  {showQ5b && (
+                    <div className="space-y-3 pl-4 border-l-2 border-muted animate-in fade-in duration-200">
+                      <p className="text-sm font-medium">
+                        ¿Cuántos de tus hijos estudian en la universidad?
+                      </p>
+                      <div className={q5bOptions.length >= 4 ? "grid gap-2 sm:grid-cols-2" : "grid gap-2"}>
+                        {q5bOptions.map((option) => (
+                          <OptionCard
+                            key={String(option.value)}
+                            option={option}
+                            selected={profileData.childrenAtUniversity === option.value}
+                            onSelect={() => handleSelect("childrenAtUniversity", option.value)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Q5c: ¿cuántos fuera de casa? */}
+                  {showQ5c && (
+                    <div className="space-y-3 pl-4 border-l-2 border-muted animate-in fade-in duration-200">
+                      <p className="text-sm font-medium">
+                        ¿Cuántos de ellos estudian fuera de casa, en otra ciudad?
+                      </p>
+                      <div className={q5cOptions.length >= 4 ? "grid gap-2 sm:grid-cols-2" : "grid gap-2"}>
+                        {q5cOptions.map((option) => (
+                          <OptionCard
+                            key={String(option.value)}
+                            option={option}
+                            selected={profileData.childrenStudyingAway === option.value}
+                            onSelect={() => handleSelect("childrenStudyingAway", option.value)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </Fragment>
           );
         })}
 
@@ -419,9 +672,7 @@ export default function ProfilePage() {
           <div className="flex flex-wrap gap-2">
             {fields.map((field) => {
               const value = profileData[field];
-              // Los campos opcionales sin responder se omiten silenciosamente
               if (value === null) return null;
-
               const label = LABEL_MAP[field]?.[value] ?? String(value);
               return (
                 <span
@@ -432,6 +683,39 @@ export default function ProfilePage() {
                 </span>
               );
             })}
+
+            {/* Chips adicionales para las subpreguntas condicionales de la sección 0 */}
+            {sectionIndex === 0 && (
+              <>
+                {profileData.dependents > 0 && profileData.hasPartner === true && (
+                  <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium bg-muted text-foreground">
+                    Incluye pareja
+                  </span>
+                )}
+                {profileData.dependents > 0 && profileData.hasPartner !== null && profileData.partnerHasIncome === true && (
+                  <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium bg-muted text-foreground">
+                    Pareja con ingresos
+                  </span>
+                )}
+                {(profileData.childrenAtUniversity ?? 0) > 0 && (
+                  <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium bg-muted text-foreground">
+                    {profileData.childrenAtUniversity} en universidad
+                  </span>
+                )}
+                {(profileData.childrenStudyingAway ?? 0) > 0 && (
+                  <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium bg-muted text-foreground">
+                    {profileData.childrenStudyingAway} fuera de casa
+                  </span>
+                )}
+              </>
+            )}
+
+            {/* Chip adicional para cuota de deuda en sección 3 */}
+            {sectionIndex === 3 && profileData.monthlyDebtPayment > 0 && (
+              <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium bg-muted text-foreground">
+                Cuota deuda: {profileData.monthlyDebtPayment}€/mes
+              </span>
+            )}
           </div>
         </div>
       ))}
@@ -453,9 +737,29 @@ export default function ProfilePage() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-start p-8 pt-12">
-      <div className="w-full max-w-2xl">
+      <div className="w-full max-w-2xl space-y-6">
+        {mode === "inverse" && (
+          <div className="flex gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+            <Info className="size-5 shrink-0 mt-0.5" />
+            <p>
+              Estás configurando tu perfil para el cálculo inverso. Define el perfil que corresponda al estilo de vida que deseas alcanzar, no necesariamente tu situación actual. Por ejemplo, si actualmente vives de alquiler pero quieres comprar una vivienda, selecciona &quot;Hipoteca&quot; en tu perfil. Si prefieres ahorrar para pagarla sin préstamo, mantén tu perfil actual y destina el importe deseado a &quot;Ahorro a largo plazo&quot;.
+            </p>
+          </div>
+        )}
         {currentStep < 4 ? renderSection(currentStep) : renderSummary()}
       </div>
     </main>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense fallback={
+      <main className="flex min-h-screen items-center justify-center">
+        <p className="text-muted-foreground">Cargando...</p>
+      </main>
+    }>
+      <ProfileForm />
+    </Suspense>
   );
 }

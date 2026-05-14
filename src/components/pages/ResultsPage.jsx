@@ -34,7 +34,7 @@ function ResultsContent() {
   const income = parseFloat(incomeParam);
 
   useEffect(() => {
-    const stored = localStorage.getItem("financialProfile");
+    const stored = localStorage.getItem("userProfile");
     if (stored) {
       try {
         setProfile(JSON.parse(stored));
@@ -154,6 +154,11 @@ function ResultsContent() {
           </CardHeader>
           <CardContent>
             <p className="text-4xl font-bold">{formatCurrency(income)}</p>
+            {result.monthlyDebtPayment > 0 && (
+              <p className="text-sm text-muted-foreground mt-2">
+                Cuota fija de deudas: {formatCurrency(result.monthlyDebtPayment)}/mes · Ingreso disponible: {formatCurrency(result.effectiveIncome)}/mes
+              </p>
+            )}
           </CardContent>
         </Card>
 
@@ -270,7 +275,7 @@ function ResultsContent() {
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium">Ratio de deuda (DTI)</CardTitle>
                 <CardDescription className="text-xs">
-                  Amortización extra como proxy de deuda activa
+                  Hipoteca, cuotas de vehículo y deudas de consumo sobre el ingreso total
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -285,6 +290,28 @@ function ResultsContent() {
                     ? "en zona de atención"
                     : "en zona crítica"}
                 </p>
+                {/* Desglose por componente */}
+                {(result.transversal.dti.breakdown.external.amount > 0 ||
+                  result.transversal.dti.breakdown.housing.amount > 0 ||
+                  result.transversal.dti.breakdown.vehicle.amount > 0) && (
+                  <div className="mt-3 space-y-1 border-t pt-2">
+                    {[
+                      { label: "Deudas de consumo", key: "external" },
+                      { label: "Hipoteca",           key: "housing"  },
+                      { label: "Vehículo (cuota)",   key: "vehicle"  },
+                    ]
+                      .filter(({ key }) => result.transversal.dti.breakdown[key].amount > 0)
+                      .map(({ label, key }) => {
+                        const item = result.transversal.dti.breakdown[key];
+                        return (
+                          <div key={key} className="flex justify-between text-xs text-muted-foreground">
+                            <span>{label}</span>
+                            <span>{formatCurrency(item.amount)}</span>
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -292,7 +319,7 @@ function ResultsContent() {
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium">Gasto total en seguros</CardTitle>
                 <CardDescription className="text-xs">
-                  Seguros explícitos en el cálculo actual (seguro de vida)
+                  Estimación sobre los importes asignados (vida + salud + vehículo)
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -300,6 +327,27 @@ function ResultsContent() {
                 <p className="text-xs text-muted-foreground mt-1">
                   {formatCurrency(result.transversal.insurance.amount)} / mes
                 </p>
+                {/* Desglose por componente */}
+                <div className="mt-3 space-y-1 border-t pt-2">
+                  <p className="text-xs text-muted-foreground italic pb-1">
+                    Estimación orientativa del gasto mensual en seguros. Los importes de seguro de vehículo y salud se calculan a partir del gasto total en su categoría.
+                  </p>
+                  {[
+                    { label: "Seguro de vida", key: "life" },
+                    { label: "Seguro médico",  key: "health" },
+                    { label: "Seguro vehículo", key: "transport" },
+                  ]
+                    .filter(({ key }) => result.transversal.insurance.breakdown[key].amount > 0)
+                    .map(({ label, key }) => {
+                      const item = result.transversal.insurance.breakdown[key];
+                      return (
+                        <div key={key} className="flex justify-between text-xs text-muted-foreground">
+                          <span>{label}</span>
+                          <span>{formatCurrency(item.amount)}</span>
+                        </div>
+                      );
+                    })}
+                </div>
               </CardContent>
             </Card>
           </div>

@@ -2,22 +2,16 @@
  * Catálogo global de categorías financieras.
  *
  * 20 categorías organizadas en tres bloques: needs, wants, savings.
- * CATEGORIES_CATALOG es un array para permitir iteración y filtrado en el motor.
- * Los helpers getCategoryById y getCategoriesByIds mantienen la interfaz existente.
+ * CATEGORIES_CATALOG es un array para permitir iteración y filtrado.
  *
- * Campos de cada categoría:
- *   id, label, description         — identidad
- *   block                          — 'needs' | 'wants' | 'savings'
- *   isAnchor                       — porcentaje fijado por el motor (no ajustable por residuo)
- *   isInsurance / isDebt           — marcadores para indicadores transversales
- *   healthyRange { min, max }      — % sobre ingreso neto considerado saludable
- *   alerts { mild, severe, critical } — umbrales de alerta (% sobre ingreso neto)
- *   alertDirection                 — 'above' alerta por exceso | 'below' por defecto
- *   referenceSource                — fuente de los umbrales
- *   referenceReliability           — fiabilidad de la fuente
- *   ineReference                   — dato INE EPF 2024 corregido a ingreso neto (×0.86)
- *   ineWeight                      — peso relativo dentro del bloque deseos (null si no es wants)
- *   examples                       — ejemplos concretos para el usuario
+ * Campos de necesidades y ahorro:
+ *   factibleMin / factibleMax  — restricciones duras del LP (nunca violadas)
+ *   scaling                    — parámetros de escala por ingreso (null si no escala)
+ *   lpWeight                   — peso LP para priorización de ahorro (null para necesidades)
+ *   alerts                     — umbrales institucionales para diagnóstico (no afectan al LP)
+ *
+ * Campos de deseos:
+ *   ineWeight                  — peso relativo para distribución proporcional INE
  */
 
 export const CATEGORIES_CATALOG = [
@@ -31,17 +25,31 @@ export const CATEGORIES_CATALOG = [
     label: "Vivienda",
     description: "Alquiler o cuota hipotecaria, comunidad, IBI y mantenimiento del hogar",
     block: "needs",
+    factibleMin: 0,
+    factibleMax: 35,
+    scaling: {
+      floor: 8,
+      exponent: 0.9,
+      referenceIncome: 2000,
+      useOECD: true,
+      bidirectional: false,
+    },
+    lpWeight: null,
+    alerts: {
+      mild:   { threshold: 35, message: "Tu gasto en vivienda supera el techo prudencial del Banco de España" },
+      severe: { threshold: 40, message: "Tu gasto en vivienda supera el umbral de sobrecarga oficial de la UE (Eurostat)" },
+    },
+    // Campos heredados — conservados para compatibilidad con flows de diagnóstico
     isAnchor: true,
     isInsurance: false,
     isDebt: false,
     healthyRange: { min: 3, max: 30 },
-    alerts: { mild: 35, severe: 40, critical: 40 },
     alertDirection: "above",
     referenceSource: "Banco de España / Finanzas para Todos / Eurostat EU-SILC",
     referenceReliability: "very_high",
     ineReference: 27.9,
     ineWeight: null,
-    examples: ["Alquiler mensual", "Cuota hipotecaria", "Comunidad de propietarios", "IBI", "Seguro del hogar"]
+    examples: ["Alquiler mensual", "Cuota hipotecaria", "Comunidad de propietarios", "IBI", "Seguro del hogar"],
   },
 
   {
@@ -49,17 +57,30 @@ export const CATEGORIES_CATALOG = [
     label: "Suministros",
     description: "Electricidad, gas, agua, internet y telefonía móvil",
     block: "needs",
+    factibleMin: 0,
+    factibleMax: 15,
+    scaling: {
+      floor: 1,
+      exponent: 0.95,
+      referenceIncome: 2000,
+      useOECD: false,
+      bidirectional: false,
+    },
+    lpWeight: null,
+    alerts: {
+      mild:   { threshold: 10, message: "Tu gasto en suministros roza el umbral de pobreza energética de la UE" },
+      severe: { threshold: 13, message: "Tu gasto en suministros es excesivo para cualquier perfil" },
+    },
     isAnchor: false,
     isInsurance: false,
     isDebt: false,
     healthyRange: { min: 4, max: 10 },
-    alerts: { mild: 10, severe: 13, critical: null },
     alertDirection: "above",
     referenceSource: "Directiva UE Eficiencia Energética / Umbral Boardman",
     referenceReliability: "medium",
     ineReference: 6.7,
     ineWeight: null,
-    examples: ["Factura de luz", "Factura de gas", "Agua", "Internet", "Teléfono móvil"]
+    examples: ["Factura de luz", "Factura de gas", "Agua", "Internet", "Teléfono móvil"],
   },
 
   {
@@ -67,17 +88,30 @@ export const CATEGORIES_CATALOG = [
     label: "Alimentación",
     description: "Compra en supermercado y mercado para consumo en el hogar",
     block: "needs",
+    factibleMin: 3,
+    factibleMax: 25,
+    scaling: {
+      floor: 1,
+      exponent: 0.95,
+      referenceIncome: 2000,
+      useOECD: false,
+      bidirectional: true,
+    },
+    lpWeight: null,
+    alerts: {
+      mild:   { threshold: 20, message: "Tu gasto en alimentación supera la media española del INE" },
+      severe: { threshold: 25, message: "Tu gasto en alimentación es significativamente elevado" },
+    },
     isAnchor: true,
     isInsurance: false,
     isDebt: false,
     healthyRange: { min: 8, max: 20 },
-    alerts: { mild: 20, severe: 25, critical: null },
     alertDirection: "above",
     referenceSource: "INE EPF 2024 / BLS Consumer Expenditure Survey",
     referenceReliability: "medium",
     ineReference: 13.6,
     ineWeight: null,
-    examples: ["Supermercado", "Mercado", "Carnicería", "Frutería"]
+    examples: ["Supermercado", "Mercado", "Carnicería", "Frutería"],
   },
 
   {
@@ -85,17 +119,30 @@ export const CATEGORIES_CATALOG = [
     label: "Transporte",
     description: "Transporte público, combustible, mantenimiento del vehículo y seguro",
     block: "needs",
+    factibleMin: 0,
+    factibleMax: 25,
+    scaling: {
+      floor: 1,
+      exponent: 0.75,
+      referenceIncome: 2000,
+      useOECD: false,
+      bidirectional: false,
+    },
+    lpWeight: null,
+    alerts: {
+      mild:   { threshold: 18, message: "Tu gasto en transporte supera el rango habitual" },
+      severe: { threshold: 22, message: "Tu gasto en transporte es desproporcionado para cualquier perfil" },
+    },
     isAnchor: true,
     isInsurance: false,
     isDebt: false,
     healthyRange: { min: 3, max: 18 },
-    alerts: { mild: 18, severe: 22, critical: null },
     alertDirection: "above",
     referenceSource: "INE EPF 2024 / Regla 20/4/10",
     referenceReliability: "medium",
     ineReference: 9.8,
     ineWeight: null,
-    examples: ["Abono transporte", "Gasolina", "Seguro del vehículo", "ITV y mantenimiento", "Renting o leasing"]
+    examples: ["Abono transporte", "Gasolina", "Seguro del vehículo", "ITV y mantenimiento", "Renting o leasing"],
   },
 
   {
@@ -103,17 +150,30 @@ export const CATEGORIES_CATALOG = [
     label: "Salud",
     description: "Seguro médico privado, farmacia, dental, óptica y copagos",
     block: "needs",
+    factibleMin: 0,
+    factibleMax: 15,
+    scaling: {
+      floor: 1,
+      exponent: 0.95,
+      referenceIncome: 2000,
+      useOECD: false,
+      bidirectional: false,
+    },
+    lpWeight: null,
+    alerts: {
+      mild:   { threshold: 10, message: "Tu gasto en salud es elevado" },
+      severe: { threshold: 13, message: "Tu gasto en salud supera el umbral de dificultad financiera de la OMS" },
+    },
     isAnchor: true,
     isInsurance: false,
     isDebt: false,
     healthyRange: { min: 1, max: 10 },
-    alerts: { mild: 10, severe: 13, critical: null },
     alertDirection: "above",
     referenceSource: "OMS SDG 3.8.2 / INE EPF 2024",
     referenceReliability: "high",
     ineReference: 3.4,
     ineWeight: null,
-    examples: ["Seguro médico privado", "Farmacia", "Dentista", "Óptica", "Copagos médicos"]
+    examples: ["Seguro médico privado", "Farmacia", "Dentista", "Óptica", "Copagos médicos"],
   },
 
   {
@@ -121,17 +181,30 @@ export const CATEGORIES_CATALOG = [
     label: "Educación",
     description: "Matrículas, libros, material escolar, cursos y formación continua",
     block: "needs",
+    factibleMin: 0,
+    factibleMax: 45,
+    scaling: {
+      floor: 0,
+      exponent: 0.5,
+      referenceIncome: 2000,
+      useOECD: false,
+      bidirectional: false,
+    },
+    lpWeight: null,
+    alerts: {
+      mild:   { threshold: 20, message: "Tu gasto en educación es elevado" },
+      severe: { threshold: 25, message: "Tu gasto en educación compromete otras categorías esenciales" },
+    },
     isAnchor: true,
     isInsurance: false,
     isDebt: false,
     healthyRange: { min: 0, max: 20 },
-    alerts: { mild: 20, severe: 25, critical: null },
     alertDirection: "above",
     referenceSource: "INE EPF 2024",
     referenceReliability: "very_low",
     ineReference: 1.4,
     ineWeight: null,
-    examples: ["Matrícula universitaria", "Libros de texto", "Cursos de idiomas", "Actividades extraescolares", "Máster o postgrado"]
+    examples: ["Matrícula universitaria", "Libros de texto", "Cursos de idiomas", "Actividades extraescolares", "Máster o postgrado"],
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -143,17 +216,21 @@ export const CATEGORIES_CATALOG = [
     label: "Restaurantes y bares",
     description: "Cenas fuera, cafeterías, bares y comida a domicilio",
     block: "wants",
+    factibleMin: null,
+    factibleMax: null,
+    scaling: null,
+    lpWeight: null,
+    alerts: null,
     isAnchor: false,
     isInsurance: false,
     isDebt: false,
     healthyRange: { min: 0, max: 15 },
-    alerts: { mild: null, severe: null, critical: null },
     alertDirection: "above",
     referenceSource: "INE EPF 2024 (descriptivo)",
     referenceReliability: "low",
     ineReference: 4.7,
     ineWeight: 22,
-    examples: ["Restaurantes", "Bares y cafeterías", "Delivery y comida a domicilio"]
+    examples: ["Restaurantes", "Bares y cafeterías", "Delivery y comida a domicilio"],
   },
 
   {
@@ -161,17 +238,21 @@ export const CATEGORIES_CATALOG = [
     label: "Viajes y vacaciones",
     description: "Viajes, vacaciones, hoteles y alojamiento turístico",
     block: "wants",
+    factibleMin: null,
+    factibleMax: null,
+    scaling: null,
+    lpWeight: null,
+    alerts: null,
     isAnchor: false,
     isInsurance: false,
     isDebt: false,
     healthyRange: { min: 0, max: 15 },
-    alerts: { mild: null, severe: null, critical: null },
     alertDirection: "above",
     referenceSource: "INE EPF 2024 (descriptivo)",
     referenceReliability: "very_low",
     ineReference: 3.8,
     ineWeight: 17,
-    examples: ["Vuelos", "Hoteles", "Apartamentos turísticos", "Paquetes vacacionales"]
+    examples: ["Vuelos", "Hoteles", "Apartamentos turísticos", "Paquetes vacacionales"],
   },
 
   {
@@ -179,17 +260,21 @@ export const CATEGORIES_CATALOG = [
     label: "Ropa y calzado",
     description: "Ropa, calzado y complementos para toda la familia",
     block: "wants",
+    factibleMin: null,
+    factibleMax: null,
+    scaling: null,
+    lpWeight: null,
+    alerts: null,
     isAnchor: false,
     isInsurance: false,
     isDebt: false,
     healthyRange: { min: 0, max: 10 },
-    alerts: { mild: null, severe: null, critical: null },
     alertDirection: "above",
     referenceSource: "INE EPF 2024 (descriptivo)",
     referenceReliability: "low",
     ineReference: 3.4,
     ineWeight: 16,
-    examples: ["Ropa", "Calzado", "Accesorios", "Ropa deportiva"]
+    examples: ["Ropa", "Calzado", "Accesorios", "Ropa deportiva"],
   },
 
   {
@@ -197,17 +282,21 @@ export const CATEGORIES_CATALOG = [
     label: "Belleza y cuidado personal",
     description: "Peluquería, cosmética, perfumería y cuidado personal",
     block: "wants",
+    factibleMin: null,
+    factibleMax: null,
+    scaling: null,
+    lpWeight: null,
+    alerts: null,
     isAnchor: false,
     isInsurance: false,
     isDebt: false,
     healthyRange: { min: 0, max: 10 },
-    alerts: { mild: null, severe: null, critical: null },
     alertDirection: "above",
     referenceSource: "INE EPF 2024 (descriptivo)",
     referenceReliability: "very_low",
     ineReference: 3.1,
     ineWeight: 14,
-    examples: ["Peluquería", "Cosmética y perfumería", "Productos de higiene premium"]
+    examples: ["Peluquería", "Cosmética y perfumería", "Productos de higiene premium"],
   },
 
   {
@@ -215,17 +304,21 @@ export const CATEGORIES_CATALOG = [
     label: "Ocio y entretenimiento",
     description: "Cine, teatro, conciertos, eventos y actividades culturales",
     block: "wants",
+    factibleMin: null,
+    factibleMax: null,
+    scaling: null,
+    lpWeight: null,
+    alerts: null,
     isAnchor: false,
     isInsurance: false,
     isDebt: false,
     healthyRange: { min: 0, max: 10 },
-    alerts: { mild: null, severe: null, critical: null },
     alertDirection: "above",
     referenceSource: "INE EPF 2024 (descriptivo)",
     referenceReliability: "low",
     ineReference: 2.2,
     ineWeight: 10,
-    examples: ["Cine y teatro", "Conciertos", "Museos", "Parques de atracciones"]
+    examples: ["Cine y teatro", "Conciertos", "Museos", "Parques de atracciones"],
   },
 
   {
@@ -233,17 +326,21 @@ export const CATEGORIES_CATALOG = [
     label: "Hobbies y deporte",
     description: "Equipamiento deportivo, actividades recreativas y aficiones",
     block: "wants",
+    factibleMin: null,
+    factibleMax: null,
+    scaling: null,
+    lpWeight: null,
+    alerts: null,
     isAnchor: false,
     isInsurance: false,
     isDebt: false,
     healthyRange: { min: 0, max: 10 },
-    alerts: { mild: null, severe: null, critical: null },
     alertDirection: "above",
     referenceSource: "INE EPF 2024 (descriptivo)",
     referenceReliability: "very_low",
     ineReference: 2.2,
     ineWeight: 10,
-    examples: ["Cuota del gimnasio", "Material deportivo", "Equipamiento para hobbies"]
+    examples: ["Cuota del gimnasio", "Material deportivo", "Equipamiento para hobbies"],
   },
 
   {
@@ -251,17 +348,21 @@ export const CATEGORIES_CATALOG = [
     label: "Suscripciones digitales",
     description: "Streaming, aplicaciones, software y servicios digitales",
     block: "wants",
+    factibleMin: null,
+    factibleMax: null,
+    scaling: null,
+    lpWeight: null,
+    alerts: null,
     isAnchor: false,
     isInsurance: false,
     isDebt: false,
     healthyRange: { min: 0, max: 5 },
-    alerts: { mild: null, severe: null, critical: null },
     alertDirection: "above",
     referenceSource: "INE EPF 2024 / Deloitte Digital Media Trends (estimado)",
     referenceReliability: "very_low",
     ineReference: 1.3,
     ineWeight: 6,
-    examples: ["Netflix, Spotify, Disney+", "Aplicaciones y software", "Servicios en la nube"]
+    examples: ["Netflix, Spotify, Disney+", "Aplicaciones y software", "Servicios en la nube"],
   },
 
   {
@@ -269,17 +370,21 @@ export const CATEGORIES_CATALOG = [
     label: "Regalos y donaciones",
     description: "Regalos, donaciones a ONGs y ayuda a personas del entorno",
     block: "wants",
+    factibleMin: null,
+    factibleMax: null,
+    scaling: null,
+    lpWeight: null,
+    alerts: null,
     isAnchor: false,
     isInsurance: false,
     isDebt: false,
     healthyRange: { min: 0, max: 5 },
-    alerts: { mild: null, severe: null, critical: null },
     alertDirection: "above",
     referenceSource: "INE EPF 2024 / Ley 49/2002 (estimado)",
     referenceReliability: "low",
     ineReference: 1.3,
     ineWeight: 6,
-    examples: ["Regalos de cumpleaños y navidad", "Donaciones a ONGs", "Ayuda a familia o amigos"]
+    examples: ["Regalos de cumpleaños y navidad", "Donaciones a ONGs", "Ayuda a familia o amigos"],
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -291,17 +396,27 @@ export const CATEGORIES_CATALOG = [
     label: "Seguro de vida",
     description: "Prima mensual del seguro de vida o seguro vinculado a hipoteca",
     block: "savings",
+    factibleMin: 0,
+    factibleMax: 1.5,
+    scaling: {
+      floor: 0.3,
+      exponent: 0.95,
+      referenceIncome: 2000,
+      useOECD: false,
+      bidirectional: false,
+    },
+    lpWeight: 30,
+    alerts: null,
     isAnchor: false,
     isInsurance: true,
     isDebt: false,
     healthyRange: { min: 0.5, max: 3 },
-    alerts: { mild: null, severe: null, critical: null },
     alertDirection: "above",
     referenceSource: "Charles Schwab / Ramsey Solutions",
     referenceReliability: "low",
     ineReference: null,
     ineWeight: null,
-    examples: ["Seguro de vida temporal", "Seguro de vida vinculado a hipoteca"]
+    examples: ["Seguro de vida temporal", "Seguro de vida vinculado a hipoteca"],
   },
 
   {
@@ -309,17 +424,21 @@ export const CATEGORIES_CATALOG = [
     label: "Fondo de emergencia",
     description: "Aportación mensual para alcanzar o mantener el colchón de emergencias",
     block: "savings",
+    factibleMin: 0,
+    factibleMax: 1,
+    scaling: null,
+    lpWeight: 50,
+    alerts: null,
     isAnchor: true,
     isInsurance: false,
     isDebt: false,
     healthyRange: { min: 1, max: 10 },
-    alerts: { mild: null, severe: null, critical: null },
     alertDirection: "below",
     referenceSource: "Banco de España / Finanzas para Todos / OCDE",
     referenceReliability: "very_high",
     ineReference: null,
     ineWeight: null,
-    examples: ["Cuenta de ahorro líquida", "Depósito a la vista"]
+    examples: ["Cuenta de ahorro líquida", "Depósito a la vista"],
   },
 
   {
@@ -327,17 +446,21 @@ export const CATEGORIES_CATALOG = [
     label: "Ahorro a corto plazo",
     description: "Ahorro para objetivos en menos de 2 años: vacaciones, electrodomésticos, reparaciones",
     block: "savings",
+    factibleMin: 0,
+    factibleMax: 6,
+    scaling: null,
+    lpWeight: 15,
+    alerts: null,
     isAnchor: false,
     isInsurance: false,
     isDebt: false,
     healthyRange: { min: 2, max: 6 },
-    alerts: { mild: null, severe: null, critical: null },
     alertDirection: "below",
     referenceSource: "Fidelity 50/15/5",
     referenceReliability: "medium",
     ineReference: null,
     ineWeight: null,
-    examples: ["Ahorro para vacaciones", "Fondo para reparaciones del hogar", "Electrónica y electrodomésticos"]
+    examples: ["Ahorro para vacaciones", "Fondo para reparaciones del hogar", "Electrónica y electrodomésticos"],
   },
 
   {
@@ -345,17 +468,21 @@ export const CATEGORIES_CATALOG = [
     label: "Ahorro a largo plazo",
     description: "Ahorro para objetivos a más de 2 años, principalmente entrada de vivienda",
     block: "savings",
+    factibleMin: 0,
+    factibleMax: 12,
+    scaling: null,
+    lpWeight: 20,
+    alerts: null,
     isAnchor: true,
     isInsurance: false,
     isDebt: false,
     healthyRange: { min: 0, max: 15 },
-    alerts: { mild: null, severe: null, critical: null },
     alertDirection: "below",
     referenceSource: "Banco de España (normativa LTV 80%)",
     referenceReliability: "medium_high",
     ineReference: null,
     ineWeight: null,
-    examples: ["Ahorro para entrada de vivienda", "Cuenta ahorro a largo plazo"]
+    examples: ["Ahorro para entrada de vivienda", "Cuenta ahorro a largo plazo"],
   },
 
   {
@@ -363,17 +490,21 @@ export const CATEGORIES_CATALOG = [
     label: "Inversión y jubilación",
     description: "Aportaciones a planes de pensiones, fondos de inversión y otros vehículos a largo plazo",
     block: "savings",
+    factibleMin: 0,
+    factibleMax: 15,
+    scaling: null,
+    lpWeight: 40,
+    alerts: null,
     isAnchor: true,
     isInsurance: false,
     isDebt: false,
     healthyRange: { min: 4, max: 15 },
-    alerts: { mild: null, severe: null, critical: null },
     alertDirection: "below",
     referenceSource: "OCDE Pensions at a Glance 2025 / Wade Pfau (JFP 2011)",
     referenceReliability: "medium_high",
     ineReference: null,
     ineWeight: null,
-    examples: ["Plan de pensiones", "Fondo de inversión indexado", "ETFs"]
+    examples: ["Plan de pensiones", "Fondo de inversión indexado", "ETFs"],
   },
 
   {
@@ -381,38 +512,31 @@ export const CATEGORIES_CATALOG = [
     label: "Amortización extra de deuda",
     description: "Pagos adicionales voluntarios para reducir deuda más rápido de lo pactado",
     block: "savings",
+    factibleMin: 0,
+    factibleMax: 0,
+    scaling: null,
+    lpWeight: 10,
+    alerts: null,
     isAnchor: true,
     isInsurance: false,
     isDebt: true,
     healthyRange: { min: 0, max: 5 },
-    alerts: { mild: null, severe: null, critical: null },
     alertDirection: "above",
     referenceSource: "Bogleheads (principio financiero)",
     referenceReliability: "medium",
     ineReference: null,
     ineWeight: null,
-    examples: ["Amortización anticipada de hipoteca", "Pago adelantado de préstamo personal"]
-  }
+    examples: ["Amortización anticipada de hipoteca", "Pago adelantado de préstamo personal"],
+  },
 
 ];
 
 // ─── Funciones de acceso ──────────────────────────────────────────────────────
 
-/**
- * Obtiene una categoría por su ID. Devuelve null si no existe.
- * @param {string} id
- * @returns {object|null}
- */
 export function getCategoryById(id) {
   return CATEGORIES_CATALOG.find((c) => c.id === id) || null;
 }
 
-/**
- * Hidrata un array de IDs devolviendo los objetos completos del catálogo.
- * Los IDs desconocidos se omiten silenciosamente.
- * @param {string[]} ids
- * @returns {object[]}
- */
 export function getCategoriesByIds(ids) {
   return ids.map((id) => CATEGORIES_CATALOG.find((c) => c.id === id)).filter(Boolean);
 }

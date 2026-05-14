@@ -10,82 +10,109 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 /**
  * Subcomponente del formulario separado para mantener la compatibilidad con Suspense.
  */
+const HELP_TEXT = {
+  monthly: "Ingreso neto mensual tras impuestos. Si recibes pagas extra, usa el modo anual.",
+  annual:  "Total neto recibido en el año. Se convierte automáticamente a mensual.",
+};
+
 function CalculatorForm() {
   const router = useRouter();
 
-  // Estado para el ingreso mensual
-  const [income, setIncome] = useState("");
+  const [income, setIncome]         = useState("");
+  const [incomeMode, setIncomeMode] = useState("monthly"); // "monthly" | "annual"
+  const [error, setError]           = useState("");
 
-  // Estado para errores de validación
-  const [error, setError] = useState("");
-
-  /**
-   * Maneja el cambio en el input de ingreso
-   * Limpia el error si existe
-   */
   const handleIncomeChange = (e) => {
     setIncome(e.target.value);
-    if (error) {
-      setError(""); // Limpiar error al empezar a escribir
-    }
+    if (error) setError("");
   };
 
-  /**
-   * Valida y procesa el formulario
-   * Navega a la página de resultados si es válido
-   */
+  const handleModeChange = (mode) => {
+    setIncomeMode(mode);
+    if (error) setError("");
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // Convertir a número
-    const incomeNumber = parseFloat(income);
+    const raw = parseFloat(income);
 
-    // Validación básica
-    if (!income || isNaN(incomeNumber)) {
+    if (!income || isNaN(raw)) {
       setError("Por favor, introduce un ingreso válido");
       return;
     }
-
-    if (incomeNumber <= 0) {
+    if (raw <= 0) {
       setError("El ingreso debe ser mayor que 0");
       return;
     }
 
-    router.push(`/results?income=${incomeNumber}`);
+    const monthlyIncome = incomeMode === "annual" ? raw / 12 : raw;
+    router.push(`/results?income=${monthlyIncome}`);
   };
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-8">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Ingreso Mensual</CardTitle>
+          <CardTitle>Tu ingreso</CardTitle>
           <CardDescription>
-            Introduce tu ingreso mensual para calcular la distribución ideal
+            Introduce tu ingreso para calcular la distribución ideal
           </CardDescription>
         </CardHeader>
 
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Input de ingreso */}
             <div className="space-y-2">
-              <Label htmlFor="income">Ingreso mensual (€)</Label>
+              {/* Fila label + toggle */}
+              <div className="flex items-center justify-between">
+                <Label htmlFor="income">
+                  {incomeMode === "monthly" ? "Ingreso mensual (€)" : "Ingreso anual (€)"}
+                </Label>
+                <div className="flex rounded-md border overflow-hidden text-xs">
+                  <button
+                    type="button"
+                    onClick={() => handleModeChange("monthly")}
+                    className={`px-3 py-1 transition-colors ${
+                      incomeMode === "monthly"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-background text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    Mensual
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleModeChange("annual")}
+                    className={`px-3 py-1 transition-colors border-l ${
+                      incomeMode === "annual"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-background text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    Anual
+                  </button>
+                </div>
+              </div>
+
               <Input
                 id="income"
                 type="number"
-                placeholder="2000"
+                placeholder={incomeMode === "monthly" ? "2000" : "24000"}
                 value={income}
                 onChange={handleIncomeChange}
                 min="0"
                 step="0.01"
                 className={error ? "border-red-500" : ""}
               />
-              {/* Mostrar error si existe */}
+
+              {/* Texto de ayuda contextual */}
+              <p className="text-xs text-muted-foreground">{HELP_TEXT[incomeMode]}</p>
+
               {error && (
                 <p className="text-sm text-red-500">{error}</p>
               )}
             </div>
 
-            {/* Botones */}
             <div className="flex gap-4 pt-4">
               <Button
                 type="button"

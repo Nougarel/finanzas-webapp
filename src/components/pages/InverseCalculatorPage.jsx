@@ -1,248 +1,235 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getFinancialModel } from "@/lib/models/financialModels";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { CATEGORIES_CATALOG } from "@/lib/models/categories";
 
-/**
- * Devuelve las claves de los campos activos según el modo seleccionado.
- * En auto solo los bloques de gasto; en manual todos.
- */
-function getActiveBlocks(model, savingsMode) {
-  if (savingsMode === "auto") {
-    return model.blocks.filter((b) => b.type === "expense");
-  }
-  return model.blocks;
+const BLOCK_META = {
+  needs:   { label: "Necesidades",  defaultOpen: true },
+  wants:   { label: "Deseos",       defaultOpen: false },
+  savings: { label: "Ahorro",       defaultOpen: false },
+};
+
+const BLOCK_ORDER = ["needs", "wants", "savings"];
+
+function fmt(n) {
+  return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(n);
 }
 
-/**
- * Subcomponente que contiene el formulario del cálculo inverso.
- * Separado para poder usar useSearchParams dentro de Suspense,
- * requisito de Next.js App Router en Client Components.
- */
+// ─── Nota contextual por categoría según el perfil ───────────────────────────
+function getCategoryNote(cat, profile) {
+  if (!profile) return cat.description;
+
+  switch (cat.id) {
+    case "housing": {
+      if (profile.housingStatus === "owned" || profile.housingStatus === "family")
+        return "Gastos de mantenimiento (comunidad, IBI, reparaciones). Si quieres ahorrar para comprar una vivienda, usa 'Ahorro a largo plazo' o cambia tu perfil a 'Hipoteca'.";
+      if (profile.housingStatus === "rent")
+        return "Tu alquiler mensual incluyendo comunidad y gastos asociados.";
+      if (profile.housingStatus === "mortgage")
+        return "Cuota hipotecaria mensual incluyendo comunidad e IBI.";
+      return cat.description;
+    }
+    case "transport": {
+      if (profile.vehicleStatus === "none")
+        return "Transporte público, taxi y desplazamientos. Si planeas adquirir un vehículo, cambia tu perfil a 'Coche propio' o 'Financiado'.";
+      if (profile.vehicleStatus === "owned_paid")
+        return "Combustible, seguro, mantenimiento y parking.";
+      if (profile.vehicleStatus === "financed" || profile.vehicleStatus === "leasing")
+        return "Cuota del vehículo, combustible, seguro y mantenimiento.";
+      return cat.description;
+    }
+    case "groceries":
+      return "Compra en supermercado y mercado para consumo del hogar.";
+    case "utilities":
+      return "Electricidad, gas, agua, internet y telefonía.";
+    case "health": {
+      if (profile.privateHealthInsurance === "none")
+        return "Copagos, farmacia, óptica y dental. Si planeas contratar seguro privado, actualiza tu perfil.";
+      return "Prima del seguro más copagos, farmacia, óptica y dental.";
+    }
+    case "education": {
+      const adultDependents = profile.hasPartner ? 1 : 0;
+      const hasChildren = (profile.dependents ?? 0) > adultDependents;
+      const hasOwnEdu = profile.ownEducation && profile.ownEducation !== "none";
+      if (hasOwnEdu && hasChildren) return "Tu formación más la de tus hijos si los tienes.";
+      if (hasOwnEdu) return "Tu formación continua, máster, postgrado o cursos.";
+      if (hasChildren) return "Matrículas, material escolar y formación de los hijos.";
+      return "Cursos o formación continua que planees realizar. Si planeas tener hijos, actualiza tu perfil con dependientes.";
+    }
+    case "long_term_savings":
+      return "Importe mensual que deseas destinar a esta categoría de ahorro. Incluye ahorro para entrada de vivienda, vehículo u otros objetivos a más de 2 años.";
+    default:
+      if (cat.block === "wants") return "Importe mensual que deseas destinar a esta categoría.";
+      if (cat.block === "savings") return "Importe mensual que deseas destinar a esta categoría de ahorro.";
+      return cat.description;
+  }
+}
+
 function InverseCalculatorForm() {
-  const router = useRouter();
+  const router      = useRouter();
   const searchParams = useSearchParams();
 
-  // Leer el modelo elegido en el paso anterior — fallback a "50_30_20" si no viene en la URL
-  const modelId = searchParams.get("model") || "50_30_20";
-  const model = getFinancialModel(modelId);
+  const [profile, setProfile] = useState(null);
+  const [profileMissing, setProfileMissing] = useState(false);
 
-  // Modo de ahorro: "auto" (los ahorros se calculan solos) o "manual" (el usuario los introduce)
-  const [savingsMode, setSavingsMode] = useState("auto");
+  // amounts: { [categoryId]: string }  — cadena para permitir campo vacío
+  const [amounts, setAmounts] = useState(() => {
+    const raw = searchParams.get("amounts");
+    if (raw) {
+      try { return JSON.parse(decodeURIComponent(raw)); } catch { /* ignore */ }
+    }
+    return {};
+  });
 
-  // Un campo vacío por bloque — se reinicia al cambiar de modo para evitar valores huérfanos
-  const [amounts, setAmounts] = useState(() =>
-    model ? Object.fromEntries(model.blocks.map((b) => [b.key, ""])) : {}
-  );
+  // touched: Set de categoryIds que el usuario ha escrito algo (incluso "0")
+  const touchedRef = useRef(new Set());
 
-  // Un mensaje de error individual por campo
-  const [errors, setErrors] = useState(() =>
-    model ? Object.fromEntries(model.blocks.map((b) => [b.key, ""])) : {}
-  );
+  const [openBlocks, setOpenBlocks] = useState({ needs: true, wants: false, savings: false });
 
-  // Mostrar error si el modelo no existe en el registro
-  if (!model) {
+  useEffect(() => {
+    const stored = localStorage.getItem("userProfile");
+    if (!stored) { setProfileMissing(true); return; }
+    try { setProfile(JSON.parse(stored)); }
+    catch { setProfileMissing(true); }
+  }, []);
+
+  if (profileMissing) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center p-8">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle>Error</CardTitle>
-            <CardDescription>Modelo no encontrado</CardDescription>
+            <CardTitle>Perfil no encontrado</CardTitle>
+            <CardDescription>Necesitas completar tu perfil antes de usar el calculador inverso.</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground mb-4">
-              El modelo "{modelId}" no existe. Por favor, selecciona un modelo válido.
-            </p>
-            <Button onClick={() => router.push("/profile")}>
-              Volver a la selección
-            </Button>
+            <Button onClick={() => router.push("/profile")}>Completar perfil</Button>
           </CardContent>
         </Card>
       </main>
     );
   }
 
-  /**
-   * Cambia el modo y reinicia todos los campos para evitar valores inconsistentes
-   */
-  const handleModeChange = (newMode) => {
-    setSavingsMode(newMode);
-    setAmounts(Object.fromEntries(model.blocks.map((b) => [b.key, ""])));
-    setErrors(Object.fromEntries(model.blocks.map((b) => [b.key, ""])));
+  const handleChange = (catId, value) => {
+    touchedRef.current.add(catId);
+    setAmounts(prev => ({ ...prev, [catId]: value }));
   };
 
-  /**
-   * Actualiza el valor de un campo y limpia su error si lo tenía
-   */
-  const handleAmountChange = (key, value) => {
-    setAmounts((prev) => ({ ...prev, [key]: value }));
-    if (errors[key]) {
-      setErrors((prev) => ({ ...prev, [key]: "" }));
-    }
-  };
+  const totalSpecified = Object.values(amounts).reduce((s, v) => {
+    const n = parseFloat(v);
+    return s + (isNaN(n) ? 0 : n);
+  }, 0);
 
-  /**
-   * Valida los campos activos y navega a los resultados.
-   * En modo auto solo se validan y envían los bloques de gasto.
-   * Los importes se pasan serializados como JSON en la URL.
-   */
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    const activeBlocks = getActiveBlocks(model, savingsMode);
-    const newErrors = {};
-    let hasErrors = false;
-
-    for (const block of activeBlocks) {
-      const value = parseFloat(amounts[block.key]);
-
-      if (!amounts[block.key] || isNaN(value)) {
-        newErrors[block.key] = `Introduce un importe válido para ${block.label}`;
-        hasErrors = true;
-      } else if (value <= 0) {
-        newErrors[block.key] = `El importe de ${block.label} debe ser mayor que 0`;
-        hasErrors = true;
-      } else {
-        newErrors[block.key] = "";
-      }
+    // Solo las categorías tocadas con valor > 0
+    const specifiedAmounts = {};
+    for (const [catId, raw] of Object.entries(amounts)) {
+      if (!touchedRef.current.has(catId)) continue;
+      const n = parseFloat(raw);
+      if (!isNaN(n) && n > 0) specifiedAmounts[catId] = n;
     }
 
-    if (hasErrors) {
-      setErrors(newErrors);
-      return;
-    }
-
-    // En modo auto, solo los bloques de gasto van en la URL
-    const desiredAmounts = Object.fromEntries(
-      activeBlocks.map((block) => [block.key, parseFloat(amounts[block.key])])
-    );
-
-    const amountsParam = encodeURIComponent(JSON.stringify(desiredAmounts));
-    router.push(`/inverse-results?model=${modelId}&amounts=${amountsParam}&mode=${savingsMode}`);
+    const amountsParam = encodeURIComponent(JSON.stringify(specifiedAmounts));
+    router.push(`/inverse-results?amounts=${amountsParam}`);
   };
 
-  const activeBlocks = getActiveBlocks(model, savingsMode);
-  const savingsBlocks = model.blocks.filter((b) => b.type === "savings");
+  const toggleBlock = (block) =>
+    setOpenBlocks(prev => ({ ...prev, [block]: !prev[block] }));
+
+  const catsByBlock = {};
+  for (const block of BLOCK_ORDER) {
+    catsByBlock[block] = CATEGORIES_CATALOG.filter(c => c.block === block);
+  }
+
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-8">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>¿Cuánto quieres en cada bloque?</CardTitle>
-          <CardDescription>
-            Indica el importe mensual deseado para cada categoría del modelo {model.name}
-          </CardDescription>
-        </CardHeader>
+    <main className="flex min-h-screen flex-col items-center py-12 px-4">
+      <div className="w-full max-w-lg space-y-6">
 
-        <CardContent>
-          {/* Selector de modo — dos botones estilo tab */}
-          <div className="mb-6 space-y-3">
-            <p className="text-sm font-medium">¿Cómo quieres calcular el ahorro?</p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => handleModeChange("auto")}
-                className={`rounded-lg border p-3 text-left transition-colors ${
-                  savingsMode === "auto"
-                    ? "border-primary bg-primary/5 text-primary"
-                    : "border-border hover:border-primary/50"
-                }`}
-              >
-                <p className="text-sm font-semibold">Automático</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Solo introduces tus gastos; el ahorro se calcula solo
-                </p>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleModeChange("manual")}
-                className={`rounded-lg border p-3 text-left transition-colors ${
-                  savingsMode === "manual"
-                    ? "border-primary bg-primary/5 text-primary"
-                    : "border-border hover:border-primary/50"
-                }`}
-              >
-                <p className="text-sm font-semibold">Manual</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Introduces tú mismo el importe de cada bloque, incluido el ahorro
-                </p>
-              </button>
-            </div>
-          </div>
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold tracking-tight">Calculador inverso</h1>
+          <p className="text-sm text-muted-foreground">
+            Introduce los importes mensuales que quieres destinar a cada categoría.
+            Deja en blanco las que quieres que se calculen automáticamente.
+          </p>
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Campos activos según el modo */}
-            {activeBlocks.map((block) => (
-              <div key={block.key} className="space-y-1">
-                <Label htmlFor={block.key}>{block.label} (€)</Label>
-                <Input
-                  id={block.key}
-                  type="number"
-                  placeholder="0"
-                  value={amounts[block.key]}
-                  onChange={(e) => handleAmountChange(block.key, e.target.value)}
-                  min="0"
-                  step="0.01"
-                  className={errors[block.key] ? "border-red-500" : ""}
-                />
-                <p className="text-xs text-muted-foreground">{block.description}</p>
-                {errors[block.key] && (
-                  <p className="text-sm text-red-500">{errors[block.key]}</p>
+        <form onSubmit={handleSubmit} className="space-y-3">
+
+          {BLOCK_ORDER.map(block => {
+            const meta = BLOCK_META[block];
+            const cats = catsByBlock[block];
+            const isOpen = openBlocks[block];
+
+            return (
+              <Card key={block}>
+                <button
+                  type="button"
+                  onClick={() => toggleBlock(block)}
+                  className="w-full flex items-center justify-between px-6 py-4 text-left"
+                >
+                  <span className="font-semibold">{meta.label}</span>
+                  {isOpen ? <ChevronUp className="size-4 text-muted-foreground" /> : <ChevronDown className="size-4 text-muted-foreground" />}
+                </button>
+
+                {isOpen && (
+                  <CardContent className="pt-0 space-y-4">
+                    {cats.map(cat => (
+                      <div key={cat.id} className="space-y-1">
+                        <Label htmlFor={cat.id} className="text-sm font-medium">{cat.label}</Label>
+                        <Input
+                          id={cat.id}
+                          type="number"
+                          min="0"
+                          step="1"
+                          placeholder="Automático"
+                          value={amounts[cat.id] ?? ""}
+                          onChange={e => handleChange(cat.id, e.target.value)}
+                          className="h-9"
+                        />
+                        <p className="text-xs text-muted-foreground">{getCategoryNote(cat, profile)}</p>
+                      </div>
+                    ))}
+                  </CardContent>
                 )}
-              </div>
-            ))}
+              </Card>
+            );
+          })}
 
-            {/* En modo auto, mostrar los bloques de ahorro como solo lectura */}
-            {savingsMode === "auto" && savingsBlocks.length > 0 && (
-              <div className="space-y-3 rounded-lg bg-muted/50 border border-dashed p-4">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Se calculará automáticamente
-                </p>
-                {savingsBlocks.map((block) => (
-                  <div key={block.key} className="space-y-0.5">
-                    <p className="text-sm font-medium">{block.label}</p>
-                    <p className="text-xs text-muted-foreground">{block.description}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Botones */}
-            <div className="flex gap-4 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => router.push("/profile")}
-                className="flex-1"
-              >
-                Volver
-              </Button>
-              <Button type="submit" className="flex-1">
-                Calcular
-              </Button>
+          {/* Total en tiempo real */}
+          {totalSpecified > 0 && (
+            <div className="flex items-center justify-between rounded-lg bg-muted/50 px-4 py-3 text-sm">
+              <span className="text-muted-foreground">Total especificado</span>
+              <span className="font-semibold">{fmt(totalSpecified)}</span>
             </div>
-          </form>
-        </CardContent>
-      </Card>
+          )}
+
+          <div className="flex gap-3 pt-1">
+            <Button type="button" variant="outline" onClick={() => router.push("/profile")} className="flex-1">
+              Volver
+            </Button>
+            <Button type="submit" className="flex-1" disabled={!profile}>
+              Calcular ingreso
+            </Button>
+          </div>
+        </form>
+      </div>
     </main>
   );
 }
 
-/**
- * Componente de la página del formulario de cálculo inverso.
- * Envuelve InverseCalculatorForm en Suspense, requerido por Next.js cuando
- * un Client Component usa useSearchParams().
- */
 export default function InverseCalculatorPage() {
   return (
     <Suspense fallback={
       <main className="flex min-h-screen items-center justify-center">
-        <p>Cargando...</p>
+        <p className="text-muted-foreground">Cargando...</p>
       </main>
     }>
       <InverseCalculatorForm />

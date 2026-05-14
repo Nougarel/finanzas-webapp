@@ -49,7 +49,7 @@ export default function HomePage() {
             </CardHeader>
             <CardContent className="flex-1 flex items-end">
               <Button asChild variant="outline" className="w-full">
-                <Link href="/profile">
+                <Link href="/profile?mode=inverse">
                   Comenzar
                 </Link>
               </Button>

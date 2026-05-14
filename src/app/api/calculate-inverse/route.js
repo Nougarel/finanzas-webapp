@@ -1,30 +1,23 @@
-import { NextResponse } from "next/server";
-import { calculateDistribution } from "@/lib/calculators/distributionCalculator";
-import { getFinancialModel } from "@/lib/models/financialModels";
+import { NextResponse } from 'next/server';
+import { calculateInverse } from '@/lib/calculators/inverseCalculator';
 
 export async function POST(request) {
   try {
-    const { modelId, desiredAmounts, mode } = await request.json();
+    const { profile, specifiedAmounts } = await request.json();
 
-    const model = getFinancialModel(modelId);
-    if (!model) {
+    if (!profile || !specifiedAmounts) {
       return NextResponse.json(
-        { error: `Modelo "${modelId}" no encontrado` },
+        { error: 'Se requieren los campos profile y specifiedAmounts' },
         { status: 400 }
       );
     }
 
-    const result = calculateDistribution({
-      calculationType: "inverse",
-      desiredAmounts,
-      model,
-      mode: mode || "manual"
-    });
+    const result = calculateInverse(profile, specifiedAmounts);
 
     return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json(
-      { error: error.message || "Error interno en el cálculo" },
+      { error: error.message || 'Error interno en el cálculo' },
       { status: 500 }
     );
   }
