@@ -59,33 +59,26 @@ function ResultsContent() {
   const searchParams = useSearchParams();
 
   const [viewMode, setViewMode] = useState("detailed");
-  const [profile, setProfile] = useState(null);
-  const [profileMissing, setProfileMissing] = useState(false);
+  const [profile] = useState(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const s = localStorage.getItem("userProfile");
+      return s ? JSON.parse(s) : null;
+    } catch { return null; }
+  });
+  const profileMissing = profile === null;
   const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !!localStorage.getItem("userProfile");
+  });
   const [calcError, setCalcError] = useState(null);
 
   const incomeParam = searchParams.get("income");
   const income = parseFloat(incomeParam);
 
   useEffect(() => {
-    const stored = localStorage.getItem("userProfile");
-    if (stored) {
-      try {
-        setProfile(JSON.parse(stored));
-      } catch {
-        setProfileMissing(true);
-      }
-    } else {
-      setProfileMissing(true);
-    }
-  }, []);
-
-  useEffect(() => {
     if (!profile || !income || isNaN(income) || income <= 0) return;
-
-    setLoading(true);
-    setCalcError(null);
 
     fetch("/api/calculate", {
       method: "POST",
@@ -120,14 +113,6 @@ function ResultsContent() {
             <Button onClick={() => router.push("/calculator")}>Volver al formulario</Button>
           </CardContent>
         </Card>
-      </main>
-    );
-  }
-
-  if (!profile && !profileMissing) {
-    return (
-      <main className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground">Cargando tu perfil...</p>
       </main>
     );
   }

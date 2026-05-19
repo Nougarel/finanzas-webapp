@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect, useRef, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { CATEGORIES_CATALOG } from "@/lib/models/categories";
+import { CATEGORIES_UI } from "@/lib/models/categories";
 
 const BLOCK_META = {
   needs:   { label: "Necesidades",  defaultOpen: true },
@@ -71,33 +71,42 @@ function getCategoryNote(cat, profile) {
   }
 }
 
-function InverseCalculatorForm() {
-  const router      = useRouter();
-  const searchParams = useSearchParams();
+export default function InverseCalculatorPage() {
+  const router = useRouter();
 
-  const [profile, setProfile] = useState(null);
-  const [profileMissing, setProfileMissing] = useState(false);
-
-  // amounts: { [categoryId]: string }  — cadena para permitir campo vacío
-  const [amounts, setAmounts] = useState(() => {
-    const raw = searchParams.get("amounts");
-    if (raw) {
-      try { return JSON.parse(decodeURIComponent(raw)); } catch { /* ignore */ }
-    }
-    return {};
+  const [profile] = useState(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const s = localStorage.getItem("userProfile");
+      return s ? JSON.parse(s) : null;
+    } catch { return null; }
   });
+  const profileMissing = profile === null;
 
   // touched: Set de categoryIds que el usuario ha escrito algo (incluso "0")
-  const touchedRef = useRef(new Set());
+  // Inicializado desde localStorage si hay importes previos guardados
+  const touchedRef = useRef((() => {
+    if (typeof window === "undefined") return new Set();
+    try {
+      const s = localStorage.getItem("specifiedAmounts");
+      if (!s) return new Set();
+      return new Set(Object.keys(JSON.parse(s)));
+    } catch { return new Set(); }
+  })());
+
+  // amounts: { [categoryId]: string }  — cadena para permitir campo vacío
+  // Rehidratados desde localStorage si el usuario vuelve desde la pantalla de resultados
+  const [amounts, setAmounts] = useState(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      const s = localStorage.getItem("specifiedAmounts");
+      if (!s) return {};
+      const parsed = JSON.parse(s);
+      return Object.fromEntries(Object.entries(parsed).map(([k, v]) => [k, String(v)]));
+    } catch { return {}; }
+  });
 
   const [openBlocks, setOpenBlocks] = useState({ needs: true, wants: false, savings: false });
-
-  useEffect(() => {
-    const stored = localStorage.getItem("userProfile");
-    if (!stored) { setProfileMissing(true); return; }
-    try { setProfile(JSON.parse(stored)); }
-    catch { setProfileMissing(true); }
-  }, []);
 
   if (profileMissing) {
     return (
@@ -136,8 +145,10 @@ function InverseCalculatorForm() {
       if (!isNaN(n) && n > 0) specifiedAmounts[catId] = n;
     }
 
-    const amountsParam = encodeURIComponent(JSON.stringify(specifiedAmounts));
-    router.push(`/inverse-results?amounts=${amountsParam}`);
+    // Persistimos los importes deseados en localStorage para mantener la URL limpia
+    // y permitir rehidratar el formulario al volver desde los resultados.
+    localStorage.setItem("specifiedAmounts", JSON.stringify(specifiedAmounts));
+    router.push("/inverse-results");
   };
 
   const toggleBlock = (block) =>
@@ -145,7 +156,7 @@ function InverseCalculatorForm() {
 
   const catsByBlock = {};
   for (const block of BLOCK_ORDER) {
-    catsByBlock[block] = CATEGORIES_CATALOG.filter(c => c.block === block);
+    catsByBlock[block] = CATEGORIES_UI.filter(c => c.block === block);
   }
 
 
@@ -222,17 +233,5 @@ function InverseCalculatorForm() {
         </form>
       </div>
     </main>
-  );
-}
-
-export default function InverseCalculatorPage() {
-  return (
-    <Suspense fallback={
-      <main className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground">Cargando...</p>
-      </main>
-    }>
-      <InverseCalculatorForm />
-    </Suspense>
   );
 }

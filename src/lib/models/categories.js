@@ -531,12 +531,12 @@ export const CATEGORIES_CATALOG = [
 
 ];
 
-// ─── Funciones de acceso ──────────────────────────────────────────────────────
-
-export function getCategoryById(id) {
-  return CATEGORIES_CATALOG.find((c) => c.id === id) || null;
-}
-
-export function getCategoriesByIds(ids) {
-  return ids.map((id) => CATEGORIES_CATALOG.find((c) => c.id === id)).filter(Boolean);
-}
+// ─── Vista reducida para Client Components ───────────────────────────────────
+// Solo los campos que necesita la UI (sin restricciones LP, alertas ni metadatos
+// de calibración). Reduce el peso del bundle enviado al cliente.
+export const CATEGORIES_UI = CATEGORIES_CATALOG.map(({ id, label, block, description }) => ({
+  id,
+  label,
+  block,
+  description,
+}));

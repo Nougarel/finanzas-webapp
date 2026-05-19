@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { CATEGORIES_CATALOG } from "@/lib/models/categories";
+import { CATEGORIES_UI } from "@/lib/models/categories";
 
 const BLOCK_META = {
   needs:   { label: "Necesidades", defaultOpen: true  },
@@ -27,21 +27,19 @@ function DiagnosisForm() {
   const incomeParam = searchParams.get("income");
   const income = parseFloat(incomeParam);
 
-  const [profile, setProfile] = useState(null);
-  const [profileMissing, setProfileMissing] = useState(false);
+  const [profile] = useState(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const s = localStorage.getItem("userProfile");
+      return s ? JSON.parse(s) : null;
+    } catch { return null; }
+  });
+  const profileMissing = profile === null;
 
   // amounts: { [categoryId]: stringValue }
   const [amounts, setAmounts] = useState({});
   const [formError, setFormError] = useState("");
   const [openBlocks, setOpenBlocks] = useState({ needs: true, wants: false, savings: false });
-
-  // Cargar perfil de localStorage (no se necesita pre-cálculo de saludable en esta página)
-  useEffect(() => {
-    const stored = localStorage.getItem("userProfile");
-    if (!stored) { setProfileMissing(true); return; }
-    try { setProfile(JSON.parse(stored)); }
-    catch { setProfileMissing(true); }
-  }, []);
 
   // Estados de carga / error
   if (!incomeParam || isNaN(income) || income <= 0) {
@@ -72,14 +70,6 @@ function DiagnosisForm() {
       </main>
     );
   }
-  if (!profile) {
-    return (
-      <main className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground">Cargando perfil...</p>
-      </main>
-    );
-  }
-
   const handleChange = (catId, value) => {
     setAmounts((prev) => ({ ...prev, [catId]: value }));
     if (formError) setFormError("");
@@ -93,7 +83,7 @@ function DiagnosisForm() {
 
     // Construir realAmounts (0 si vacío)
     const realAmounts = {};
-    for (const cat of CATEGORIES_CATALOG) {
+    for (const cat of CATEGORIES_UI) {
       const raw = amounts[cat.id];
       const n = parseFloat(raw);
       realAmounts[cat.id] = isNaN(n) || n < 0 ? 0 : n;
@@ -112,13 +102,15 @@ function DiagnosisForm() {
       }
     }
 
-    const realParam = encodeURIComponent(JSON.stringify(realAmounts));
-    router.push(`/diagnosis?income=${income}&real=${realParam}`);
+    // Persistimos los importes reales en localStorage para evitar inflar la URL
+    // (la URL solo conserva `income`, que es coherente con el resto del flujo).
+    localStorage.setItem("diagnosisAmounts", JSON.stringify(realAmounts));
+    router.push(`/diagnosis?income=${income}`);
   };
 
   const catsByBlock = {};
   for (const block of BLOCK_ORDER) {
-    catsByBlock[block] = CATEGORIES_CATALOG.filter((c) => c.block === block);
+    catsByBlock[block] = CATEGORIES_UI.filter((c) => c.block === block);
   }
 
   return (

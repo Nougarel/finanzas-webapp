@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { AlertTriangle, Check, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CATEGORIES_CATALOG } from "@/lib/models/categories";
+import { CATEGORIES_UI } from "@/lib/models/categories";
 
 const BLOCK_ORDER = ["needs", "wants", "savings"];
 
@@ -103,33 +103,34 @@ function DiagnosisContent() {
 
   const incomeParam = searchParams.get("income");
   const income = parseFloat(incomeParam);
-  const realParam = searchParams.get("real");
 
-  const [profile, setProfile] = useState(null);
-  const [profileMissing, setProfileMissing] = useState(false);
+  const [profile] = useState(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const s = localStorage.getItem("userProfile");
+      return s ? JSON.parse(s) : null;
+    } catch { return null; }
+  });
+  const profileMissing = profile === null;
+
+  const [realAmounts] = useState(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const s = localStorage.getItem("diagnosisAmounts");
+      return s ? JSON.parse(s) : null;
+    } catch { return null; }
+  });
+  const amountsMissing = realAmounts === null;
+
   const [diagnosis, setDiagnosis] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !!localStorage.getItem("userProfile") && !!localStorage.getItem("diagnosisAmounts");
+  });
   const [calcError, setCalcError] = useState(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem("userProfile");
-    if (!stored) { setProfileMissing(true); return; }
-    try { setProfile(JSON.parse(stored)); }
-    catch { setProfileMissing(true); }
-  }, []);
-
-  useEffect(() => {
-    if (!profile || !income || isNaN(income) || income <= 0 || !realParam) return;
-
-    let realAmounts;
-    try { realAmounts = JSON.parse(decodeURIComponent(realParam)); }
-    catch {
-      setCalcError("Los importes reales no son válidos. Rellena el formulario de nuevo.");
-      return;
-    }
-
-    setLoading(true);
-    setCalcError(null);
+    if (!profile || !income || isNaN(income) || income <= 0 || !realAmounts) return;
 
     fetch("/api/diagnose", {
       method: "POST",
@@ -143,9 +144,9 @@ function DiagnosisContent() {
       })
       .catch(() => setCalcError("Error al conectar con el servidor."))
       .finally(() => setLoading(false));
-  }, [profile, income, realParam]);
+  }, [profile, income, realAmounts]);
 
-  if (!incomeParam || isNaN(income) || income <= 0 || !realParam) {
+  if (!incomeParam || isNaN(income) || income <= 0 || amountsMissing) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center p-8">
         <Card className="w-full max-w-md">
@@ -205,7 +206,7 @@ function DiagnosisContent() {
 
   // Construir mapa label para HealthScoreCard y banners
   const categoryLabels = {
-    ...Object.fromEntries(CATEGORIES_CATALOG.map((c) => [c.id, c.label])),
+    ...Object.fromEntries(CATEGORIES_UI.map((c) => [c.id, c.label])),
     _wants_block:   "Bloque de deseos",
     _savings_block: "Bloque de ahorro",
     _budget_block:  "Presupuesto insuficiente",
@@ -266,7 +267,7 @@ function DiagnosisContent() {
 
         {/* Tabla comparativa por categoría */}
         {BLOCK_ORDER.map((blockKey) => {
-          const cats = CATEGORIES_CATALOG.filter((c) => c.block === blockKey);
+          const cats = CATEGORIES_UI.filter((c) => c.block === blockKey);
           const blockAlert = diagnosis.alerts?.[`_${blockKey}_block`];
           return (
             <div key={blockKey} className="space-y-3">

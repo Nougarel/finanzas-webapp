@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { AlertTriangle, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { CATEGORIES_CATALOG } from "@/lib/models/categories";
+import { CATEGORIES_UI } from "@/lib/models/categories";
 
 const BLOCK_LABELS = { needs: "Necesidades", wants: "Deseos", savings: "Ahorro" };
 const BLOCK_ORDER  = ["needs", "wants", "savings"];
@@ -31,54 +31,61 @@ function ErrorCard({ title, message, onBack }) {
   );
 }
 
-function InverseResultsContent() {
-  const router      = useRouter();
-  const searchParams = useSearchParams();
+export default function InverseResultsPage() {
+  const router = useRouter();
 
-  const [loading,   setLoading]   = useState(true);
+  const [amountsMissing] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !localStorage.getItem("specifiedAmounts");
+  });
+  const [loading, setLoading] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !!localStorage.getItem("specifiedAmounts");
+  });
   const [result,    setResult]    = useState(null);
   const [calcError, setCalcError] = useState(null);
 
-  const amountsParam = searchParams.get("amounts");
-
   useEffect(() => {
-    if (!amountsParam) { setLoading(false); return; }
+    // Importes especificados — persistidos por InverseCalculatorPage en localStorage
+    const stored = localStorage.getItem("specifiedAmounts");
+    if (!stored) return;
 
-    let specifiedAmounts;
-    try { specifiedAmounts = JSON.parse(decodeURIComponent(amountsParam)); }
-    catch { setCalcError("Los importes no son válidos."); setLoading(false); return; }
+    // Usar Promise para que todos los setState queden en callbacks asíncronos
+    Promise.resolve(stored)
+      .then((raw) => {
+        let specifiedAmounts;
+        try { specifiedAmounts = JSON.parse(raw); }
+        catch { setCalcError("Los importes no son válidos."); setLoading(false); return; }
 
-    const profile = (() => {
-      try { return JSON.parse(localStorage.getItem("userProfile") ?? "null"); }
-      catch { return null; }
-    })();
+        const profile = (() => {
+          try { return JSON.parse(localStorage.getItem("userProfile") ?? "null"); }
+          catch { return null; }
+        })();
 
-    if (!profile) {
-      setCalcError("No se encontró el perfil. Vuelve a completarlo.");
-      setLoading(false);
-      return;
-    }
+        if (!profile) {
+          setCalcError("No se encontró el perfil. Vuelve a completarlo.");
+          setLoading(false);
+          return;
+        }
 
-    fetch("/api/calculate-inverse", {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ profile, specifiedAmounts }),
-    })
-      .then(r => r.json())
-      .then(data => {
-        if (data.error) { setCalcError(data.error); }
-        else            { setResult(data); }
-      })
-      .catch(() => setCalcError("Error al conectar con el servidor."))
-      .finally(() => setLoading(false));
-  }, [amountsParam]);
+        fetch("/api/calculate-inverse", {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({ profile, specifiedAmounts }),
+        })
+          .then(r => r.json())
+          .then(data => {
+            if (data.error) { setCalcError(data.error); }
+            else            { setResult(data); }
+          })
+          .catch(() => setCalcError("Error al conectar con el servidor."))
+          .finally(() => setLoading(false));
+      });
+  }, []);
 
-  const goBack = () => {
-    const suffix = amountsParam ? `?amounts=${amountsParam}` : "";
-    router.push(`/inverse-calculator${suffix}`);
-  };
+  const goBack = () => router.push("/inverse-calculator");
 
-  if (!amountsParam) {
+  if (amountsMissing) {
     return <ErrorCard title="Sin datos" message="No se han recibido importes." onBack={() => router.push("/inverse-calculator")} />;
   }
   if (loading) {
@@ -98,7 +105,7 @@ function InverseResultsContent() {
   // Agrupar categorías por bloque para la tabla de distribución saludable
   const catsByBlock = {};
   for (const block of BLOCK_ORDER) {
-    catsByBlock[block] = CATEGORIES_CATALOG.filter(c => c.block === block);
+    catsByBlock[block] = CATEGORIES_UI.filter(c => c.block === block);
   }
 
   return (
@@ -162,7 +169,7 @@ function InverseResultsContent() {
                 </thead>
                 <tbody>
                   {Object.entries(comparison).map(([catId, row]) => {
-                    const cat  = CATEGORIES_CATALOG.find(c => c.id === catId);
+                    const cat  = CATEGORIES_UI.find(c => c.id === catId);
                     const diff = row.diff; // positivo = especificado > saludable
                     return (
                       <tr key={catId} className="border-b last:border-0">
@@ -241,17 +248,5 @@ function InverseResultsContent() {
 
       </div>
     </main>
-  );
-}
-
-export default function InverseResultsPage() {
-  return (
-    <Suspense fallback={
-      <main className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground">Cargando resultados...</p>
-      </main>
-    }>
-      <InverseResultsContent />
-    </Suspense>
   );
 }
