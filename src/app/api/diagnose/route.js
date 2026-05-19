@@ -1,40 +1,32 @@
+// Diagnóstico personalizado: compara importes reales del usuario contra la
+// distribución saludable que el LP genera para su perfil.
 import { NextResponse } from "next/server";
-import { calculateDistribution } from "@/lib/calculators/distributionCalculator";
-import { evaluateFinancialHealth } from "@/lib/calculators/evaluator";
-import { getFinancialModel } from "@/lib/models/financialModels";
+import { diagnoseDistribution } from "@/lib/calculators/distributionEngine";
 
 export async function POST(request) {
   try {
-    const { income, modelId, realAmounts } = await request.json();
+    const { profile, income, realAmounts } = await request.json();
 
+    if (!profile || typeof profile !== "object") {
+      return NextResponse.json(
+        { error: "Se requiere un perfil válido" },
+        { status: 400 }
+      );
+    }
     if (typeof income !== "number" || income <= 0) {
       return NextResponse.json(
         { error: "Se requiere un ingreso válido" },
         { status: 400 }
       );
     }
-
-    const model = getFinancialModel(modelId);
-    if (!model) {
+    if (!realAmounts || typeof realAmounts !== "object") {
       return NextResponse.json(
-        { error: `Modelo "${modelId}" no encontrado` },
+        { error: "Se requieren los importes reales por categoría" },
         { status: 400 }
       );
     }
 
-    const idealResult = calculateDistribution({
-      calculationType: "direct",
-      income,
-      model
-    });
-
-    const diagnosis = evaluateFinancialHealth({
-      idealDistribution: idealResult.distribution,
-      realAmounts,
-      income,
-      model: { id: model.id, name: model.name, description: model.description }
-    });
-
+    const diagnosis = diagnoseDistribution(profile, income, realAmounts);
     return NextResponse.json(diagnosis);
   } catch (error) {
     return NextResponse.json(

@@ -1,5 +1,6 @@
 import 'server-only';
 
+// LEGACY — No utilizado desde la unificación del diagnóstico. Mantener como referencia.
 /**
  * Motor de evaluación de salud financiera
  *

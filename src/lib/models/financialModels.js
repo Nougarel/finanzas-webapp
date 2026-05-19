@@ -1,3 +1,4 @@
+// LEGACY — No utilizado desde la unificación del diagnóstico. Mantener como referencia.
 /**
  * Definición de modelos financieros como objetos de datos
  *

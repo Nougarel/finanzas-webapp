@@ -1,3 +1,4 @@
+// LEGACY — No utilizado desde la unificación del diagnóstico. Mantener como referencia.
 /**
  * Motor de cálculo de distribución financiera
  *

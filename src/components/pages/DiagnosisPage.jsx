@@ -2,91 +2,129 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { AlertTriangle, Check, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { CATEGORIES_CATALOG } from "@/lib/models/categories";
 
-const OVERALL_STATUS_STYLES = {
-  healthy: {
-    wrapper: "bg-green-50 border border-green-200 text-green-800 rounded-lg p-6",
-    label: "Saludable",
-    message: "Tu distribución financiera es saludable. Estás gestionando bien tus ingresos."
-  },
-  warning: {
-    wrapper: "bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-6",
-    label: "Necesita atención",
-    message: "Tu distribución financiera necesita ajustes. Revisa los bloques marcados."
-  },
-  critical: {
-    wrapper: "bg-red-50 border border-red-200 text-red-800 rounded-lg p-6",
-    label: "Crítico",
-    message: "Tu distribución financiera presenta desviaciones importantes. Actúa sobre los bloques en rojo."
-  }
-};
+const BLOCK_ORDER = ["needs", "wants", "savings"];
 
-const BLOCK_STATUS_STYLES = {
-  healthy: "bg-green-100 text-green-700",
-  warning: "bg-amber-100 text-amber-700",
-  critical: "bg-red-100 text-red-700"
-};
+// ─── Subcomponentes compartidos (mismos del flujo directo) ──────────────────
 
-function getDirectionMessage(block) {
-  if (block.direction === "balanced") {
-    return "Este bloque está dentro del rango saludable.";
-  }
-  const pct = Math.abs(block.deviationPercentage).toFixed(1);
-  if (block.blockType === "savings") {
-    return block.direction === "under"
-      ? `Estás ahorrando un ${pct}% menos de lo recomendado.`
-      : `Estás ahorrando un ${pct}% más de lo recomendado.`;
-  }
-  return block.direction === "over"
-    ? `Estás gastando un ${pct}% más de lo recomendado en este bloque.`
-    : `Estás gastando un ${pct}% menos de lo recomendado en este bloque.`;
-}
-
-function ErrorCard({ title, message, onBack }) {
+function AlertBanner({ level, message, size = "sm" }) {
+  const colors = level === "severe"
+    ? "bg-red-50 border-red-200 text-red-800"
+    : "bg-amber-50 border-amber-200 text-amber-800";
+  const padding = size === "md" ? "px-4 py-3 text-sm" : "px-3 py-2 text-xs";
+  const iconSize = size === "md" ? "size-5" : "size-4";
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-8">
-      <Card className="w-full max-w-2xl">
-        <CardHeader>
-          <CardTitle>{title}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground mb-4">{message}</p>
-          <Button onClick={onBack}>Volver al formulario</Button>
-        </CardContent>
-      </Card>
-    </main>
+    <div className={`flex gap-2 rounded-md border ${padding} ${colors}`}>
+      <AlertTriangle className={`shrink-0 ${iconSize} mt-0.5`} />
+      <p className="leading-snug">{message}</p>
+    </div>
   );
 }
+
+const HEALTH_SCORE_COLORS = {
+  excellent:  { text: "text-green-700",  bar: "bg-green-600",  bg: "bg-green-50 border-green-200"  },
+  good:       { text: "text-green-600",  bar: "bg-green-500",  bg: "bg-green-50 border-green-200"  },
+  acceptable: { text: "text-amber-600",  bar: "bg-amber-500",  bg: "bg-amber-50 border-amber-200"  },
+  improvable: { text: "text-orange-600", bar: "bg-orange-500", bg: "bg-orange-50 border-orange-200" },
+  critical:   { text: "text-red-600",    bar: "bg-red-500",    bg: "bg-red-50 border-red-200"      },
+};
+
+function HealthScoreCard({ healthScore, categoryLabels }) {
+  if (!healthScore) return null;
+  const { score, label, level, penalties } = healthScore;
+  const colors = HEALTH_SCORE_COLORS[level] ?? HEALTH_SCORE_COLORS.acceptable;
+  const labelFor = (k) => categoryLabels[k] ?? k;
+
+  return (
+    <Card className={colors.bg}>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">
+          Salud financiera de tu situación real
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex items-baseline gap-3">
+          <p className={`text-5xl font-bold ${colors.text}`}>
+            {score}<span className="text-2xl opacity-60">/100</span>
+          </p>
+          <p className={`text-xl font-semibold ${colors.text}`}>{label}</p>
+        </div>
+        <div className="w-full h-2 rounded-full bg-white/60 overflow-hidden">
+          <div className={`h-full ${colors.bar} transition-all`} style={{ width: `${score}%` }} />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Basado en la desviación de tu gasto real respecto a la distribución saludable para tu perfil.
+        </p>
+        {penalties.length > 0 && (
+          <details className="text-xs">
+            <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+              Ver desglose ({penalties.length} {penalties.length === 1 ? "factor resta" : "factores restan"} puntos)
+            </summary>
+            <ul className="mt-2 space-y-1 pl-2">
+              {penalties.map((p, i) => (
+                <li key={i} className="flex justify-between gap-2 text-muted-foreground">
+                  <span><strong>{labelFor(p.category)}:</strong> {p.reason}</span>
+                  <span className="font-mono font-medium shrink-0">{p.points}</span>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Indicador por categoría: estado del gasto real vs saludable ────────────
+
+function StatusIcon({ status }) {
+  if (status === "on_target") return <Check className="size-4 text-green-600 shrink-0" />;
+  if (status === "above_healthy") return <ArrowUp className="size-4 text-amber-600 shrink-0" />;
+  if (status === "below_healthy") return <ArrowDown className="size-4 text-blue-600 shrink-0" />;
+  return null;
+}
+
+function statusText(status) {
+  if (status === "on_target") return "Alineado";
+  if (status === "above_healthy") return "Por encima";
+  if (status === "below_healthy") return "Por debajo";
+  return "—";
+}
+
+// ─── Componente principal ──────────────────────────────────────────────────
 
 function DiagnosisContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [loading, setLoading] = useState(false);
-  const [diagnosis, setDiagnosis] = useState(null);
-  const [calcError, setCalcError] = useState(null);
-
   const incomeParam = searchParams.get("income");
   const income = parseFloat(incomeParam);
-  const modelId = searchParams.get("model") || "50_30_20";
   const realParam = searchParams.get("real");
 
+  const [profile, setProfile] = useState(null);
+  const [profileMissing, setProfileMissing] = useState(false);
+  const [diagnosis, setDiagnosis] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [calcError, setCalcError] = useState(null);
+
   useEffect(() => {
-    if (!incomeParam || isNaN(income) || income <= 0) return;
-    if (!realParam) return;
+    const stored = localStorage.getItem("userProfile");
+    if (!stored) { setProfileMissing(true); return; }
+    try { setProfile(JSON.parse(stored)); }
+    catch { setProfileMissing(true); }
+  }, []);
+
+  useEffect(() => {
+    if (!profile || !income || isNaN(income) || income <= 0 || !realParam) return;
 
     let realAmounts;
-    try {
-      realAmounts = JSON.parse(decodeURIComponent(realParam));
-    } catch {
-      setCalcError("Los importes reales no son válidos. Por favor, rellena el formulario de nuevo.");
-      return;
-    }
-
-    if (!realAmounts || typeof realAmounts !== "object") {
-      setCalcError("Los importes reales no son válidos. Por favor, rellena el formulario de nuevo.");
+    try { realAmounts = JSON.parse(decodeURIComponent(realParam)); }
+    catch {
+      setCalcError("Los importes reales no son válidos. Rellena el formulario de nuevo.");
       return;
     }
 
@@ -96,74 +134,86 @@ function DiagnosisContent() {
     fetch("/api/diagnose", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ income, modelId, realAmounts })
+      body: JSON.stringify({ profile, income, realAmounts }),
     })
-      .then((res) => res.json())
+      .then((r) => r.json())
       .then((data) => {
-        if (data.error) {
-          setCalcError(data.error);
-        } else {
-          setDiagnosis(data);
-        }
+        if (data.error) setCalcError(data.error);
+        else setDiagnosis(data);
       })
-      .catch(() => {
-        setCalcError("Error al conectar con el servidor. Inténtalo de nuevo.");
-      })
+      .catch(() => setCalcError("Error al conectar con el servidor."))
       .finally(() => setLoading(false));
-  }, [incomeParam, income, modelId, realParam]);
+  }, [profile, income, realParam]);
 
-  if (!incomeParam || isNaN(income) || income <= 0) {
+  if (!incomeParam || isNaN(income) || income <= 0 || !realParam) {
     return (
-      <ErrorCard
-        title="Ingreso inválido"
-        message="No se pudo leer el ingreso. Por favor, vuelve al formulario."
-        onBack={() => router.push(`/diagnosis-form?income=${incomeParam}&model=${modelId}`)}
-      />
+      <main className="flex min-h-screen flex-col items-center justify-center p-8">
+        <Card className="w-full max-w-md">
+          <CardHeader><CardTitle>Datos inválidos</CardTitle></CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">Vuelve al formulario para introducir tus importes reales.</p>
+            <Button onClick={() => router.push(`/diagnosis-form?income=${income}`)}>Volver al formulario</Button>
+          </CardContent>
+        </Card>
+      </main>
     );
   }
 
-  if (!realParam) {
+  if (profileMissing) {
     return (
-      <ErrorCard
-        title="Datos inválidos"
-        message="Los importes reales no son válidos. Por favor, rellena el formulario de nuevo."
-        onBack={() => router.push(`/diagnosis-form?income=${income}&model=${modelId}`)}
-      />
+      <main className="flex min-h-screen flex-col items-center justify-center p-8">
+        <Card className="w-full max-w-md">
+          <CardHeader><CardTitle>Perfil no encontrado</CardTitle></CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">Necesitas completar el cuestionario antes de diagnosticar.</p>
+            <Button onClick={() => router.push("/profile")}>Completar perfil</Button>
+          </CardContent>
+        </Card>
+      </main>
     );
   }
 
   if (loading || (!diagnosis && !calcError)) {
     return (
       <main className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground">Analizando tu situación financiera...</p>
+        <p className="text-muted-foreground">Analizando tu situación...</p>
       </main>
     );
   }
 
   if (calcError) {
     return (
-      <ErrorCard
-        title="Error en el diagnóstico"
-        message={calcError}
-        onBack={() => router.push(`/diagnosis-form?income=${income}&model=${modelId}`)}
-      />
+      <main className="flex min-h-screen flex-col items-center justify-center p-8">
+        <Card className="w-full max-w-md">
+          <CardHeader><CardTitle>Error en el diagnóstico</CardTitle></CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">{calcError}</p>
+            <Button onClick={() => router.push(`/diagnosis-form?income=${income}`)}>Volver al formulario</Button>
+          </CardContent>
+        </Card>
+      </main>
     );
   }
 
-  if (!diagnosis) return null;
-
-  const overallStyle = OVERALL_STATUS_STYLES[diagnosis.summary.overallStatus];
-
-  const formatCurrency = (amount) =>
-    new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(amount);
-
-  const formatPercentage = (percentage) =>
-    `${(percentage * 100).toFixed(0)}%`;
-
-  const formatDeviation = (deviationPct) => {
-    const sign = deviationPct > 0 ? "+" : "";
-    return `${sign}${deviationPct.toFixed(1)}%`;
+  const formatCurrency = (n) =>
+    new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(n);
+  const formatPct = (n) => `${n.toFixed(1)}%`;
+  const formatSignedAmount = (n) => {
+    const sign = n > 0 ? "+" : "";
+    return `${sign}${formatCurrency(n)}`;
   };
+
+  // Construir mapa label para HealthScoreCard y banners
+  const categoryLabels = {
+    ...Object.fromEntries(CATEGORIES_CATALOG.map((c) => [c.id, c.label])),
+    _wants_block:   "Bloque de deseos",
+    _savings_block: "Bloque de ahorro",
+    _budget_block:  "Presupuesto insuficiente",
+    _debt_block:    "Carga de deuda alta",
+  };
+
+  const budgetAlert = diagnosis.alerts?._budget_block;
+  const debtAlert   = diagnosis.alerts?._debt_block;
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-8">
@@ -171,100 +221,133 @@ function DiagnosisContent() {
 
         {/* Encabezado */}
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">
-            Diagnóstico de salud financiera
-          </h1>
+          <h1 className="text-3xl font-bold tracking-tight">Diagnóstico de tu situación real</h1>
           <p className="text-muted-foreground">
-            Basado en el modelo {diagnosis.model.name} con un ingreso de {formatCurrency(income)}
+            Comparación de tu gasto real contra la distribución saludable para tu perfil (ingreso {formatCurrency(income)})
           </p>
         </div>
 
-        {/* Banner de estado global */}
-        <div className={overallStyle.wrapper}>
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <p className="text-2xl font-bold">{overallStyle.label}</p>
-            </div>
-            <p>{overallStyle.message}</p>
-            <div className="flex gap-6 pt-1">
-              <span className="text-sm font-medium">
-                ✓ {diagnosis.summary.healthyBlocks} saludable{diagnosis.summary.healthyBlocks !== 1 ? "s" : ""}
-              </span>
-              {diagnosis.summary.warningBlocks > 0 && (
-                <span className="text-sm font-medium">
-                  ⚠ {diagnosis.summary.warningBlocks} en atención
-                </span>
-              )}
-              {diagnosis.summary.criticalBlocks > 0 && (
-                <span className="text-sm font-medium">
-                  ✗ {diagnosis.summary.criticalBlocks} crítico{diagnosis.summary.criticalBlocks !== 1 ? "s" : ""}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
+        {/* Alertas críticas del sistema */}
+        {budgetAlert && <AlertBanner level={budgetAlert.level} message={budgetAlert.message} size="md" />}
+        {debtAlert   && <AlertBanner level={debtAlert.level}   message={debtAlert.message}   size="md" />}
 
-        {/* Detalle por bloque */}
+        {/* Score de salud */}
+        <HealthScoreCard healthScore={diagnosis.healthScore} categoryLabels={categoryLabels} />
+
+        {/* Resumen por bloque */}
         <div className="grid gap-4 md:grid-cols-3">
-          {diagnosis.blocks.map((block) => (
-            <Card key={block.key} className="flex flex-col">
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  {block.label}
-                  <span className="text-sm font-normal text-muted-foreground">
-                    {formatPercentage(block.percentage)}
-                  </span>
-                </CardTitle>
-                <CardDescription>{block.description}</CardDescription>
-              </CardHeader>
-              <CardContent className="flex-1 space-y-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Ideal</p>
-                    <p className="text-lg font-semibold">{formatCurrency(block.idealAmount)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Real</p>
-                    <p className="text-lg font-bold">{formatCurrency(block.realAmount)}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${BLOCK_STATUS_STYLES[block.status]}`}>
-                    {block.statusLabel}
-                  </span>
-                  {block.direction !== "balanced" && (
-                    <span className="text-sm font-medium text-muted-foreground">
-                      {formatDeviation(block.deviationPercentage)}
-                    </span>
-                  )}
-                </div>
-
-                <p className="text-xs text-muted-foreground">
-                  {getDirectionMessage(block)}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
+          {BLOCK_ORDER.map((blockKey) => {
+            const b = diagnosis.blocks[blockKey];
+            const isOver = b.diffAmount > 0;
+            const sign = isOver ? "+" : "";
+            const overUnderColor = blockKey === "savings"
+              ? (isOver ? "text-green-700" : "text-amber-600")     // ahorro: más es bueno
+              : (isOver ? "text-amber-600" : "text-green-700");    // gasto: menos es bueno
+            return (
+              <Card key={blockKey}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">{b.label}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-1">
+                  <p className="text-sm text-muted-foreground">
+                    Real: <strong className="text-foreground">{formatCurrency(b.realAmount)}</strong>
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Recomendado: {formatCurrency(b.healthyAmount)}
+                  </p>
+                  <p className={`text-sm font-medium ${overUnderColor}`}>
+                    {sign}{formatCurrency(b.diffAmount)} ({sign}{b.deviationPct.toFixed(1)}%)
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
+
+        {/* Tabla comparativa por categoría */}
+        {BLOCK_ORDER.map((blockKey) => {
+          const cats = CATEGORIES_CATALOG.filter((c) => c.block === blockKey);
+          const blockAlert = diagnosis.alerts?.[`_${blockKey}_block`];
+          return (
+            <div key={blockKey} className="space-y-3">
+              <div className="flex items-baseline justify-between border-b-2 border-foreground/10 pb-2">
+                <h2 className="text-lg font-bold">{diagnosis.blocks[blockKey].label}</h2>
+                <span className="text-sm text-muted-foreground">
+                  {formatCurrency(diagnosis.blocks[blockKey].realAmount)} reales
+                </span>
+              </div>
+
+              {blockAlert && (
+                <AlertBanner
+                  level={blockAlert.level}
+                  message={`${diagnosis.blocks[blockKey].label}: ${blockAlert.message}`}
+                />
+              )}
+
+              <Card>
+                <CardContent className="p-0">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b bg-muted/30">
+                        <th className="text-left px-4 py-2 font-medium text-muted-foreground">Categoría</th>
+                        <th className="text-right px-4 py-2 font-medium text-muted-foreground">Tu gasto</th>
+                        <th className="text-right px-4 py-2 font-medium text-muted-foreground">Recomendado</th>
+                        <th className="text-right px-4 py-2 font-medium text-muted-foreground">Diferencia</th>
+                        <th className="text-center px-4 py-2 font-medium text-muted-foreground">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cats.map((cat) => {
+                        const c = diagnosis.comparison[cat.id];
+                        const catAlert = diagnosis.alerts?.[cat.id];
+                        return (
+                          <tr key={cat.id} className="border-b last:border-0 align-top">
+                            <td className="px-4 py-2">
+                              <p className="font-medium">{cat.label}</p>
+                              {catAlert && (
+                                <div className="mt-1">
+                                  <AlertBanner level={catAlert.level} message={catAlert.message} />
+                                </div>
+                              )}
+                            </td>
+                            <td className="text-right px-4 py-2 font-medium">{formatCurrency(c.realAmount)}</td>
+                            <td className="text-right px-4 py-2 text-muted-foreground">
+                              {formatCurrency(c.healthyAmount)}
+                              <span className="ml-1 text-xs">({formatPct(c.healthyPercentage)})</span>
+                            </td>
+                            <td className="text-right px-4 py-2">{formatSignedAmount(c.diffAmount)}</td>
+                            <td className="text-center px-4 py-2">
+                              <div className="inline-flex items-center gap-1">
+                                <StatusIcon status={c.status} />
+                                <span className="text-xs text-muted-foreground">{statusText(c.status)}</span>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </CardContent>
+              </Card>
+            </div>
+          );
+        })}
 
         {/* Botones de acción */}
         <div className="flex flex-wrap gap-4 justify-center pt-4">
           <Button
             variant="outline"
-            onClick={() => router.push(`/diagnosis-form?income=${income}&model=${modelId}`)}
+            onClick={() => router.push(`/diagnosis-form?income=${income}`)}
           >
             Recalcular
           </Button>
           <Button
             variant="outline"
-            onClick={() => router.push(`/calculator?model=${modelId}`)}
+            onClick={() => router.push(`/results?income=${income}`)}
           >
-            Cambiar ingreso
+            Volver a resultados
           </Button>
-          <Button variant="outline" onClick={() => router.push("/")}>
-            Volver al inicio
-          </Button>
+          <Button variant="outline" onClick={() => router.push("/")}>Inicio</Button>
         </div>
       </div>
     </main>

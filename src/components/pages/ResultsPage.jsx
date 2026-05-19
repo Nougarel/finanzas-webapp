@@ -2,15 +2,28 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const BLOCK_ORDER = ["needs", "wants", "savings"];
 
-function AlertDot({ level }) {
-  if (!level) return null;
-  const color = level === "mild" ? "bg-amber-400" : "bg-red-500";
-  return <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${color}`} title={level} />;
+// Banner visible que muestra el mensaje completo de la alerta.
+// - level=mild: fondo ámbar / level=severe: fondo rojo.
+// - size="sm" para alertas de categoría/bloque, "md" para alertas críticas (budget, debt).
+function AlertBanner({ level, message, size = "sm" }) {
+  const isSevere = level === "severe";
+  const colors = isSevere
+    ? "bg-red-50 border-red-200 text-red-800"
+    : "bg-amber-50 border-amber-200 text-amber-800";
+  const padding = size === "md" ? "px-4 py-3 text-sm" : "px-3 py-2 text-xs";
+  const iconSize = size === "md" ? "size-5" : "size-4";
+  return (
+    <div className={`flex gap-2 rounded-md border ${padding} ${colors}`}>
+      <AlertTriangle className={`shrink-0 ${iconSize} mt-0.5`} />
+      <p className="leading-snug">{message}</p>
+    </div>
+  );
 }
 
 function dtiColorClass(total) {
@@ -18,6 +31,28 @@ function dtiColorClass(total) {
   if (total < 40) return "text-amber-600";
   return "text-red-600";
 }
+
+// Referencia INE: media nacional para una categoría.
+// Los datos INE son estadísticas descriptivas, no benchmarks de salud financiera —
+// se muestran siempre en gris neutro independientemente de la desviación.
+function IneReference({ ineData, block }) {
+  if (!ineData) return null;
+  const { ineReference } = ineData;
+
+  if (block === "wants") {
+    return (
+      <p className="text-xs text-muted-foreground">
+        Media española: {ineReference}% del ingreso
+      </p>
+    );
+  }
+  return (
+    <p className="text-xs text-muted-foreground">
+      Media española (INE): {ineReference}%
+    </p>
+  );
+}
+
 
 function ResultsContent() {
   const router = useRouter();
@@ -133,9 +168,21 @@ function ResultsContent() {
 
   const formatPct = (pct) => `${pct.toFixed(1)}%`;
 
+  // Alertas críticas de sistema (presupuesto insuficiente, deuda asfixiante)
+  const budgetAlert = result.alerts?._budget_block;
+  const debtAlert   = result.alerts?._debt_block;
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-8">
       <div className="w-full max-w-4xl space-y-6">
+
+        {/* Alertas críticas de sistema — siempre en lo más alto */}
+        {budgetAlert && (
+          <AlertBanner level={budgetAlert.level} message={budgetAlert.message} size="md" />
+        )}
+        {debtAlert && (
+          <AlertBanner level={debtAlert.level} message={debtAlert.message} size="md" />
+        )}
 
         {/* Encabezado */}
         <div className="text-center space-y-2">
@@ -201,10 +248,11 @@ function ResultsContent() {
             {BLOCK_ORDER.map((blockKey) => {
               const block = result.blocks[blockKey];
               const cats = Object.values(result.categories).filter((c) => c.block === blockKey);
+              const blockAlert = result.alerts?.[`_${blockKey}_block`];
 
               return (
-                <div key={blockKey}>
-                  <div className="flex items-baseline justify-between border-b-2 border-foreground/10 pb-2 mb-3">
+                <div key={blockKey} className="space-y-3">
+                  <div className="flex items-baseline justify-between border-b-2 border-foreground/10 pb-2">
                     <div className="flex items-baseline gap-3">
                       <h2 className="text-lg font-bold">{block.label}</h2>
                       <span className="text-sm text-muted-foreground">{formatPct(block.percentage)}</span>
@@ -212,25 +260,39 @@ function ResultsContent() {
                     <span className="text-xl font-bold">{formatCurrency(block.amount)}</span>
                   </div>
 
+                  {blockAlert && (
+                    <AlertBanner
+                      level={blockAlert.level}
+                      message={`${block.label}: ${blockAlert.message}`}
+                    />
+                  )}
+
                   <div className="grid gap-2 sm:grid-cols-2">
                     {cats.map((cat) => {
-                      const alert = result.alerts[cat.id];
+                      const alert   = result.alerts[cat.id];
+                      const ineData = result.ineComparison?.[cat.id];
                       return (
                         <div
                           key={cat.id}
-                          className="flex items-start justify-between rounded-lg bg-muted/40 px-4 py-3"
+                          className="rounded-lg bg-muted/40 px-4 py-3 space-y-2"
                         >
-                          <div className="space-y-0.5 pr-4">
-                            <div className="flex items-center gap-1.5">
+                          <div className="flex items-start justify-between">
+                            <div className="space-y-0.5 pr-4">
                               <p className="text-sm font-medium">{cat.label}</p>
-                              {alert && <AlertDot level={alert.level} />}
+                              <p className="text-xs text-muted-foreground">{cat.description}</p>
                             </div>
-                            <p className="text-xs text-muted-foreground">{cat.description}</p>
+                            <div className="text-right shrink-0">
+                              <p className="text-sm font-semibold">{formatCurrency(cat.amount)}</p>
+                              <p className="text-xs text-muted-foreground">{formatPct(cat.percentage)}</p>
+                            </div>
                           </div>
-                          <div className="text-right shrink-0">
-                            <p className="text-sm font-semibold">{formatCurrency(cat.amount)}</p>
-                            <p className="text-xs text-muted-foreground">{formatPct(cat.percentage)}</p>
-                          </div>
+                          {ineData && <IneReference ineData={ineData} block={blockKey} />}
+                          {alert && (
+                            <AlertBanner
+                              level={alert.level}
+                              message={`${cat.label}: ${alert.message}`}
+                            />
+                          )}
                         </div>
                       );
                     })}
@@ -238,30 +300,50 @@ function ResultsContent() {
                 </div>
               );
             })}
+
+            {/* Nota al pie sobre datos INE */}
+            <p className="text-xs text-muted-foreground italic border-t pt-3">
+              Datos de referencia del INE (Instituto Nacional de Estadística). Los porcentajes medios
+              pueden variar según la composición del hogar y la comunidad autónoma.
+            </p>
           </div>
         )}
 
         {/* Vista macro: cards de bloque */}
         {viewMode === "macro" && (
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="space-y-4">
+            {/* Alertas de bloque en vista macro: arriba del grid */}
             {BLOCK_ORDER.map((blockKey) => {
-              const block = result.blocks[blockKey];
+              const blockAlert = result.alerts?.[`_${blockKey}_block`];
+              if (!blockAlert) return null;
               return (
-                <Card key={blockKey} className="flex flex-col">
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      {block.label}
-                      <span className="text-sm font-normal text-muted-foreground">
-                        {formatPct(block.percentage)}
-                      </span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex-1 flex items-end">
-                    <p className="text-3xl font-bold">{formatCurrency(block.amount)}</p>
-                  </CardContent>
-                </Card>
+                <AlertBanner
+                  key={`alert-${blockKey}`}
+                  level={blockAlert.level}
+                  message={`${result.blocks[blockKey].label}: ${blockAlert.message}`}
+                />
               );
             })}
+            <div className="grid gap-4 md:grid-cols-3">
+              {BLOCK_ORDER.map((blockKey) => {
+                const block = result.blocks[blockKey];
+                return (
+                  <Card key={blockKey} className="flex flex-col">
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between">
+                        {block.label}
+                        <span className="text-sm font-normal text-muted-foreground">
+                          {formatPct(block.percentage)}
+                        </span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex-1 flex items-end">
+                      <p className="text-3xl font-bold">{formatCurrency(block.amount)}</p>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
           </div>
         )}
 
@@ -362,9 +444,7 @@ function ResultsContent() {
             Volver al inicio
           </Button>
           <Button
-            onClick={() =>
-              router.push(`/diagnosis-form?income=${income}&model=${result.closestModel.id}`)
-            }
+            onClick={() => router.push(`/diagnosis-form?income=${income}`)}
           >
             Analizar mi situación real
           </Button>
