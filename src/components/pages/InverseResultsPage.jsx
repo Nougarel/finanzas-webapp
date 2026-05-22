@@ -6,6 +6,7 @@ import { AlertTriangle, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { CATEGORIES_UI } from "@/lib/models/categories";
+import { STORAGE_KEYS } from "@/lib/storage-keys";
 
 const BLOCK_LABELS = { needs: "Necesidades", wants: "Deseos", savings: "Ahorro" };
 const BLOCK_ORDER  = ["needs", "wants", "savings"];
@@ -36,18 +37,18 @@ export default function InverseResultsPage() {
 
   const [amountsMissing] = useState(() => {
     if (typeof window === "undefined") return false;
-    return !localStorage.getItem("specifiedAmounts");
+    return !localStorage.getItem(STORAGE_KEYS.specifiedAmounts);
   });
   const [loading, setLoading] = useState(() => {
     if (typeof window === "undefined") return false;
-    return !!localStorage.getItem("specifiedAmounts");
+    return !!localStorage.getItem(STORAGE_KEYS.specifiedAmounts);
   });
   const [result,    setResult]    = useState(null);
   const [calcError, setCalcError] = useState(null);
 
   useEffect(() => {
     // Importes especificados — persistidos por InverseCalculatorPage en localStorage
-    const stored = localStorage.getItem("specifiedAmounts");
+    const stored = localStorage.getItem(STORAGE_KEYS.specifiedAmounts);
     if (!stored) return;
 
     // Usar Promise para que todos los setState queden en callbacks asíncronos
@@ -58,7 +59,7 @@ export default function InverseResultsPage() {
         catch { setCalcError("Los importes no son válidos."); setLoading(false); return; }
 
         const profile = (() => {
-          try { return JSON.parse(localStorage.getItem("userProfile") ?? "null"); }
+          try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.profileIdeal) ?? "null"); }
           catch { return null; }
         })();
 

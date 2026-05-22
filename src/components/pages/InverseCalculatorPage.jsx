@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { CATEGORIES_UI } from "@/lib/models/categories";
+import { STORAGE_KEYS } from "@/lib/storage-keys";
 
 const BLOCK_META = {
   needs:   { label: "Necesidades",  defaultOpen: true },
@@ -77,7 +78,7 @@ export default function InverseCalculatorPage() {
   const [profile] = useState(() => {
     if (typeof window === "undefined") return null;
     try {
-      const s = localStorage.getItem("userProfile");
+      const s = localStorage.getItem(STORAGE_KEYS.profileIdeal);
       return s ? JSON.parse(s) : null;
     } catch { return null; }
   });
@@ -88,7 +89,7 @@ export default function InverseCalculatorPage() {
   const touchedRef = useRef((() => {
     if (typeof window === "undefined") return new Set();
     try {
-      const s = localStorage.getItem("specifiedAmounts");
+      const s = localStorage.getItem(STORAGE_KEYS.specifiedAmounts);
       if (!s) return new Set();
       return new Set(Object.keys(JSON.parse(s)));
     } catch { return new Set(); }
@@ -99,7 +100,7 @@ export default function InverseCalculatorPage() {
   const [amounts, setAmounts] = useState(() => {
     if (typeof window === "undefined") return {};
     try {
-      const s = localStorage.getItem("specifiedAmounts");
+      const s = localStorage.getItem(STORAGE_KEYS.specifiedAmounts);
       if (!s) return {};
       const parsed = JSON.parse(s);
       return Object.fromEntries(Object.entries(parsed).map(([k, v]) => [k, String(v)]));
@@ -134,6 +135,9 @@ export default function InverseCalculatorPage() {
     return s + (isNaN(n) ? 0 : n);
   }, 0);
 
+  // Número de categorías con un importe > 0 fijado por el usuario
+  const specifiedCount = Object.values(amounts).filter(v => Number(v) > 0).length;
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -147,7 +151,7 @@ export default function InverseCalculatorPage() {
 
     // Persistimos los importes deseados en localStorage para mantener la URL limpia
     // y permitir rehidratar el formulario al volver desde los resultados.
-    localStorage.setItem("specifiedAmounts", JSON.stringify(specifiedAmounts));
+    localStorage.setItem(STORAGE_KEYS.specifiedAmounts, JSON.stringify(specifiedAmounts));
     router.push("/inverse-results");
   };
 
@@ -216,9 +220,14 @@ export default function InverseCalculatorPage() {
 
           {/* Total en tiempo real */}
           {totalSpecified > 0 && (
-            <div className="flex items-center justify-between rounded-lg bg-muted/50 px-4 py-3 text-sm">
-              <span className="text-muted-foreground">Total especificado</span>
-              <span className="font-semibold">{fmt(totalSpecified)}</span>
+            <div className="rounded-lg bg-muted/50 px-4 py-3 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Total especificado</span>
+                <span className="font-semibold">{fmt(totalSpecified)}</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {specifiedCount} de 20 categorías fijadas — el resto se calculará automáticamente
+              </p>
             </div>
           )}
 

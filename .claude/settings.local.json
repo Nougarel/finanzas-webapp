@@ -16,7 +16,11 @@
       "Read(//c/Users/Usuario/Documents/KnowledgeBase/01-proyectos/personales/**)",
       "Bash(ls \"C:\\\\Users\\\\Usuario\\\\Documents\\\\bloques_claude_chat_export_markdowns\\\\\")",
       "Read(//c/Users/Usuario/Documents/**)",
-      "Bash(git -C \"c:\\\\Users\\\\Usuario\\\\Documents\\\\ProyectoManhattan\\\\finanzas-webapp\" add .claude/settings.local.json src/app/api/diagnose/route.js src/components/pages/DiagnosisFormPage.jsx src/components/pages/DiagnosisPage.jsx src/components/pages/ResultsPage.jsx src/lib/calculators/distributionCalculator.js src/lib/calculators/distributionEngine.js src/lib/calculators/evaluator.js src/lib/models/financialModels.js CLAUDE.md)"
+      "Bash(git -C \"c:\\\\Users\\\\Usuario\\\\Documents\\\\ProyectoManhattan\\\\finanzas-webapp\" add .claude/settings.local.json src/app/api/diagnose/route.js src/components/pages/DiagnosisFormPage.jsx src/components/pages/DiagnosisPage.jsx src/components/pages/ResultsPage.jsx src/lib/calculators/distributionCalculator.js src/lib/calculators/distributionEngine.js src/lib/calculators/evaluator.js src/lib/models/financialModels.js CLAUDE.md)",
+      "Bash(git -C 'c:\\\\Users\\\\Usuario\\\\Documents\\\\ProyectoManhattan\\\\finanzas-webapp' commit -m ' *)",
+      "Bash(git -C \"c:\\\\Users\\\\Usuario\\\\Documents\\\\ProyectoManhattan\\\\finanzas-webapp\" push origin main)",
+      "Bash(git -C \"c:\\\\Users\\\\Usuario\\\\Documents\\\\ProyectoManhattan\\\\finanzas-webapp\" status)",
+      "Bash(git -C \"c:\\\\Users\\\\Usuario\\\\Documents\\\\ProyectoManhattan\\\\finanzas-webapp\" diff --stat)"
     ]
   }
 }

@@ -6,6 +6,7 @@ import { AlertTriangle, Check, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CATEGORIES_UI } from "@/lib/models/categories";
+import { STORAGE_KEYS } from "@/lib/storage-keys";
 
 const BLOCK_ORDER = ["needs", "wants", "savings"];
 
@@ -107,7 +108,7 @@ function DiagnosisContent() {
   const [profile] = useState(() => {
     if (typeof window === "undefined") return null;
     try {
-      const s = localStorage.getItem("userProfile");
+      const s = localStorage.getItem(STORAGE_KEYS.profileCurrent);
       return s ? JSON.parse(s) : null;
     } catch { return null; }
   });
@@ -116,7 +117,7 @@ function DiagnosisContent() {
   const [realAmounts] = useState(() => {
     if (typeof window === "undefined") return null;
     try {
-      const s = localStorage.getItem("diagnosisAmounts");
+      const s = localStorage.getItem(STORAGE_KEYS.diagnosisAmounts);
       return s ? JSON.parse(s) : null;
     } catch { return null; }
   });
@@ -125,7 +126,7 @@ function DiagnosisContent() {
   const [diagnosis, setDiagnosis] = useState(null);
   const [loading, setLoading] = useState(() => {
     if (typeof window === "undefined") return false;
-    return !!localStorage.getItem("userProfile") && !!localStorage.getItem("diagnosisAmounts");
+    return !!localStorage.getItem(STORAGE_KEYS.profileCurrent) && !!localStorage.getItem(STORAGE_KEYS.diagnosisAmounts);
   });
   const [calcError, setCalcError] = useState(null);
 

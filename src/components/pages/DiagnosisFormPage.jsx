@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { CATEGORIES_UI } from "@/lib/models/categories";
+import { STORAGE_KEYS } from "@/lib/storage-keys";
 
 const BLOCK_META = {
   needs:   { label: "Necesidades", defaultOpen: true  },
@@ -30,7 +31,7 @@ function DiagnosisForm() {
   const [profile] = useState(() => {
     if (typeof window === "undefined") return null;
     try {
-      const s = localStorage.getItem("userProfile");
+      const s = localStorage.getItem(STORAGE_KEYS.profileCurrent);
       return s ? JSON.parse(s) : null;
     } catch { return null; }
   });
@@ -104,7 +105,7 @@ function DiagnosisForm() {
 
     // Persistimos los importes reales en localStorage para evitar inflar la URL
     // (la URL solo conserva `income`, que es coherente con el resto del flujo).
-    localStorage.setItem("diagnosisAmounts", JSON.stringify(realAmounts));
+    localStorage.setItem(STORAGE_KEYS.diagnosisAmounts, JSON.stringify(realAmounts));
     router.push(`/diagnosis?income=${income}`);
   };
 

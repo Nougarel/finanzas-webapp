@@ -14,32 +14,15 @@ import {
   BookOpen, GraduationCap, School,
   AlertCircle, CheckCircle2, Sparkles,
   X, TrendingDown, Minus,
-  Building, Info,
+  Building,
 } from "lucide-react";
-
-// ─── Metadatos de las 4 secciones ───────────────────────────────────────────
-
-const SECTIONS = [
-  {
-    title: "Sobre ti",
-    subtitle: "Cuéntanos un poco sobre tu situación personal y laboral.",
-  },
-  {
-    title: "Tu vivienda",
-    subtitle: "Tu situación de vivienda es uno de los factores que más influye en tu distribución financiera.",
-  },
-  {
-    title: "Movilidad, salud y formación",
-    subtitle: "Unos datos más sobre cómo te mueves, cómo cuidas tu salud y si estás estudiando.",
-  },
-  {
-    title: "Tu ahorro y deuda",
-    subtitle: "Por último, cuéntanos cómo está tu situación de ahorro y si tienes deudas activas.",
-  },
-];
+import { PROFILE_COPY } from "@/lib/copy/profileCopy";
+import { STORAGE_KEYS } from "@/lib/storage-keys";
 
 // ─── Preguntas y opciones por sección ───────────────────────────────────────
-// Cada pregunta: { field, label, helpText?, optional?, options: [{ value, label, subtext?, Icon }] }
+// Cada pregunta: { field, helpText?, optional?, modes?, options: [{ value, label, subtext?, Icon }] }
+// El label de la pregunta se obtiene desde PROFILE_COPY.questions[field] según el modo.
+// `modes` (opcional) restringe la visibilidad a una lista de modos: ["direct"], ["inverse"], etc.
 // Los valores son exactamente los que almacena profileData (string | number | boolean).
 
 const SECTION_QUESTIONS = [
@@ -47,7 +30,6 @@ const SECTION_QUESTIONS = [
   [
     {
       field: "employmentStatus",
-      label: "¿Cuál es tu situación laboral actual?",
       options: [
         { value: "permanent",  label: "Asalariado indefinido",            subtext: "Contrato fijo a jornada completa",                  Icon: Briefcase   },
         { value: "temporary",  label: "Asalariado temporal o parcial",    subtext: "Contrato temporal, obra, o media jornada",           Icon: Clock       },
@@ -57,7 +39,6 @@ const SECTION_QUESTIONS = [
     },
     {
       field: "ageRange",
-      label: "¿En qué franja de edad te encuentras?",
       options: [
         { value: "under35", label: "Menos de 35 años",     Icon: TrendingUp },
         { value: "35to50",  label: "Entre 35 y 50 años",   Icon: Target     },
@@ -66,7 +47,6 @@ const SECTION_QUESTIONS = [
     },
     {
       field: "dependents",
-      label: "¿Tienes personas a tu cargo económicamente?",
       options: [
         { value: 0, label: "No tengo dependientes",  subtext: "Vivo de forma independiente",                      Icon: User  },
         { value: 1, label: "1 dependiente",          subtext: "Hijo, familiar u otra persona a cargo",            Icon: Users },
@@ -82,7 +62,6 @@ const SECTION_QUESTIONS = [
   [
     {
       field: "housingStatus",
-      label: "¿Cuál es tu situación de vivienda actual?",
       options: [
         { value: "rent",     label: "Vivo de alquiler",              subtext: "Pago una renta mensual al propietario",                               Icon: Key         },
         { value: "mortgage", label: "Tengo hipoteca activa",         subtext: "Estoy pagando la hipoteca de mi vivienda",                            Icon: Home        },
@@ -92,7 +71,6 @@ const SECTION_QUESTIONS = [
     },
     {
       field: "geographicZone",
-      label: "¿En qué tipo de zona resides?",
       options: [
         { value: "expensive_city", label: "Ciudad con alto coste de vida",     subtext: "Madrid, Barcelona, San Sebastián, Bilbao y similares",            Icon: Building2 },
         { value: "standard",       label: "Ciudad o zona urbana estándar",     subtext: "Resto de capitales de provincia y ciudades medias",               Icon: MapPin    },
@@ -105,7 +83,6 @@ const SECTION_QUESTIONS = [
   [
     {
       field: "vehicleStatus",
-      label: "¿Cuál es tu situación respecto al transporte privado?",
       options: [
         { value: "none",       label: "Sin vehículo propio",            subtext: "Uso transporte público, bicicleta o patinete",                    Icon: Bus       },
         { value: "owned_paid", label: "Vehículo propio ya pagado",      subtext: "El coche o moto es mío y no tiene préstamo",                      Icon: Car       },
@@ -115,7 +92,6 @@ const SECTION_QUESTIONS = [
     },
     {
       field: "privateHealthInsurance",
-      label: "¿Tienes seguro médico privado?",
       options: [
         { value: "none",     label: "No, solo sanidad pública",         subtext: "Solo dispongo del sistema de salud público",                      Icon: Shield      },
         { value: "basic",    label: "Sí, complementario básico",        subtext: "Seguro privado que complementa la sanidad pública",               Icon: ShieldCheck },
@@ -124,7 +100,6 @@ const SECTION_QUESTIONS = [
     },
     {
       field: "ownEducation",
-      label: "¿Estás realizando actualmente algún tipo de formación?",
       options: [
         { value: "none",       label: "Sin formación activa ahora mismo",       subtext: "No tengo estudios o cursos en curso",                    Icon: BookOpen      },
         { value: "continuous", label: "Formación continua o cursos puntuales",  subtext: "Idiomas, certificaciones, cursos online...",             Icon: GraduationCap },
@@ -137,8 +112,8 @@ const SECTION_QUESTIONS = [
   [
     {
       field: "emergencyFundStatus",
-      label: "¿Cuánto tienes ahorrado como fondo de emergencia?",
       helpText: "El fondo de emergencia es un colchón de ahorro líquido equivalente a 3–6 meses de tus gastos esenciales.",
+      modes: ["direct"],
       options: [
         { value: "none",     label: "Todavía no tengo",          subtext: "No dispongo de un colchón de emergencia",                   Icon: AlertCircle  },
         { value: "building", label: "Lo estoy construyendo",     subtext: "Tengo algo ahorrado, pero menos de 3 meses de gastos",     Icon: TrendingUp   },
@@ -148,7 +123,6 @@ const SECTION_QUESTIONS = [
     },
     {
       field: "housingPurchaseGoal",
-      label: "¿Tienes como objetivo comprar una vivienda?",
       options: [
         { value: false, label: "No es un objetivo actual",  subtext: "No planeo comprar vivienda a medio plazo",          Icon: X    },
         { value: true,  label: "Sí, es un objetivo activo", subtext: "Quiero comprar vivienda en los próximos años",      Icon: Home },
@@ -156,8 +130,8 @@ const SECTION_QUESTIONS = [
     },
     {
       field: "consumerDebt",
-      label: "¿Tienes préstamos o deudas de consumo activas?",
       helpText: "Excluyendo hipoteca si ya la tienes reflejada arriba. Incluye préstamos personales, financiaciones, tarjetas con saldo pendiente, etc.",
+      modes: ["direct"],
       options: [
         { value: "none",   label: "No tengo deudas de consumo",  subtext: "Sin préstamos ni financiaciones activas",        Icon: CheckCircle },
         { value: "low",    label: "Sí, a tipo bajo",             subtext: "Menos del 3% de interés anual",                 Icon: TrendingDown },
@@ -167,7 +141,6 @@ const SECTION_QUESTIONS = [
     },
     {
       field: "pensionRegime",
-      label: "¿Cuál es tu sistema de cotización para la jubilación?",
       optional: true,
       options: [
         { value: "social_security", label: "Seguridad Social general",  subtext: "Régimen habitual para la mayoría de trabajadores",          Icon: Building    },
@@ -210,6 +183,22 @@ const SUMMARY_SECTIONS = [
   { sectionIndex: 3, fields: ["emergencyFundStatus", "housingPurchaseGoal", "consumerDebt", "pensionRegime"] },
 ];
 
+// Devuelve la definición de un campo desde SECTION_QUESTIONS (o null si no existe).
+function findFieldDef(fieldId) {
+  for (const section of SECTION_QUESTIONS) {
+    for (const q of section) {
+      if (q.field === fieldId) return q;
+    }
+  }
+  return null;
+}
+
+// Indica si un campo está visible en el modo actual según su restricción `modes`.
+function isFieldVisibleInMode(fieldDef, currentMode) {
+  if (!fieldDef?.modes) return true; // sin restricción = visible en todos los modos
+  return fieldDef.modes.includes(currentMode);
+}
+
 // ─── Subcomponente: tarjeta de opción ────────────────────────────────────────
 
 function OptionCard({ option, selected, onSelect }) {
@@ -249,11 +238,11 @@ function OptionCard({ option, selected, onSelect }) {
 
 // ─── Subcomponente: barra de progreso ────────────────────────────────────────
 
-function ProgressBar({ currentStep }) {
+function ProgressBar({ currentStep, sections }) {
   return (
     <div className="space-y-2">
       <div className="flex gap-2">
-        {SECTIONS.map((_, i) => (
+        {sections.map((_, i) => (
           <div
             key={i}
             className={`h-1.5 flex-1 rounded-full transition-colors duration-300 ${
@@ -263,7 +252,7 @@ function ProgressBar({ currentStep }) {
         ))}
       </div>
       <p className="text-xs text-muted-foreground">
-        Paso {currentStep + 1} de {SECTIONS.length} — {SECTIONS[currentStep].title}
+        Paso {currentStep + 1} de {sections.length} — {sections[currentStep].title}
       </p>
     </div>
   );
@@ -275,6 +264,10 @@ function ProfileForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const mode = searchParams.get("mode"); // null = directo, "inverse" = inverso
+
+  // Modo activo y copy correspondiente
+  const currentMode = mode === "inverse" ? "inverse" : "direct";
+  const copy = PROFILE_COPY[currentMode];
 
   // currentStep: 0-3 → secciones del cuestionario, 4 → pantalla de resumen
   const [currentStep, setCurrentStep] = useState(0);
@@ -410,10 +403,19 @@ function ProfileForm() {
 
   // ── Validación del botón Siguiente ──────────────────────────────────────
 
+  // Los campos ocultos por modo no deben bloquear el avance
+  const requiredForCurrentMode =
+    currentStep < 4
+      ? REQUIRED_FIELDS_BY_SECTION[currentStep].filter((fieldId) => {
+          const fieldDef = findFieldDef(fieldId);
+          return isFieldVisibleInMode(fieldDef, currentMode);
+        })
+      : [];
+
   const isNextDisabled =
     currentStep < 4 &&
     (
-      REQUIRED_FIELDS_BY_SECTION[currentStep].some(
+      requiredForCurrentMode.some(
         (field) => profileData[field] === null
       ) ||
       // Q5a es obligatoria si hay dependientes
@@ -428,19 +430,50 @@ function ProfileForm() {
   const handlePrev = () => setCurrentStep((s) => s - 1);
 
   const handleConfirm = () => {
-    localStorage.setItem("userProfile", JSON.stringify(profileData));
-    router.push(mode === "inverse" ? "/inverse-calculator" : "/calculator");
+    // En modo inverso, forzamos valores neutros para los campos ocultos
+    // (el motor de cálculo los necesita aunque la UI no los exponga).
+    const profileToSave = {
+      ...profileData,
+      ...(currentMode === "inverse" ? {
+        emergencyFundStatus: "complete",
+        consumerDebt: "none",
+        monthlyDebtPayment: 0,
+      } : {}),
+    };
+
+    const storageKey = currentMode === "inverse"
+      ? STORAGE_KEYS.profileIdeal
+      : STORAGE_KEYS.profileCurrent;
+
+    localStorage.setItem(storageKey, JSON.stringify(profileToSave));
+    router.push(currentMode === "inverse" ? "/inverse-calculator" : "/calculator");
   };
 
   // ── Renderizado de una sección de preguntas ──────────────────────────────
 
   const renderSection = (sectionIndex) => {
-    const section = SECTIONS[sectionIndex];
-    const questions = SECTION_QUESTIONS[sectionIndex];
+    const section = copy.sections[sectionIndex];
+    // Filtramos preguntas no visibles en el modo actual
+    const questions = SECTION_QUESTIONS[sectionIndex].filter(
+      (q) => isFieldVisibleInMode(q, currentMode)
+    );
 
     return (
       <div className="space-y-8">
-        <ProgressBar currentStep={sectionIndex} />
+        <ProgressBar currentStep={sectionIndex} sections={copy.sections} />
+
+        {/* Badge sticky de modo — ancla mental durante todo el cuestionario */}
+        {currentMode === "inverse" ? (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-100 text-amber-800 text-sm font-medium w-fit">
+            <Sparkles className="h-4 w-4" />
+            <span>Perfil ideal futuro</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 text-sm font-medium w-fit">
+            <User className="h-4 w-4" />
+            <span>Perfil actual</span>
+          </div>
+        )}
 
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">{section.title}</h1>
@@ -450,13 +483,14 @@ function ProfileForm() {
         {questions.map((question) => {
           const isOptional = question.optional === true;
           const gridClass = question.options.length >= 4 ? "grid gap-2 sm:grid-cols-2" : "grid gap-2";
+          const questionLabel = copy.questions[question.field] ?? question.field;
 
           return (
             <Fragment key={question.field}>
               {/* Pregunta estándar */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-sm font-medium">{question.label}</p>
+                  <p className="text-sm font-medium">{questionLabel}</p>
                   {isOptional && (
                     <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full leading-none">
                       Opcional
@@ -486,7 +520,7 @@ function ProfileForm() {
                 <div className="space-y-3 pl-4 border-l-2 border-muted animate-in fade-in duration-200">
                   <div className="space-y-1">
                     <p className="text-sm font-medium">
-                      ¿Cuánto pagas en total al mes en cuotas de préstamos o deudas?
+                      {copy.questions.monthlyDebtPayment}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       Sin contar hipoteca ni vehículo. Incluye préstamos personales, financiaciones de productos, tarjetas con saldo pendiente, deudas con familiares, etc.
@@ -517,7 +551,7 @@ function ProfileForm() {
               {sectionIndex === 2 && question.field === "vehicleStatus" && showFreelanceTravel && (
                 <div className="space-y-3 pl-4 border-l-2 border-muted animate-in fade-in duration-200">
                   <p className="text-sm font-medium">
-                    ¿Tu actividad requiere desplazamientos regulares para visitar clientes o realizar tu trabajo en distintas ubicaciones?
+                    {copy.questions.freelanceRegularTravel}
                   </p>
                   <div className="grid gap-2">
                     {[
@@ -542,7 +576,7 @@ function ProfileForm() {
                   {showQ5a && (
                     <div className="space-y-3 pl-4 border-l-2 border-muted animate-in fade-in duration-200">
                       <p className="text-sm font-medium">
-                        ¿Incluye una pareja o adulto a tu cargo?
+                        {copy.questions.hasPartner}
                       </p>
                       <div className="grid gap-2">
                         {[
@@ -564,7 +598,7 @@ function ProfileForm() {
                   {showPartnerIncome && (
                     <div className="space-y-3 pl-4 border-l-2 border-muted animate-in fade-in duration-200">
                       <p className="text-sm font-medium">
-                        ¿Tu pareja aporta ingresos propios al hogar?
+                        {copy.questions.partnerHasIncome}
                       </p>
                       <div className="grid gap-2">
                         {[
@@ -586,7 +620,7 @@ function ProfileForm() {
                   {showQ5b && (
                     <div className="space-y-3 pl-4 border-l-2 border-muted animate-in fade-in duration-200">
                       <p className="text-sm font-medium">
-                        ¿Cuántos de tus hijos estudian en la universidad?
+                        {copy.questions.childrenAtUniversity}
                       </p>
                       <div className={q5bOptions.length >= 4 ? "grid gap-2 sm:grid-cols-2" : "grid gap-2"}>
                         {q5bOptions.map((option) => (
@@ -605,7 +639,7 @@ function ProfileForm() {
                   {showQ5c && (
                     <div className="space-y-3 pl-4 border-l-2 border-muted animate-in fade-in duration-200">
                       <p className="text-sm font-medium">
-                        ¿Cuántos de ellos estudian fuera de casa, en otra ciudad?
+                        {copy.questions.childrenStudyingAway}
                       </p>
                       <div className={q5cOptions.length >= 4 ? "grid gap-2 sm:grid-cols-2" : "grid gap-2"}>
                         {q5cOptions.map((option) => (
@@ -646,10 +680,23 @@ function ProfileForm() {
 
   const renderSummary = () => (
     <div className="space-y-8">
+      {/* Badge sticky de modo también en el resumen */}
+      {currentMode === "inverse" ? (
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-100 text-amber-800 text-sm font-medium w-fit">
+          <Sparkles className="h-4 w-4" />
+          <span>Perfil ideal futuro</span>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 text-sm font-medium w-fit">
+          <User className="h-4 w-4" />
+          <span>Perfil actual</span>
+        </div>
+      )}
+
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Resumen de tu perfil</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{copy.summary.title}</h1>
         <p className="text-sm text-muted-foreground">
-          Revisa tus respuestas antes de continuar. Puedes editar cualquier sección.
+          {copy.summary.subtitle}
         </p>
       </div>
 
@@ -657,7 +704,7 @@ function ProfileForm() {
         <div key={sectionIndex} className="space-y-3">
           {/* Cabecera de sección */}
           <div className="flex items-center justify-between border-b pb-2">
-            <h2 className="text-sm font-semibold">{SECTIONS[sectionIndex].title}</h2>
+            <h2 className="text-sm font-semibold">{copy.sections[sectionIndex].title}</h2>
             <Button
               variant="ghost"
               size="sm"
@@ -670,19 +717,22 @@ function ProfileForm() {
 
           {/* Chips de respuestas */}
           <div className="flex flex-wrap gap-2">
-            {fields.map((field) => {
-              const value = profileData[field];
-              if (value === null) return null;
-              const label = LABEL_MAP[field]?.[value] ?? String(value);
-              return (
-                <span
-                  key={field}
-                  className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium bg-muted text-foreground"
-                >
-                  {label}
-                </span>
-              );
-            })}
+            {fields
+              // Excluimos del resumen los campos ocultos en el modo actual
+              .filter((field) => isFieldVisibleInMode(findFieldDef(field), currentMode))
+              .map((field) => {
+                const value = profileData[field];
+                if (value === null) return null;
+                const label = LABEL_MAP[field]?.[value] ?? String(value);
+                return (
+                  <span
+                    key={field}
+                    className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium bg-muted text-foreground"
+                  >
+                    {label}
+                  </span>
+                );
+              })}
 
             {/* Chips adicionales para las subpreguntas condicionales de la sección 0 */}
             {sectionIndex === 0 && (
@@ -710,8 +760,8 @@ function ProfileForm() {
               </>
             )}
 
-            {/* Chip adicional para cuota de deuda en sección 3 */}
-            {sectionIndex === 3 && profileData.monthlyDebtPayment > 0 && (
+            {/* Chip adicional para cuota de deuda en sección 3 (solo modo directo) */}
+            {sectionIndex === 3 && currentMode === "direct" && profileData.monthlyDebtPayment > 0 && (
               <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium bg-muted text-foreground">
                 Cuota deuda: {profileData.monthlyDebtPayment}€/mes
               </span>
@@ -726,11 +776,11 @@ function ProfileForm() {
           Anterior
         </Button>
         <Button size="lg" onClick={handleConfirm}>
-          Confirmar y calcular
+          {copy.summary.cta}
         </Button>
       </div>
       <p className="text-xs text-muted-foreground text-center pt-3">
-        Tu perfil se guardará en este dispositivo para que no tengas que rellenarlo de nuevo.
+        {copy.summary.footer}
       </p>
     </div>
   );
@@ -738,14 +788,6 @@ function ProfileForm() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-start p-8 pt-12">
       <div className="w-full max-w-2xl space-y-6">
-        {mode === "inverse" && (
-          <div className="flex gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
-            <Info className="size-5 shrink-0 mt-0.5" />
-            <p>
-              Estás configurando tu perfil para el cálculo inverso. Define el perfil que corresponda al estilo de vida que deseas alcanzar, no necesariamente tu situación actual. Por ejemplo, si actualmente vives de alquiler pero quieres comprar una vivienda, selecciona &quot;Hipoteca&quot; en tu perfil. Si prefieres ahorrar para pagarla sin préstamo, mantén tu perfil actual y destina el importe deseado a &quot;Ahorro a largo plazo&quot;.
-            </p>
-          </div>
-        )}
         {currentStep < 4 ? renderSection(currentStep) : renderSummary()}
       </div>
     </main>

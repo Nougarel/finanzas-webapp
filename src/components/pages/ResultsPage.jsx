@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { STORAGE_KEYS } from "@/lib/storage-keys";
 
 const BLOCK_ORDER = ["needs", "wants", "savings"];
 
@@ -62,7 +63,7 @@ function ResultsContent() {
   const [profile] = useState(() => {
     if (typeof window === "undefined") return null;
     try {
-      const s = localStorage.getItem("userProfile");
+      const s = localStorage.getItem(STORAGE_KEYS.profileCurrent);
       return s ? JSON.parse(s) : null;
     } catch { return null; }
   });
@@ -70,7 +71,7 @@ function ResultsContent() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(() => {
     if (typeof window === "undefined") return false;
-    return !!localStorage.getItem("userProfile");
+    return !!localStorage.getItem(STORAGE_KEYS.profileCurrent);
   });
   const [calcError, setCalcError] = useState(null);
 
