@@ -52,7 +52,7 @@ function runLP(profile, income, specifiedAmounts) {
     }
   }
 
-  const { targets, factibleMaxOverrides } = calculateTargets(profile, income);
+  const { targets, factibleMaxOverrides, insufficientBudget } = calculateTargets(profile, income);
 
   const lpWeightOverrides = profile.housingPurchaseGoal === true
     ? { long_term_savings: 35 }
@@ -65,7 +65,7 @@ function runLP(profile, income, specifiedAmounts) {
     factibleMaxOverrides,
   });
 
-  return { lpResult, targets };
+  return { lpResult, targets, insufficientBudget };
 }
 
 /**
@@ -209,7 +209,7 @@ export function calculateInverse(profile, specifiedAmounts = {}) {
   let incomeForDistribution = Math.ceil(high);
 
   // 4. LP final con el ingreso convergido
-  let { lpResult, targets } = runLP(profileForInverse, incomeForDistribution, specifiedAmounts);
+  let { lpResult, targets, insufficientBudget } = runLP(profileForInverse, incomeForDistribution, specifiedAmounts);
 
   // 5. Safety check: necesidades no fijadas deben recibir ≥ 95% de su target
   const MAX_RETRIES = 5;
@@ -217,7 +217,7 @@ export function calculateInverse(profile, specifiedAmounts = {}) {
   while (retries < MAX_RETRIES) {
     if (!lpResult.feasible) {
       incomeForDistribution += 100;
-      ({ lpResult, targets } = runLP(profileForInverse, incomeForDistribution, specifiedAmounts));
+      ({ lpResult, targets, insufficientBudget } = runLP(profileForInverse, incomeForDistribution, specifiedAmounts));
       retries++;
       continue;
     }
@@ -240,7 +240,7 @@ export function calculateInverse(profile, specifiedAmounts = {}) {
     if (allOk) break;
 
     incomeForDistribution += 100;
-    ({ lpResult, targets } = runLP(profileForInverse, incomeForDistribution, specifiedAmounts));
+    ({ lpResult, targets, insufficientBudget } = runLP(profileForInverse, incomeForDistribution, specifiedAmounts));
     retries++;
   }
 
@@ -321,5 +321,6 @@ export function calculateInverse(profile, specifiedAmounts = {}) {
     specifiedAmounts,
     comparison,
     warnings,
+    insufficientBudget: insufficientBudget === true,
   };
 }
