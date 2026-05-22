@@ -84,6 +84,14 @@ function evaluateAlerts(needsDistribution, wantsTotal, savingsTotal) {
     alerts._savings_block = { level: 'mild',   message: 'Tu tasa de ahorro está por debajo de lo recomendado' };
   }
 
+  // Ahorro excesivo — penalización moderada: ahorrar mucho es preferible a no ahorrar,
+  // pero por encima del 50% puede comprometer calidad de vida o cubrir necesidades básicas.
+  if (savingsTotal > 65) {
+    alerts._savings_excess_block = { level: 'severe', message: 'Una tasa de ahorro tan elevada puede comprometer cubrir necesidades básicas. Revisa tu distribución.' };
+  } else if (savingsTotal > 50) {
+    alerts._savings_excess_block = { level: 'mild',   message: 'Estás destinando más de la mitad de tu ingreso al ahorro. Considera si tu calidad de vida actual es la que deseas.' };
+  }
+
   return alerts;
 }
 
@@ -145,6 +153,52 @@ function calculateTransversal(needsDist, savingsDist, income, effectiveIncome, m
 const SAVINGS_IDS_SET = new Set(CATEGORIES_CATALOG.filter(c => c.block === 'savings').map(c => c.id));
 const NEEDS_IDS_SET   = new Set(CATEGORIES_CATALOG.filter(c => c.block === 'needs').map(c => c.id));
 
+// Dirección de penalización por categoría:
+//   'upper_only'      → solo penalizar si el gasto está POR ENCIMA del target (coste fijo — menos es mejor)
+//   'lower_only'      → solo penalizar si el gasto está POR DEBAJO del target (ahorro — más es mejor)
+//   'symmetric'       → penalizar en ambas direcciones (resto de necesidades)
+//   'block_only'      → sin penalización individual (deseos — solo a nivel de bloque)
+//   'floor_sensitive' → penalizar el exceso siempre, y el defecto solo si cae bajo el suelo vital (healthyRange.min)
+const SCORING_DIRECTION = {
+  // Needs — coste fijo: penalizar solo el exceso
+  housing:   'upper_only',
+  transport: 'upper_only',
+  // Needs — necesidad vital con suelo: penalizar shortfall bajo mínimo Y exceso pronunciado
+  groceries: 'floor_sensitive',
+  health:    'floor_sensitive',
+  // Needs — coste operativo / formación: penalizar solo el exceso (gastar menos es neutro o positivo)
+  utilities:  'upper_only',
+  education:  'upper_only',
+  // Savings — penalizar solo el shortfall
+  life_insurance:      'lower_only',
+  emergency_fund:      'lower_only',
+  short_term_savings:  'lower_only',
+  long_term_savings:   'lower_only',
+  investment:          'lower_only',
+  debt_extra:          'lower_only',
+  // Wants — sin penalización individual (solo bloque)
+  dining_out:      'block_only',
+  travel:          'block_only',
+  clothing:        'block_only',
+  personal_care:   'block_only',
+  entertainment:   'block_only',
+  hobbies:         'block_only',
+  subscriptions:   'block_only',
+  gifts:           'block_only',
+};
+
+// Suelos vitales para categorías 'floor_sensitive': mínimo del healthyRange del catálogo.
+// Se usa para decidir si un shortfall debe penalizarse (por debajo del suelo) o no.
+const FLOOR_SENSITIVE_MIN = Object.fromEntries(
+  CATEGORIES_CATALOG
+    .filter(c => SCORING_DIRECTION[c.id] === 'floor_sensitive')
+    .map(c => {
+      const range = c.healthyRange;
+      const minVal = Array.isArray(range) ? range[0] : (range?.min ?? range?.low ?? 0);
+      return [c.id, minVal];
+    })
+);
+
 // Penalización base según magnitud de desviación (puntos porcentuales).
 function deviationPenalty(absDev) {
   if (absDev < 1.5)  return 0;
@@ -155,17 +209,20 @@ function deviationPenalty(absDev) {
 
 // Penalizaciones por alertas de bloque.
 const BLOCK_PENALTY = {
-  _wants_block:   { mild: 5,  severe: 10 },
-  _savings_block: { mild: 5,  severe: 10 },
-  _budget_block:  { severe: 20 },
-  _debt_block:    { severe: 15 },
+  _wants_block:          { mild: 5,  severe: 10 },
+  _savings_block:        { mild: 5,  severe: 10 },
+  _savings_excess_block: { mild: 3,  severe: 7  },
+  _budget_block:         { severe: 20 },
+  _debt_block:           { severe: 15 },
 };
 
 /**
  * Calcula un score 0-100 de salud financiera basado en:
- *   - Desviaciones de las categorías respecto a sus targets personalizados
- *     (necesidades a peso completo, ahorro con factor 0.7).
- *   - Alertas de bloque (_wants_block, _savings_block, _budget_block, _debt_block).
+ *   - Desviaciones de las categorías respecto a sus targets personalizados,
+ *     aplicando la dirección de penalización definida en SCORING_DIRECTION
+ *     (upper_only / lower_only / symmetric / floor_sensitive / block_only).
+ *   - Alertas de bloque (_wants_block, _savings_block, _savings_excess_block,
+ *     _budget_block, _debt_block).
  *
  * Devuelve también una etiqueta cualitativa y el desglose de penalizaciones
  * para que la UI pueda explicarlo al usuario.
@@ -179,19 +236,41 @@ function calculateHealthScore(categoryDiagnosis, alerts) {
     if (catId.startsWith('_')) continue;
     if (diag.target === null) continue;
 
-    const absDev = Math.abs(diag.deviation);
+    const direction = SCORING_DIRECTION[catId] ?? 'symmetric';
+
+    // Deseos: sin penalización individual, solo a nivel de bloque.
+    if (direction === 'block_only') continue;
+
+    const deviation = diag.deviation;
+
+    // Coste fijo: solo penalizar si excede el target (gastar menos es bueno).
+    if (direction === 'upper_only' && deviation <= 0) continue;
+
+    // Ahorro: solo penalizar si queda por debajo del target (ahorrar más es bueno).
+    if (direction === 'lower_only' && deviation >= 0) continue;
+
+    // Necesidad vital con suelo: penalizar exceso siempre; defecto solo si cae bajo el suelo.
+    if (direction === 'floor_sensitive' && deviation < 0) {
+      const floor = FLOOR_SENSITIVE_MIN[catId] ?? 0;
+      if (diag.assigned >= floor) continue;
+    }
+
+    const absDev = Math.abs(deviation);
     const base   = deviationPenalty(absDev);
     if (base === 0) continue;
 
-    const factor = SAVINGS_IDS_SET.has(catId) ? 0.7 : 1.0;
+    // Factor por tipo: needs y savings a peso completo (1.0). El antiguo 0.7 para
+    // savings era un compromiso por penalizar también el exceso; con 'lower_only'
+    // resuelto, el déficit de ahorro merece el mismo peso que el exceso en needs.
+    const factor = 1.0;
     const points = Math.round(base * factor);
     if (points === 0) continue;
 
-    const direction = diag.deviation > 0 ? 'por encima' : 'por debajo';
+    const dirLabel = deviation > 0 ? 'por encima' : 'por debajo';
     penalties.push({
       category: catId,
       points: -points,
-      reason: `${absDev.toFixed(1)} pp ${direction} del target`,
+      reason: `${absDev.toFixed(1)} pp ${dirLabel} del target`,
     });
     totalPenalty += points;
   }
