@@ -188,9 +188,20 @@ function ResultsContent() {
           <CardContent>
             <p className="text-4xl font-bold">{formatCurrency(income)}</p>
             {result.monthlyDebtPayment > 0 && (
-              <p className="text-sm text-muted-foreground mt-2">
-                Cuota fija de deudas: {formatCurrency(result.monthlyDebtPayment)}/mes · Ingreso disponible: {formatCurrency(result.effectiveIncome)}/mes
-              </p>
+              <div className="mt-3 space-y-1 border-t pt-3">
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>Ingreso neto</span>
+                  <span>{formatCurrency(income)}</span>
+                </div>
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>Cuota fija de deuda</span>
+                  <span>−{formatCurrency(result.monthlyDebtPayment)} ({formatPct(result.monthlyDebtPayment / income * 100)})</span>
+                </div>
+                <div className="flex justify-between text-sm font-medium border-t pt-2 mt-1">
+                  <span>Disponible para distribuir</span>
+                  <span>{formatCurrency(result.effectiveIncome)}</span>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -224,6 +235,13 @@ function ResultsContent() {
           {viewMode === "detailed" && (
             <p className="text-xs text-muted-foreground">
               Los importes por categoría están calculados en base a tu perfil. Úsalos como referencia orientativa.
+            </p>
+          )}
+          {result.monthlyDebtPayment > 0 && (
+            <p className="text-xs text-muted-foreground bg-muted/40 rounded-md px-3 py-2">
+              Los porcentajes son sobre tu ingreso bruto de {formatCurrency(income)}.
+              El {formatPct(result.monthlyDebtPayment / income * 100)} restante
+              ({formatCurrency(result.monthlyDebtPayment)}) corresponde a tu cuota fija de deuda.
             </p>
           )}
         </div>

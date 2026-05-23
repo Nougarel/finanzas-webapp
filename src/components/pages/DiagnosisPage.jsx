@@ -237,6 +237,15 @@ function DiagnosisContent() {
         <HealthScoreCard healthScore={diagnosis.healthScore} categoryLabels={categoryLabels} />
 
         {/* Resumen por bloque */}
+        {diagnosis.monthlyDebtPayment > 0 && (
+          <div className="rounded-md bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+            La distribución saludable está calculada sobre{" "}
+            <strong className="text-foreground">{formatCurrency(diagnosis.effectiveIncome)}</strong>/mes —
+            tu ingreso disponible tras descontar los{" "}
+            <strong className="text-foreground">{formatCurrency(diagnosis.monthlyDebtPayment)}</strong>/mes
+            de cuotas de deuda fija.
+          </div>
+        )}
         <div className="grid gap-4 md:grid-cols-3">
           {BLOCK_ORDER.map((blockKey) => {
             const b = diagnosis.blocks[blockKey];
