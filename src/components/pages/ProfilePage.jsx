@@ -300,6 +300,9 @@ function ProfileForm() {
     pensionRegime:        null, // 'social_security' | 'mutual' | 'none' — opcional
   });
 
+  // Error de validación del input de cuota mensual de deuda
+  const [debtError, setDebtError] = useState("");
+
   // ── Lógica de selección con limpieza de campos dependientes ─────────────
 
   const handleSelect = (field, value) => {
@@ -534,16 +537,24 @@ function ProfileForm() {
                       value={profileData.monthlyDebtPayment || ""}
                       onChange={(e) => {
                         const val = parseFloat(e.target.value);
+                        if (e.target.value !== "" && !isNaN(val) && val < 0) {
+                          setDebtError("La cuota no puede ser negativa");
+                          return; // No actualizar el estado
+                        }
+                        setDebtError("");
                         setProfileData((prev) => ({
                           ...prev,
-                          monthlyDebtPayment: isNaN(val) ? 0 : Math.max(0, val),
+                          monthlyDebtPayment: isNaN(val) ? 0 : val,
                         }));
                       }}
                       placeholder="0"
-                      className="w-32 rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      className={`w-32 rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary ${debtError ? "border-red-500" : "border-border"}`}
                     />
                     <span className="text-sm text-muted-foreground">€/mes</span>
                   </div>
+                  {debtError && (
+                    <p className="text-xs text-red-500 mt-1">{debtError}</p>
+                  )}
                 </div>
               )}
 

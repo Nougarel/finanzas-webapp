@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { CATEGORIES_UI } from "@/lib/models/categories";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
+import { validateAmount } from "@/lib/validators";
 
 const BLOCK_META = {
   needs:   { label: "Necesidades",  defaultOpen: true },
@@ -109,6 +110,9 @@ export default function InverseCalculatorPage() {
 
   const [openBlocks, setOpenBlocks] = useState({ needs: true, wants: false, savings: false });
 
+  // Errores de validación por categoría: { [catId]: string }
+  const [errors, setErrors] = useState({});
+
   if (profileMissing) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center p-8">
@@ -128,6 +132,24 @@ export default function InverseCalculatorPage() {
   const handleChange = (catId, value) => {
     touchedRef.current.add(catId);
     setAmounts(prev => ({ ...prev, [catId]: value }));
+    // Limpiar error mientras el usuario corrige
+    if (errors[catId]) {
+      setErrors(prev => {
+        const { [catId]: _removed, ...rest } = prev;
+        return rest;
+      });
+    }
+  };
+
+  const handleBlur = (catId, value) => {
+    const { valid, error } = validateAmount(value, { allowEmpty: true });
+    setErrors(prev => {
+      if (valid) {
+        const { [catId]: _removed, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [catId]: error };
+    });
   };
 
   const totalSpecified = Object.values(amounts).reduce((s, v) => {
@@ -140,6 +162,17 @@ export default function InverseCalculatorPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    // Re-validar todos los campos con valor antes de enviar
+    const newErrors = {};
+    for (const [catId, value] of Object.entries(amounts)) {
+      const { valid, error } = validateAmount(value, { allowEmpty: true });
+      if (!valid) newErrors[catId] = error;
+    }
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
 
     // Solo las categorías tocadas con valor > 0
     const specifiedAmounts = {};
@@ -207,8 +240,12 @@ export default function InverseCalculatorPage() {
                           placeholder="Automático"
                           value={amounts[cat.id] ?? ""}
                           onChange={e => handleChange(cat.id, e.target.value)}
-                          className="h-9"
+                          onBlur={e => handleBlur(cat.id, e.target.value)}
+                          className={`h-9 ${errors[cat.id] ? "border-red-500" : ""}`}
                         />
+                        {errors[cat.id] && (
+                          <p className="text-xs text-red-500 mt-0.5">{errors[cat.id]}</p>
+                        )}
                         <p className="text-xs text-muted-foreground">{getCategoryNote(cat, profile)}</p>
                       </div>
                     ))}

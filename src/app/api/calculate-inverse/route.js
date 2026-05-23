@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { calculateInverse } from '@/lib/calculators/inverseCalculator';
+import { sanitizeAmounts } from '@/lib/validators';
 
 export async function POST(request) {
   try {
@@ -12,7 +13,22 @@ export async function POST(request) {
       );
     }
 
-    const result = calculateInverse(profile, specifiedAmounts);
+    if (typeof specifiedAmounts !== 'object' || Array.isArray(specifiedAmounts) || specifiedAmounts === null) {
+      return NextResponse.json(
+        { error: 'specifiedAmounts debe ser un objeto' },
+        { status: 400 }
+      );
+    }
+
+    const { clean, invalidFields } = sanitizeAmounts(specifiedAmounts);
+    if (invalidFields.length > 0) {
+      return NextResponse.json(
+        { error: 'Algunos importes son inválidos (negativos o no numéricos)', invalidFields },
+        { status: 400 }
+      );
+    }
+
+    const result = calculateInverse(profile, clean);
 
     return NextResponse.json(result);
   } catch (error) {

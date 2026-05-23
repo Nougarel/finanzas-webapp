@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { CATEGORIES_UI } from "@/lib/models/categories";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
+import { validateAmount } from "@/lib/validators";
 
 const BLOCK_META = {
   needs:   { label: "Necesidades", defaultOpen: true  },
@@ -40,6 +41,8 @@ function DiagnosisForm() {
   // amounts: { [categoryId]: stringValue }
   const [amounts, setAmounts] = useState({});
   const [formError, setFormError] = useState("");
+  // Errores por campo (validación de cada importe)
+  const [fieldErrors, setFieldErrors] = useState({});
   const [openBlocks, setOpenBlocks] = useState({ needs: true, wants: false, savings: false });
 
   // Estados de carga / error
@@ -74,6 +77,23 @@ function DiagnosisForm() {
   const handleChange = (catId, value) => {
     setAmounts((prev) => ({ ...prev, [catId]: value }));
     if (formError) setFormError("");
+    if (fieldErrors[catId]) {
+      setFieldErrors((prev) => {
+        const { [catId]: _removed, ...rest } = prev;
+        return rest;
+      });
+    }
+  };
+
+  const handleBlur = (catId, value) => {
+    const { valid, error } = validateAmount(value, { allowEmpty: true });
+    setFieldErrors((prev) => {
+      if (valid) {
+        const { [catId]: _removed, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [catId]: error };
+    });
   };
 
   const toggleBlock = (block) =>
@@ -82,12 +102,24 @@ function DiagnosisForm() {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // Construir realAmounts (0 si vacío)
+    // Re-validar todos los campos antes de enviar
+    const newFieldErrors = {};
+    for (const cat of CATEGORIES_UI) {
+      const value = amounts[cat.id] ?? "";
+      const { valid, error } = validateAmount(value, { allowEmpty: true });
+      if (!valid) newFieldErrors[cat.id] = error;
+    }
+    if (Object.keys(newFieldErrors).length > 0) {
+      setFieldErrors(newFieldErrors);
+      return;
+    }
+
+    // Construir realAmounts (0 si vacío) — los negativos ya fueron capturados arriba
     const realAmounts = {};
     for (const cat of CATEGORIES_UI) {
       const raw = amounts[cat.id];
       const n = parseFloat(raw);
-      realAmounts[cat.id] = isNaN(n) || n < 0 ? 0 : n;
+      realAmounts[cat.id] = isNaN(n) ? 0 : n;
     }
 
     // Validación global: suma de reales no debe alejarse >30% del ingreso
@@ -168,8 +200,12 @@ function DiagnosisForm() {
                           placeholder="0"
                           value={amounts[cat.id] ?? ""}
                           onChange={(e) => handleChange(cat.id, e.target.value)}
-                          className="h-9"
+                          onBlur={(e) => handleBlur(cat.id, e.target.value)}
+                          className={`h-9 ${fieldErrors[cat.id] ? "border-red-500" : ""}`}
                         />
+                        {fieldErrors[cat.id] && (
+                          <p className="text-xs text-red-500 mt-0.5">{fieldErrors[cat.id]}</p>
+                        )}
                       </div>
                     ))}
                   </CardContent>

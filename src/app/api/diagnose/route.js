@@ -2,6 +2,7 @@
 // distribución saludable que el LP genera para su perfil.
 import { NextResponse } from "next/server";
 import { diagnoseDistribution } from "@/lib/calculators/distributionEngine";
+import { sanitizeAmounts } from "@/lib/validators";
 
 export async function POST(request) {
   try {
@@ -19,14 +20,22 @@ export async function POST(request) {
         { status: 400 }
       );
     }
-    if (!realAmounts || typeof realAmounts !== "object") {
+    if (!realAmounts || typeof realAmounts !== "object" || Array.isArray(realAmounts)) {
       return NextResponse.json(
         { error: "Se requieren los importes reales por categoría" },
         { status: 400 }
       );
     }
 
-    const diagnosis = diagnoseDistribution(profile, income, realAmounts);
+    const { clean, invalidFields } = sanitizeAmounts(realAmounts);
+    if (invalidFields.length > 0) {
+      return NextResponse.json(
+        { error: "Algunos importes son inválidos (negativos o no numéricos)", invalidFields },
+        { status: 400 }
+      );
+    }
+
+    const diagnosis = diagnoseDistribution(profile, income, clean);
     return NextResponse.json(diagnosis);
   } catch (error) {
     return NextResponse.json(

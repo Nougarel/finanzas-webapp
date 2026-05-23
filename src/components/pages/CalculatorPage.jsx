@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { validateIncome } from "@/lib/validators";
 
 /**
  * Subcomponente del formulario separado para mantener la compatibilidad con Suspense.
@@ -35,17 +36,13 @@ function CalculatorForm() {
   const handleSubmit = (e) => {
     e.preventDefault();
 
+    const validation = validateIncome(income);
+    if (!validation.valid) {
+      setError(validation.error);
+      return;
+    }
+
     const raw = parseFloat(income);
-
-    if (!income || isNaN(raw)) {
-      setError("Por favor, introduce un ingreso válido");
-      return;
-    }
-    if (raw <= 0) {
-      setError("El ingreso debe ser mayor que 0");
-      return;
-    }
-
     const monthlyIncome = incomeMode === "annual" ? raw / 12 : raw;
     router.push(`/results?income=${monthlyIncome}`);
   };
