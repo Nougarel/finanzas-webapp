@@ -328,7 +328,94 @@ export function calculateInverse(profile, specifiedAmounts = {}) {
   // 7. Advertencias
   const warnings = [];
 
+  // ── A) Inconsistencias perfil↔spec (warnings de perfil) ──────────────────────
+  // Se ejecutan primero. Las categorías que producen un warning de perfil
+  // se añaden a suppressCatalogWarningFor para no duplicar mensajes.
+  const suppressCatalogWarningFor = new Set();
+
+  // Número de hijos (excluyendo pareja del conteo de dependientes).
+  // Replica la lógica de calculateOECDFactor.
+  const hasPartner_       = profile.hasPartner ?? false;
+  const adultDependents_  = hasPartner_ ? 1 : 0;
+  const totalChildren_    = Math.max(0, (profile.dependents ?? 0) - adultDependents_);
+
+  // 1. Housing — vivienda pagada/cedida con importe alto
+  if (
+    'housing' in specifiedAmounts &&
+    (profile.housingStatus === 'owned' || profile.housingStatus === 'family')
+  ) {
+    const pct = (specifiedAmounts.housing / incomeForDistribution) * 100;
+    if (pct > 10) {
+      warnings.push(
+        'Vivienda: has indicado que tu vivienda está pagada o cedida, lo que implica solo gastos de mantenimiento. ' +
+        'Si planeas pagar alquiler o hipoteca, actualiza tu perfil para que el cálculo sea preciso.'
+      );
+      suppressCatalogWarningFor.add('housing');
+    }
+  }
+
+  // 2. Transport — sin vehículo con importe alto
+  if ('transport' in specifiedAmounts && profile.vehicleStatus === 'none') {
+    const pct = (specifiedAmounts.transport / incomeForDistribution) * 100;
+    if (pct > 8) {
+      warnings.push(
+        'Transporte: has indicado que no tienes vehículo. ' +
+        'El transporte público en España raramente supera este importe. ' +
+        'Si planeas adquirir un vehículo, actualiza tu perfil.'
+      );
+      suppressCatalogWarningFor.add('transport');
+    }
+  }
+
+  // 3. Education — sin hijos ni formación propia con importe alto
+  if (
+    'education' in specifiedAmounts &&
+    totalChildren_ === 0 &&
+    (profile.ownEducation === 'none' || !profile.ownEducation)
+  ) {
+    const pct = (specifiedAmounts.education / incomeForDistribution) * 100;
+    if (pct > 5) {
+      warnings.push(
+        'Educación: has indicado que no estás en formación ni tienes hijos o dependientes a cargo. ' +
+        'Si planeas formarte o tienes dependientes, actualiza tu perfil.'
+      );
+      suppressCatalogWarningFor.add('education');
+    }
+  }
+
+  // 4. Health — sin seguro privado con importe alto
+  if (
+    'health' in specifiedAmounts &&
+    (profile.privateHealthInsurance === 'none' || !profile.privateHealthInsurance)
+  ) {
+    const pct = (specifiedAmounts.health / incomeForDistribution) * 100;
+    if (pct > 8) {
+      warnings.push(
+        'Salud: has indicado que no tienes seguro médico privado. ' +
+        'Copagos, farmacia y dental raramente superan este importe con solo la sanidad pública. ' +
+        'Si planeas contratar un seguro, actualiza tu perfil.'
+      );
+      suppressCatalogWarningFor.add('health');
+    }
+  }
+
+  // 5. Debt extra — sin deuda con importe > 0 (caso binario)
+  if (
+    'debt_extra' in specifiedAmounts &&
+    specifiedAmounts.debt_extra > 0 &&
+    (profile.consumerDebt === 'none' || !profile.consumerDebt)
+  ) {
+    warnings.push(
+      'Amortización extra: has indicado que no tienes deuda de consumo. ' +
+      'Si has contraído deuda, actualiza tu perfil. ' +
+      'Si quieres reservar este importe para otro fin, considera usar Ahorro a corto plazo o Inversión.'
+    );
+    suppressCatalogWarningFor.add('debt_extra');
+  }
+
+  // ── B) Warnings del catálogo (umbrales de alerts) — respetan supresión ────────
   for (const [catId, specifiedAmount] of Object.entries(specifiedAmounts)) {
+    if (suppressCatalogWarningFor.has(catId)) continue;
     const cat = CATEGORIES_CATALOG.find(c => c.id === catId);
     if (!cat || !cat.alerts) continue;
 
