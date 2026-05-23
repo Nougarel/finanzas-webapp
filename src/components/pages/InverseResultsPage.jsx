@@ -164,7 +164,7 @@ export default function InverseResultsPage() {
                   <tr className="border-b bg-muted/30">
                     <th className="text-left px-4 py-2 font-medium text-muted-foreground">Categoría</th>
                     <th className="text-right px-4 py-2 font-medium text-muted-foreground">Especificado</th>
-                    <th className="text-right px-4 py-2 font-medium text-muted-foreground">Saludable</th>
+                    <th className="text-right px-4 py-2 font-medium text-muted-foreground">Ref. INE</th>
                     <th className="text-right px-4 py-2 font-medium text-muted-foreground">Diferencia</th>
                   </tr>
                 </thead>

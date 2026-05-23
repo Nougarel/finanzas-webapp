@@ -251,31 +251,77 @@ export function calculateInverse(profile, specifiedAmounts = {}) {
   const { distribution } = lpResult;
 
   // 5. Construir distribución saludable completa con importes
-  const wantsCats     = CATEGORIES_CATALOG.filter(c => c.block === 'wants');
-  const totalWeight   = wantsCats.reduce((s, c) => s + (c.ineWeight ?? 0), 0);
+  const wantsCats   = CATEGORIES_CATALOG.filter(c => c.block === 'wants');
+  const totalWeight = wantsCats.reduce((s, c) => s + (c.ineWeight ?? 0), 0);
   const totalWantsPct = distribution.wants ?? 0;
+
+  // Pre-calcular referencia INE para cada deseo (bloque completo, sin tener en cuenta
+  // qué fijó el usuario). Se usa en la comparativa para mostrar la desviación
+  // informativa respecto a la media española — no como objetivo a alcanzar.
+  const wantsIneReference = {};
+  for (const cat of wantsCats) {
+    const pct = totalWeight > 0 ? (cat.ineWeight / totalWeight) * totalWantsPct : 0;
+    wantsIneReference[cat.id] = {
+      amount:     parseFloat(((pct / 100) * incomeForDistribution).toFixed(2)),
+      percentage: parseFloat(pct.toFixed(2)),
+    };
+  }
+
+  // Pre-calcular porcentaje total de deseos especificados por el usuario
+  const specifiedWantsPct = Object.entries(specifiedAmounts)
+    .filter(([id]) => WANTS_IDS.includes(id))
+    .reduce((s, [, amt]) => s + (amt / incomeForDistribution) * 100, 0);
+
+  // Remanente del bloque wants para distribuir entre deseos no especificados
+  const remainingWantsPct = Math.max(0, totalWantsPct - specifiedWantsPct);
+
+  // Pesos INE solo de los deseos no especificados (para repartir el remanente)
+  const unspecifiedWantsCats = wantsCats.filter(c => !(c.id in specifiedAmounts));
+  const unspecifiedWeight    = unspecifiedWantsCats.reduce((s, c) => s + (c.ineWeight ?? 0), 0);
 
   const healthyDistribution = {};
   for (const cat of CATEGORIES_CATALOG) {
-    const pct = cat.block === 'wants'
-      ? (cat.ineWeight / totalWeight) * totalWantsPct
-      : (distribution[cat.id] ?? 0);
+    let pct;
+    if (cat.block === 'wants') {
+      if (cat.id in specifiedAmounts) {
+        // Usar el importe real que el usuario fijó
+        pct = (specifiedAmounts[cat.id] / incomeForDistribution) * 100;
+      } else {
+        // Distribuir el remanente del bloque proportionalmente por peso INE
+        pct = unspecifiedWeight > 0
+          ? (cat.ineWeight / unspecifiedWeight) * remainingWantsPct
+          : 0;
+      }
+    } else {
+      pct = distribution[cat.id] ?? 0;
+    }
     healthyDistribution[cat.id] = {
       percentage: parseFloat(pct.toFixed(2)),
       amount:     parseFloat(((pct / 100) * incomeForDistribution).toFixed(2)),
     };
   }
 
-  // 6. Comparación: especificado vs. distribución saludable
+  // 6. Comparación: especificado vs. referencia INE (deseos) o distribución saludable (resto)
+  // Para deseos: healthyAmount = referencia INE (informativa, no prescriptiva)
+  // Para necesidades y ahorros: healthyAmount = lo que el LP asignó
   const comparison = {};
   for (const [catId, specifiedAmount] of Object.entries(specifiedAmounts)) {
-    const healthy = healthyDistribution[catId];
-    if (!healthy) continue;
+    let healthyAmount, healthyPct;
+    if (WANTS_IDS.includes(catId)) {
+      // Referencia INE — muestra desviación respecto a la media española
+      healthyAmount = wantsIneReference[catId]?.amount     ?? 0;
+      healthyPct    = wantsIneReference[catId]?.percentage ?? 0;
+    } else {
+      const h = healthyDistribution[catId];
+      if (!h) continue;
+      healthyAmount = h.amount;
+      healthyPct    = h.percentage;
+    }
     comparison[catId] = {
       specifiedAmount: parseFloat(specifiedAmount.toFixed(2)),
-      healthyAmount:   healthy.amount,
-      healthyPct:      healthy.percentage,
-      diff:            parseFloat((specifiedAmount - healthy.amount).toFixed(2)),
+      healthyAmount:   parseFloat(healthyAmount.toFixed(2)),
+      healthyPct:      parseFloat(healthyPct.toFixed(2)),
+      diff:            parseFloat((specifiedAmount - healthyAmount).toFixed(2)),
     };
   }
 
@@ -293,11 +339,6 @@ export function calculateInverse(profile, specifiedAmounts = {}) {
       warnings.push(`${cat.label}: ${cat.alerts.mild.message}`);
     }
   }
-
-  const specifiedWantsTotal = Object.entries(specifiedAmounts)
-    .filter(([id]) => WANTS_IDS.includes(id))
-    .reduce((s, [, v]) => s + v, 0);
-  const specifiedWantsPct = (specifiedWantsTotal / incomeForDistribution) * 100;
 
   if (specifiedWantsPct > 38) {
     warnings.push('Tus gastos discrecionales comprimen el espacio para necesidades y ahorro');
