@@ -128,12 +128,18 @@ export default function DebugRlsTestPage() {
 
       // 1. pretest_responses — upsert no aplica (UNIQUE session_id), intentamos insert y aceptamos
       //    23505 (ya existe) como prueba indirecta de que la fila propia ya está.
+      //
+      // IMPORTANTE: los valores hardcodeados aquí deben coincidir con los CHECKs
+      // vigentes en BBDD. Si una migración futura cambia los CHECKs de
+      // age_range/gender/education_level/employment_status, actualizar aquí
+      // o este escenario fallará. Última actualización: migración 004 (Fase 3 M18).
       const pretestRes = await studyClient.from("pretest_responses").insert({
         session_id: sessionId,
         age_range: "25_34",
         gender: "prefer_not_to_say",
-        education_level: "bachelor",
-        employment_status: "test_employment",
+        education_level: "university",
+        employment_status: "other",
+        household_composition: "living_alone",
         big_three_q1: true,
         big_three_q2: true,
         big_three_q3: true,
