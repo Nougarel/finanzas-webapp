@@ -10,12 +10,18 @@ import { useStudySession } from "@/lib/research/useStudySession";
 import { createStudyClient } from "@/lib/supabase/studyClient";
 
 /**
- * Página interna de validación empírica de RLS — 8 escenarios.
+ * ⚠️ COMPONENTE INTERNO DE TESTING — NO ELIMINAR sin acuerdo previo.
  *
- * Solo accesible en NODE_ENV !== "production" (gating en page.js).
- * Eliminable tras capturar evidencias para TFG cap. 5.3 (P5 aprobada).
+ * Página de validación empírica de las 14 RLS policies del subsistema de
+ * research (M-D1) mediante 8 escenarios automatizados. Solo accesible en
+ * NODE_ENV !== "production" (gating en page.js shell).
  *
- * Escenarios (E1-E8):
+ * Se mantiene deliberadamente como:
+ *   - Herramienta de regression check ante cambios en policies o migraciones
+ *   - Material académico reutilizable para TFG cap. 5.3
+ *   - Referencia técnica del patrón cliente Supabase + RLS
+ *
+ * Escenarios (E1-E8) — todos PASS en validación inicial (M18 Fase 2 Bloque C):
  *   E1 — sin auth → todos los INSERTs deben FAIL
  *   E2 — con auth propia: INSERT a las 4 hijas + UPDATE → PASS
  *   E3 — SELECT cruzado → solo ve la propia, no la ajena
