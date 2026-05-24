@@ -45,6 +45,8 @@ Tiempo total estimado: 15 a 20 minutos. Timeout duro de sesión: 60 minutos (Gal
 > El proceso es el siguiente: primero te haremos unas preguntas breves sobre ti y sobre conceptos financieros generales; después usarás la herramienta libremente; al terminar, te pediremos que valores la experiencia. Todo se hace en esta misma pestaña, sin registro y sin recoger datos personales identificativos.
 >
 > La duración estimada es de unos 10 minutos. Te recomendamos hacerlo de una sentada y sin prisa.
+>
+> **Una nota importante:** en las preguntas que aparecen a lo largo del estudio, responde lo que **realmente piensas o sabes**, sin tratar de buscar la respuesta "correcta". No estamos evaluándote a ti — el objetivo es adaptar la herramienta lo mejor posible a personas como tú, y eso solo es posible si tus respuestas son sinceras.
 
 **Botón principal:** "Empezar"
 
