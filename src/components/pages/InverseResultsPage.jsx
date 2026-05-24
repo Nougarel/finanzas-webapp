@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { CATEGORIES_UI } from "@/lib/models/categories";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
+import { useStudyContextOptional } from "@/lib/research/useStudyContext";
 
 const BLOCK_LABELS = { needs: "Necesidades", wants: "Deseos", savings: "Ahorro" };
 const BLOCK_ORDER  = ["needs", "wants", "savings"];
@@ -45,6 +46,28 @@ export default function InverseResultsPage() {
   });
   const [result,    setResult]    = useState(null);
   const [calcError, setCalcError] = useState(null);
+
+  // Modo testing guiado (M18 Fase 4): notificar cálculo completado al
+  // sistema research si el contexto /study está activo.
+  const study = useStudyContextOptional();
+  const notifiedRef = useRef(false);
+
+  useEffect(() => {
+    if (study && result && !notifiedRef.current) {
+      notifiedRef.current = true;
+      // El profile y specifiedAmounts viven en localStorage; los leemos solo
+      // para el snapshot que se persiste en app_interactions.
+      let profileSnapshot = {};
+      let inputPayload = {};
+      try {
+        profileSnapshot = JSON.parse(localStorage.getItem(STORAGE_KEYS.profileIdeal) ?? "{}");
+      } catch { /* snapshot vacío si falla parse */ }
+      try {
+        inputPayload = { specifiedAmounts: JSON.parse(localStorage.getItem(STORAGE_KEYS.specifiedAmounts) ?? "{}") };
+      } catch { /* input vacío si falla parse */ }
+      study.notifyCalculation("inverse", profileSnapshot, inputPayload, result);
+    }
+  }, [study, result]);
 
   useEffect(() => {
     // Importes especificados — persistidos por InverseCalculatorPage en localStorage

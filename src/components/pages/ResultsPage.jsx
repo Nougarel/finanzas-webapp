@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
+import { useStudyContextOptional } from "@/lib/research/useStudyContext";
 
 const BLOCK_ORDER = ["needs", "wants", "savings"];
 
@@ -77,6 +78,18 @@ function ResultsContent() {
 
   const incomeParam = searchParams.get("income");
   const income = parseFloat(incomeParam);
+
+  // Modo testing guiado (M18 Fase 4): si el contexto /study está activo,
+  // notificamos el cálculo completado para marcar el flujo como probado.
+  const study = useStudyContextOptional();
+  const notifiedRef = useRef(false);
+
+  useEffect(() => {
+    if (study && result && profile && !notifiedRef.current) {
+      notifiedRef.current = true;
+      study.notifyCalculation("direct", profile, { income }, result);
+    }
+  }, [study, result, profile, income]);
 
   useEffect(() => {
     if (!profile || !income || isNaN(income) || income <= 0) return;

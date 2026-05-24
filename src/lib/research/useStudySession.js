@@ -21,10 +21,15 @@ import { logEvent } from "@/lib/research/recorder";
  *
  * retry() incrementa `retryTick`, lo que re-ejecuta el effect de forma controlada.
  *
+ * Args opcionales (M18 Fase 4 P10):
+ *   - cohort: 'async_masivo' | 'pilot' | 'presencial' — guardado en
+ *     research_sessions.metadata.cohort al crear sesión nueva. Si la sesión
+ *     ya existía, no se sobreescribe (immutable post-creación).
+ *
  * Devuelve:
  *   { sessionId, userId, status, isLoading, error, retry }
  */
-export function useStudySession() {
+export function useStudySession({ cohort } = {}) {
   const client = useMemo(() => createStudyClient(), []);
 
   const [retryTick, setRetryTick] = useState(0);
@@ -94,10 +99,15 @@ export function useStudySession() {
           return;
         }
 
-        // 4. No hay sesión: crear una nueva
+        // 4. No hay sesión: crear una nueva. Cohort se persiste en metadata
+        // (JSONB existente, sin migración SQL — M18 Fase 4 P10).
         const { data: created, error: insertError } = await client
           .from('research_sessions')
-          .insert({ created_by: userId, study_phase: phase })
+          .insert({
+            created_by: userId,
+            study_phase: phase,
+            metadata: { cohort: cohort ?? 'async_masivo' },
+          })
           .select('id, status')
           .single();
 
@@ -126,7 +136,7 @@ export function useStudySession() {
     ensureSession();
 
     return () => { ignore = true; };
-  }, [client, retryTick]);
+  }, [client, retryTick, cohort]);
 
   // Escuchar cambios de auth (refresh token, sign out)
   useEffect(() => {

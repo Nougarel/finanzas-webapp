@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { AlertTriangle, Check, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CATEGORIES_UI } from "@/lib/models/categories";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
+import { useStudyContextOptional } from "@/lib/research/useStudyContext";
 
 const BLOCK_ORDER = ["needs", "wants", "savings"];
 
@@ -129,6 +130,23 @@ function DiagnosisContent() {
     return !!localStorage.getItem(STORAGE_KEYS.profileCurrent) && !!localStorage.getItem(STORAGE_KEYS.diagnosisAmounts);
   });
   const [calcError, setCalcError] = useState(null);
+
+  // Modo testing guiado (M18 Fase 4): notificar diagnóstico completado al
+  // sistema research si el contexto /study está activo.
+  const study = useStudyContextOptional();
+  const notifiedRef = useRef(false);
+
+  useEffect(() => {
+    if (study && diagnosis && profile && !notifiedRef.current) {
+      notifiedRef.current = true;
+      study.notifyCalculation(
+        "diagnosis",
+        profile,
+        { income, realAmounts },
+        diagnosis
+      );
+    }
+  }, [study, diagnosis, profile, income, realAmounts]);
 
   useEffect(() => {
     if (!profile || !income || isNaN(income) || income <= 0 || !realAmounts) return;
