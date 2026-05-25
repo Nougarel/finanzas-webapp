@@ -4,7 +4,7 @@ import { sanitizeAmounts } from '@/lib/validators';
 
 export async function POST(request) {
   try {
-    const { profile, specifiedAmounts } = await request.json();
+    const { profile, specifiedAmounts, force = false } = await request.json();
 
     if (!profile || !specifiedAmounts) {
       return NextResponse.json(
@@ -28,7 +28,7 @@ export async function POST(request) {
       );
     }
 
-    const result = calculateInverse(profile, clean);
+    const result = calculateInverse(profile, clean, { force: force === true });
 
     return NextResponse.json(result);
   } catch (error) {

@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { AlertTriangle, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { CATEGORIES_UI } from "@/lib/models/categories";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useStudyContextOptional } from "@/lib/research/useStudyContext";
+import { useStudyAwareRouter } from "@/lib/research/useStudyAwareRouter";
+import CoherenceWarningScreen from "@/components/pages/CoherenceWarningScreen";
 
 const BLOCK_LABELS = { needs: "Necesidades", wants: "Deseos", savings: "Ahorro" };
 const BLOCK_ORDER  = ["needs", "wants", "savings"];
@@ -34,7 +35,7 @@ function ErrorCard({ title, message, onBack }) {
 }
 
 export default function InverseResultsPage() {
-  const router = useRouter();
+  const router = useStudyAwareRouter();
 
   const [amountsMissing] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -46,6 +47,7 @@ export default function InverseResultsPage() {
   });
   const [result,    setResult]    = useState(null);
   const [calcError, setCalcError] = useState(null);
+  const [coherenceOutliers, setCoherenceOutliers] = useState(null);
 
   // Modo testing guiado (M18 Fase 4): notificar cálculo completado al
   // sistema research si el contexto /study está activo.
@@ -69,43 +71,57 @@ export default function InverseResultsPage() {
     }
   }, [study, result]);
 
-  useEffect(() => {
-    // Importes especificados — persistidos por InverseCalculatorPage en localStorage
+  // Función de cálculo reutilizable: se llama al montar y de nuevo cuando el
+  // usuario pulsa "Calcular igualmente" (con force = true).
+  // Toda la lógica vive dentro de un microtask (Promise.resolve().then) para
+  // evitar setState síncrono dentro de useEffect — patrón ya usado antes del
+  // refactor para satisfacer react-hooks/set-state-in-effect.
+  const runCalculation = useCallback((force = false) => {
     const stored = localStorage.getItem(STORAGE_KEYS.specifiedAmounts);
     if (!stored) return;
 
-    // Usar Promise para que todos los setState queden en callbacks asíncronos
-    Promise.resolve(stored)
-      .then((raw) => {
-        let specifiedAmounts;
-        try { specifiedAmounts = JSON.parse(raw); }
-        catch { setCalcError("Los importes no son válidos."); setLoading(false); return; }
+    Promise.resolve().then(() => {
+      setLoading(true);
+      setCalcError(null);
+      if (force) setCoherenceOutliers(null);
 
-        const profile = (() => {
-          try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.profileIdeal) ?? "null"); }
-          catch { return null; }
-        })();
+      let specifiedAmounts;
+      try { specifiedAmounts = JSON.parse(stored); }
+      catch { setCalcError("Los importes no son válidos."); setLoading(false); return; }
 
-        if (!profile) {
-          setCalcError("No se encontró el perfil. Vuelve a completarlo.");
-          setLoading(false);
-          return;
-        }
+      let profile;
+      try { profile = JSON.parse(localStorage.getItem(STORAGE_KEYS.profileIdeal) ?? "null"); }
+      catch { profile = null; }
 
-        fetch("/api/calculate-inverse", {
-          method:  "POST",
-          headers: { "Content-Type": "application/json" },
-          body:    JSON.stringify({ profile, specifiedAmounts }),
+      if (!profile) {
+        setCalcError("No se encontró el perfil. Vuelve a completarlo.");
+        setLoading(false);
+        return;
+      }
+
+      fetch("/api/calculate-inverse", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ profile, specifiedAmounts, force }),
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.error) {
+            setCalcError(data.error);
+          } else if (data.requiresConfirmation) {
+            setCoherenceOutliers(data.outliers ?? []);
+          } else {
+            setResult(data);
+          }
         })
-          .then(r => r.json())
-          .then(data => {
-            if (data.error) { setCalcError(data.error); }
-            else            { setResult(data); }
-          })
-          .catch(() => setCalcError("Error al conectar con el servidor."))
-          .finally(() => setLoading(false));
-      });
+        .catch(() => setCalcError("Error al conectar con el servidor."))
+        .finally(() => setLoading(false));
+    });
   }, []);
+
+  useEffect(() => {
+    runCalculation(false);
+  }, [runCalculation]);
 
   const goBack = () => router.push("/inverse-calculator");
 
@@ -117,6 +133,16 @@ export default function InverseResultsPage() {
       <main className="flex min-h-screen items-center justify-center">
         <p className="text-muted-foreground">Calculando ingreso mínimo...</p>
       </main>
+    );
+  }
+  if (coherenceOutliers && coherenceOutliers.length > 0) {
+    return (
+      <CoherenceWarningScreen
+        outliers={coherenceOutliers}
+        onEditProfile={() => router.push("/profile")}
+        onEditAmounts={() => router.push("/inverse-calculator")}
+        onForceCalculate={() => runCalculation(true)}
+      />
     );
   }
   if (calcError) {
@@ -265,9 +291,16 @@ export default function InverseResultsPage() {
           <Button variant="outline" onClick={goBack}>
             Volver y ajustar
           </Button>
-          <Button variant="outline" onClick={() => router.push("/")}>
-            Inicio
-          </Button>
+          {!study && (
+            <Button variant="outline" onClick={() => router.push("/")}>
+              Inicio
+            </Button>
+          )}
+          {study && (
+            <Button variant="outline" onClick={() => router.push("/study/home")}>
+              Volver al menú del estudio
+            </Button>
+          )}
         </div>
 
       </div>

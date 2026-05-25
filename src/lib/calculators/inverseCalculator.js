@@ -3,6 +3,11 @@ import 'server-only';
 import { CATEGORIES_CATALOG } from '../models/categories';
 import { calculateTargets } from './profileCalculator';
 import { solveDistribution } from './lpSolver';
+import {
+  detectOutliers,
+  requiresUserConfirmation,
+  PROFILE_INCONSISTENCY_RULES,
+} from './coherenceCheck';
 
 const NEEDS_IDS   = CATEGORIES_CATALOG.filter(c => c.block === 'needs').map(c => c.id);
 const SAVINGS_IDS = CATEGORIES_CATALOG.filter(c => c.block === 'savings').map(c => c.id);
@@ -161,6 +166,10 @@ function isIncomeFeasible(profile, income, specifiedAmounts, baseTargetMap) {
  *
  * @param {object} profile
  * @param {object} specifiedAmounts — { [categoryId]: amountInEuros } (sólo > 0)
+ * @param {object} [options]
+ * @param {boolean} [options.force=false] — si true, salta la detección de
+ *   incoherencias perfil↔spec y ejecuta el cálculo siempre. Pensado para
+ *   cuando el usuario confirma desde la pantalla intermedia de coherencia.
  * @returns {{
  *   feasible: boolean,
  *   requiredIncome?: number,
@@ -170,9 +179,13 @@ function isIncomeFeasible(profile, income, specifiedAmounts, baseTargetMap) {
  *   comparison?: object,
  *   warnings?: string[],
  *   error?: string,
+ *   requiresConfirmation?: boolean,
+ *   outliers?: Array,
  * }}
  */
-export function calculateInverse(profile, specifiedAmounts = {}) {
+export function calculateInverse(profile, specifiedAmounts = {}, options = {}) {
+  const { force = false } = options;
+
   // 1. Clonar perfil forzando fase "completo" del fondo de emergencia
   const profileForInverse = { ...profile, emergencyFundStatus: 'complete' };
 
@@ -181,6 +194,24 @@ export function calculateInverse(profile, specifiedAmounts = {}) {
   //    Los usa la condición 2 de isIncomeFeasible.
   const { targets: baseTargets } = calculateTargets(profileForInverse, 2000);
   const baseTargetMap = Object.fromEntries(baseTargets.map(t => [t.categoryId, t.target]));
+
+  // 2.bis Detección de incoherencias perfil↔spec (no bloqueante).
+  //       Si se detectan outliers con AMBAS señales (estadística + inconsistencia
+  //       de perfil), se devuelve un response especial para que el frontend
+  //       muestre la pantalla intermedia de coherencia. El usuario puede
+  //       revisar perfil/importes o forzar el cálculo con force = true.
+  if (!force) {
+    const outliers = detectOutliers(profileForInverse, specifiedAmounts);
+    const blocking = requiresUserConfirmation(outliers);
+    if (blocking.length > 0) {
+      return {
+        feasible: false,
+        requiresConfirmation: true,
+        outliers: blocking,
+        specifiedAmounts,
+      };
+    }
+  }
 
   // 3. Búsqueda binaria [0, 50M] con ε = 1€
   const HI_BOUND = 50_000_000;
@@ -331,71 +362,26 @@ export function calculateInverse(profile, specifiedAmounts = {}) {
   // ── A) Inconsistencias perfil↔spec (warnings de perfil) ──────────────────────
   // Se ejecutan primero. Las categorías que producen un warning de perfil
   // se añaden a suppressCatalogWarningFor para no duplicar mensajes.
+  //
+  // Refactor: las 4 reglas con umbral dinámico (housing, transport, education,
+  // health) se iteran desde PROFILE_INCONSISTENCY_RULES (DRY con la detección
+  // pre-binaria). El umbral en % se deriva de baseTargetMap[catId] × 3: si el
+  // amount fijado supera tres veces el target base de su perfil, se dispara el
+  // warning. La regla de debt_extra se queda hardcodeada porque es binaria.
   const suppressCatalogWarningFor = new Set();
 
-  // Número de hijos (excluyendo pareja del conteo de dependientes).
-  // Replica la lógica de calculateOECDFactor.
-  const hasPartner_       = profile.hasPartner ?? false;
-  const adultDependents_  = hasPartner_ ? 1 : 0;
-  const totalChildren_    = Math.max(0, (profile.dependents ?? 0) - adultDependents_);
-
-  // 1. Housing — vivienda pagada/cedida con importe alto
-  if (
-    'housing' in specifiedAmounts &&
-    (profile.housingStatus === 'owned' || profile.housingStatus === 'family')
-  ) {
-    const pct = (specifiedAmounts.housing / incomeForDistribution) * 100;
-    if (pct > 10) {
-      warnings.push(
-        'Vivienda: has indicado que tu vivienda está pagada o cedida, lo que implica solo gastos de mantenimiento. ' +
-        'Si planeas pagar alquiler o hipoteca, actualiza tu perfil para que el cálculo sea preciso.'
-      );
-      suppressCatalogWarningFor.add('housing');
-    }
-  }
-
-  // 2. Transport — sin vehículo con importe alto
-  if ('transport' in specifiedAmounts && profile.vehicleStatus === 'none') {
-    const pct = (specifiedAmounts.transport / incomeForDistribution) * 100;
-    if (pct > 8) {
-      warnings.push(
-        'Transporte: has indicado que no tienes vehículo. ' +
-        'El transporte público en España raramente supera este importe. ' +
-        'Si planeas adquirir un vehículo, actualiza tu perfil.'
-      );
-      suppressCatalogWarningFor.add('transport');
-    }
-  }
-
-  // 3. Education — sin hijos ni formación propia con importe alto
-  if (
-    'education' in specifiedAmounts &&
-    totalChildren_ === 0 &&
-    (profile.ownEducation === 'none' || !profile.ownEducation)
-  ) {
-    const pct = (specifiedAmounts.education / incomeForDistribution) * 100;
-    if (pct > 5) {
-      warnings.push(
-        'Educación: has indicado que no estás en formación ni tienes hijos o dependientes a cargo. ' +
-        'Si planeas formarte o tienes dependientes, actualiza tu perfil.'
-      );
-      suppressCatalogWarningFor.add('education');
-    }
-  }
-
-  // 4. Health — sin seguro privado con importe alto
-  if (
-    'health' in specifiedAmounts &&
-    (profile.privateHealthInsurance === 'none' || !profile.privateHealthInsurance)
-  ) {
-    const pct = (specifiedAmounts.health / incomeForDistribution) * 100;
-    if (pct > 8) {
-      warnings.push(
-        'Salud: has indicado que no tienes seguro médico privado. ' +
-        'Copagos, farmacia y dental raramente superan este importe con solo la sanidad pública. ' +
-        'Si planeas contratar un seguro, actualiza tu perfil.'
-      );
-      suppressCatalogWarningFor.add('health');
+  for (const rule of PROFILE_INCONSISTENCY_RULES) {
+    const { catId, condition, message } = rule;
+    if (!(catId in specifiedAmounts)) continue;
+    if (!condition(profile)) continue;
+    const pct = (specifiedAmounts[catId] / incomeForDistribution) * 100;
+    const baseTargetPct = baseTargetMap[catId] ?? 0;
+    const threshold = baseTargetPct * 3;
+    if (pct > threshold) {
+      const cat = CATEGORIES_CATALOG.find(c => c.id === catId);
+      const label = cat?.label ?? catId;
+      warnings.push(`${label}: ${message}`);
+      suppressCatalogWarningFor.add(catId);
     }
   }
 
