@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CATEGORIES_UI } from "@/lib/models/categories";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { validateAmount } from "@/lib/validators";
+import { useStudyContextOptional } from "@/lib/research/useStudyContext";
+import { useStudyAwareRouter } from "@/lib/research/useStudyAwareRouter";
 
 const BLOCK_META = {
   needs:   { label: "Necesidades", defaultOpen: true  },
@@ -23,8 +25,11 @@ function fmtCurrency(n) {
 }
 
 function DiagnosisForm() {
-  const router = useRouter();
+  const router = useStudyAwareRouter();
   const searchParams = useSearchParams();
+  // Modo testing guiado (M18 Fase 4): si el contexto /study está activo,
+  // ocultamos los botones de escape al home para no romper el funnel.
+  const study = useStudyContextOptional();
 
   const incomeParam = searchParams.get("income");
   const income = parseFloat(incomeParam);
@@ -53,7 +58,9 @@ function DiagnosisForm() {
           <CardContent className="pt-6">
             <p className="text-lg font-semibold mb-2">Ingreso no válido</p>
             <p className="text-muted-foreground mb-4">Vuelve a la pantalla de resultados.</p>
-            <Button onClick={() => router.push("/")}>Inicio</Button>
+            {!study && (
+              <Button onClick={() => router.push("/")}>Inicio</Button>
+            )}
           </CardContent>
         </Card>
       </main>

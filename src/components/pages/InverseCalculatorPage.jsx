@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { CATEGORIES_UI } from "@/lib/models/categories";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { validateAmount } from "@/lib/validators";
+import { useStudyAwareRouter } from "@/lib/research/useStudyAwareRouter";
 
 const BLOCK_META = {
   needs:   { label: "Necesidades",  defaultOpen: true },
@@ -74,7 +74,7 @@ function getCategoryNote(cat, profile) {
 }
 
 export default function InverseCalculatorPage() {
-  const router = useRouter();
+  const router = useStudyAwareRouter();
 
   const [profile] = useState(() => {
     if (typeof window === "undefined") return null;

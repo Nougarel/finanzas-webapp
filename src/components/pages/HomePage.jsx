@@ -1,12 +1,20 @@
+"use client";
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useStudyAwareHref } from "@/lib/research/useStudyAwareRouter";
 
 /**
  * Componente de la página de inicio (Home)
- * Muestra las dos opciones de flujo disponibles: cálculo directo e inverso
+ * Muestra las dos opciones de flujo disponibles: cálculo directo e inverso.
+ * Cuando se renderiza dentro del funnel /study (vía /study/home), los hrefs
+ * se prefijan automáticamente con /study para no salir del modo guiado.
  */
 export default function HomePage() {
+  const directHref = useStudyAwareHref("/profile");
+  const inverseHref = useStudyAwareHref("/profile?mode=inverse");
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-8">
       <div className="w-full max-w-4xl space-y-8">
@@ -32,7 +40,7 @@ export default function HomePage() {
             </CardHeader>
             <CardContent className="flex-1 flex items-end">
               <Button asChild className="w-full">
-                <Link href="/profile">
+                <Link href={directHref}>
                   Comenzar
                 </Link>
               </Button>
@@ -49,7 +57,7 @@ export default function HomePage() {
             </CardHeader>
             <CardContent className="flex-1 flex items-end">
               <Button asChild variant="outline" className="w-full">
-                <Link href="/profile?mode=inverse">
+                <Link href={inverseHref}>
                   Comenzar
                 </Link>
               </Button>

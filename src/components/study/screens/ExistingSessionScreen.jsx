@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createStudyClient } from "@/lib/supabase/studyClient";
 import { MESSAGES } from "@/lib/research/studyCopy";
 import { useStudyContext } from "@/lib/research/useStudyContext";
+import { logEvent, updateSessionStatus } from "@/lib/research/recorder";
 
 /**
  * Resume — empuja al usuario al primer paso que tiene sentido para el
@@ -37,7 +38,7 @@ function nextStepForStatus(status) {
 
 export default function ExistingSessionScreen({ onResolved }) {
   const router = useRouter();
-  const { sessionStatus, goToStep } = useStudyContext();
+  const { sessionId, sessionStatus, goToStep } = useStudyContext();
   const titleRef = useRef(null);
   const client = useMemo(() => createStudyClient(), []);
 
@@ -59,6 +60,21 @@ export default function ExistingSessionScreen({ onResolved }) {
   };
 
   const handleRestart = async () => {
+    // Best-effort: marcamos la sesión previa como abandonada antes de cerrar
+    // sesión, para no dejar filas en estado 'active' indefinidamente. Si la
+    // BBDD falla, continuamos con signOut + reload de todos modos.
+    if (sessionId) {
+      try {
+        await updateSessionStatus(client, sessionId, "abandoned");
+      } catch {
+        // Telemetría no crítica: ignoramos el fallo y seguimos.
+      }
+      try {
+        await logEvent(client, sessionId, "session_abandoned", { reason: "user_restart" });
+      } catch {
+        // Telemetría no crítica: ignoramos el fallo y seguimos.
+      }
+    }
     // signOut elimina el JWT anónimo del localStorage → useStudySession
     // creará una nueva research_session limpia tras el reload.
     try {

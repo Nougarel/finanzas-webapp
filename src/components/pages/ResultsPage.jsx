@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect, Suspense, useRef } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useStudyContextOptional } from "@/lib/research/useStudyContext";
+import { useStudyAwareRouter } from "@/lib/research/useStudyAwareRouter";
 
 const BLOCK_ORDER = ["needs", "wants", "savings"];
 
@@ -57,7 +58,7 @@ function IneReference({ ineData, block }) {
 
 
 function ResultsContent() {
-  const router = useRouter();
+  const router = useStudyAwareRouter();
   const searchParams = useSearchParams();
 
   const [viewMode, setViewMode] = useState("detailed");
@@ -457,9 +458,16 @@ function ResultsContent() {
           <Button variant="outline" onClick={() => router.push("/calculator")}>
             Calcular de nuevo
           </Button>
-          <Button variant="outline" onClick={() => router.push("/")}>
-            Volver al inicio
-          </Button>
+          {!study && (
+            <Button variant="outline" onClick={() => router.push("/")}>
+              Volver al inicio
+            </Button>
+          )}
+          {study && (
+            <Button variant="outline" onClick={() => router.push("/study/home")}>
+              Volver al menú del estudio
+            </Button>
+          )}
           <Button
             onClick={() => router.push(`/diagnosis-form?income=${income}`)}
           >

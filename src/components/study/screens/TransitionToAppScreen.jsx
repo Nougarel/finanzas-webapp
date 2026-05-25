@@ -26,7 +26,7 @@ export default function TransitionToAppScreen() {
   const handleStart = () => {
     // Mover el state machine a la fase app (afecta a la barra de progreso).
     goToStep("app");
-    router.push("/study/calculator");
+    router.push("/study/home");
   };
 
   return (

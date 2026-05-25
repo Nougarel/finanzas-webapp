@@ -17,10 +17,7 @@ import {
 import { DEMOGRAPHICS } from "@/lib/research/studyCopy";
 import { useStudyContext } from "@/lib/research/useStudyContext";
 import { validateDemographics } from "@/lib/research/studyValidators";
-
-// Clave especial dentro de pretestAnswers para almacenar las respuestas
-// demográficas. PretestQuestionScreen las recupera al armar el payload final.
-const DEMOGRAPHICS_KEY = "__demographics";
+import { DEMOGRAPHICS_KEY } from "@/lib/research/studyConfig";
 
 /**
  * Pantalla 3: demografía (dossier §4). Pantalla única scrolleable con

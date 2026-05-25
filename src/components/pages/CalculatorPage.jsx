@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useStudyAwareRouter } from "@/lib/research/useStudyAwareRouter";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +17,7 @@ const HELP_TEXT = {
 };
 
 function CalculatorForm() {
-  const router = useRouter();
+  const router = useStudyAwareRouter();
 
   const [income, setIncome]         = useState("");
   const [incomeMode, setIncomeMode] = useState("monthly"); // "monthly" | "annual"

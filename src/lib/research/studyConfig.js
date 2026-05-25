@@ -74,3 +74,10 @@ export function getProgressStage(step) {
   if (step === "closing") return "closing";
   return null;
 }
+
+/**
+ * Clave usada para identificar las respuestas demográficas dentro del objeto
+ * pretestAnswers (que también contiene respuestas a preguntas de literacia).
+ * Se trata como una "pregunta más" para no duplicar estado.
+ */
+export const DEMOGRAPHICS_KEY = "__demographics";

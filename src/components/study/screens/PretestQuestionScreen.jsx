@@ -21,6 +21,7 @@ import {
   isBigFiveNumericCorrect,
 } from "@/lib/research/studyValidators";
 import { nextPreAppStep } from "@/lib/research/funnelMachine";
+import { DEMOGRAPHICS_KEY } from "@/lib/research/studyConfig";
 
 /**
  * Pantalla genérica de pregunta del Big Five (dossier §5).
@@ -30,7 +31,7 @@ import { nextPreAppStep } from "@/lib/research/funnelMachine";
  * bloquea el avance (política diferenciada D6).
  */
 export default function PretestQuestionScreen({ questionId }) {
-  const { goToStep, pretestAnswers, setPretestAnswer } = useStudyContext();
+  const { goToStep, currentStep, pretestAnswers, setPretestAnswer } = useStudyContext();
   const { submitPretest, logEvent, updateSessionStatus } = useStudyRecorder();
   const titleRef = useRef(null);
   const [localValue, setLocalValue] = useState(pretestAnswers[questionId] ?? "");
@@ -72,7 +73,7 @@ export default function PretestQuestionScreen({ questionId }) {
     // mediante setPretestAnswer con keys especiales, pero aquí no las tenemos
     // de momento — se completarán en el siguiente refactor).
     // De momento las demographics se persisten en extra_responses como respaldo.
-    const demographics = allAnswers.__demographics ?? {};
+    const demographics = allAnswers[DEMOGRAPHICS_KEY] ?? {};
     return {
       age_range: demographics.age_range,
       gender: demographics.gender,
@@ -109,7 +110,11 @@ export default function PretestQuestionScreen({ questionId }) {
     setPretestAnswer(questionId, localValue);
 
     if (!isLastQuestion) {
-      const next = nextPreAppStep(questionId);
+      // currentStep es "pretest_p0", "pretest_q1"... (los IDs reales del state
+      // machine). questionId es la versión corta ("p0", "q1"...) usada como
+      // clave en BIG_FIVE_QUESTIONS y pretestAnswers — no coincide con el
+      // step y por eso no puede usarse para avanzar el funnel.
+      const next = nextPreAppStep(currentStep);
       if (next) goToStep(next);
       return;
     }

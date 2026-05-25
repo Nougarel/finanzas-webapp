@@ -1,8 +1,9 @@
 "use client";
 
 import { Fragment, useState, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useStudyAwareRouter } from "@/lib/research/useStudyAwareRouter";
 import {
   Briefcase, Clock, Laptop, PauseCircle,
   TrendingUp, Target, Award,
@@ -261,7 +262,7 @@ function ProgressBar({ currentStep, sections }) {
 // ─── Componente principal ────────────────────────────────────────────────────
 
 function ProfileForm() {
-  const router = useRouter();
+  const router = useStudyAwareRouter();
   const searchParams = useSearchParams();
   const mode = searchParams.get("mode"); // null = directo, "inverse" = inverso
 

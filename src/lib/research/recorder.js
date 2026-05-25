@@ -61,14 +61,18 @@ export async function submitPretest(client, sessionId, data) {
   if (!isNonEmptyString(sessionId)) {
     return { data: null, error: makeError('INVALID_INPUT', 'sessionId vacío o inválido') };
   }
+  // UPSERT en lugar de INSERT: pretest_responses tiene UNIQUE(session_id).
+  // Si el participante reintenta tras un error o reabre la sesión Supabase
+  // persistida en localStorage, la 2ª escritura sería un 23505. Idempotente
+  // por diseño: la última respuesta válida sobrescribe la anterior.
   const { data: row, error } = await client
     .from('pretest_responses')
-    .insert({ session_id: sessionId, ...data })
+    .upsert({ session_id: sessionId, ...data }, { onConflict: 'session_id' })
     .select()
     .single();
 
   if (error) return { data: null, error: mapSupabaseError(error) };
-  if (!row) return { data: null, error: makeError('RLS_DENIED', 'Insert devolvió null sin error') };
+  if (!row) return { data: null, error: makeError('RLS_DENIED', 'Upsert devolvió null sin error') };
   return { data: row, error: null };
 }
 
@@ -121,14 +125,16 @@ export async function submitPosttest(client, sessionId, data) {
   if (!Array.isArray(data?.sus_responses) || data.sus_responses.length !== 10) {
     return { data: null, error: makeError('INVALID_INPUT', 'sus_responses debe ser array de 10 elementos') };
   }
+  // UPSERT por la misma razón que submitPretest: posttest_responses tiene
+  // UNIQUE(session_id) y queremos tolerar reintentos / sesiones reusadas.
   const { data: row, error } = await client
     .from('posttest_responses')
-    .insert({ session_id: sessionId, ...data })
+    .upsert({ session_id: sessionId, ...data }, { onConflict: 'session_id' })
     .select()
     .single();
 
   if (error) return { data: null, error: mapSupabaseError(error) };
-  if (!row) return { data: null, error: makeError('RLS_DENIED', 'Insert devolvió null sin error') };
+  if (!row) return { data: null, error: makeError('RLS_DENIED', 'Upsert devolvió null sin error') };
   return { data: row, error: null };
 }
 
