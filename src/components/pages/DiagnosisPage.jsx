@@ -9,6 +9,7 @@ import { CATEGORIES_UI } from "@/lib/models/categories";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useStudyContextOptional } from "@/lib/research/useStudyContext";
 import { useStudyAwareRouter } from "@/lib/research/useStudyAwareRouter";
+import { useMounted } from "@/lib/hooks/useMounted";
 
 const BLOCK_ORDER = ["needs", "wants", "savings"];
 
@@ -103,6 +104,7 @@ function statusText(status) {
 function DiagnosisContent() {
   const router = useStudyAwareRouter();
   const searchParams = useSearchParams();
+  const mounted = useMounted();
 
   const incomeParam = searchParams.get("income");
   const income = parseFloat(incomeParam);
@@ -165,6 +167,14 @@ function DiagnosisContent() {
       .catch(() => setCalcError("Error al conectar con el servidor."))
       .finally(() => setLoading(false));
   }, [profile, income, realAmounts]);
+
+  if (!mounted) {
+    return (
+      <main className="flex min-h-screen items-center justify-center">
+        <p className="text-muted-foreground font-light">Cargando…</p>
+      </main>
+    );
+  }
 
   if (!incomeParam || isNaN(income) || income <= 0 || amountsMissing) {
     return (

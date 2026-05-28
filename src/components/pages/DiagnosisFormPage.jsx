@@ -12,6 +12,7 @@ import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { validateAmount } from "@/lib/validators";
 import { useStudyContextOptional } from "@/lib/research/useStudyContext";
 import { useStudyAwareRouter } from "@/lib/research/useStudyAwareRouter";
+import { useMounted } from "@/lib/hooks/useMounted";
 
 const BLOCK_META = {
   needs:   { label: "Necesidades", defaultOpen: true  },
@@ -27,6 +28,7 @@ function fmtCurrency(n) {
 function DiagnosisForm() {
   const router = useStudyAwareRouter();
   const searchParams = useSearchParams();
+  const mounted = useMounted();
   // Modo testing guiado (M18 Fase 4): si el contexto /study está activo,
   // ocultamos los botones de escape al home para no romper el funnel.
   const study = useStudyContextOptional();
@@ -66,6 +68,15 @@ function DiagnosisForm() {
       </main>
     );
   }
+
+  if (!mounted) {
+    return (
+      <main className="flex min-h-screen items-center justify-center">
+        <p className="text-muted-foreground font-light">Cargando…</p>
+      </main>
+    );
+  }
+
   if (profileMissing) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center p-8">

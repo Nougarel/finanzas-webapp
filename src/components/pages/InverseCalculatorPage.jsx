@@ -13,6 +13,7 @@ import { CATEGORIES_UI } from "@/lib/models/categories";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { validateAmount } from "@/lib/validators";
 import { useStudyAwareRouter } from "@/lib/research/useStudyAwareRouter";
+import { useMounted } from "@/lib/hooks/useMounted";
 
 const BLOCK_META = {
   needs:   { label: "Necesidades",  defaultOpen: true },
@@ -74,6 +75,7 @@ function getCategoryNote(cat, profile) {
 
 export default function InverseCalculatorPage() {
   const router = useStudyAwareRouter();
+  const mounted = useMounted();
 
   const [profile] = useState(() => {
     if (typeof window === "undefined") return null;
@@ -111,6 +113,14 @@ export default function InverseCalculatorPage() {
 
   // Errores de validación por categoría: { [catId]: string }
   const [errors, setErrors] = useState({});
+
+  if (!mounted) {
+    return (
+      <main className="flex flex-1 items-center justify-center">
+        <p className="text-muted-foreground font-light">Cargando…</p>
+      </main>
+    );
+  }
 
   if (profileMissing) {
     return (

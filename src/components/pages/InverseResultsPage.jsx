@@ -9,6 +9,7 @@ import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useStudyContextOptional } from "@/lib/research/useStudyContext";
 import { useStudyAwareRouter } from "@/lib/research/useStudyAwareRouter";
 import CoherenceWarningScreen from "@/components/pages/CoherenceWarningScreen";
+import { useMounted } from "@/lib/hooks/useMounted";
 
 const BLOCK_LABELS = { needs: "Necesidades", wants: "Deseos", savings: "Ahorro" };
 const BLOCK_ORDER  = ["needs", "wants", "savings"];
@@ -36,6 +37,7 @@ function ErrorCard({ title, message, onBack }) {
 
 export default function InverseResultsPage() {
   const router = useStudyAwareRouter();
+  const mounted = useMounted();
 
   const [amountsMissing] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -124,6 +126,14 @@ export default function InverseResultsPage() {
   }, [runCalculation]);
 
   const goBack = () => router.push("/inverse-calculator");
+
+  if (!mounted) {
+    return (
+      <main className="flex min-h-screen items-center justify-center">
+        <p className="text-muted-foreground font-light">Cargando…</p>
+      </main>
+    );
+  }
 
   if (amountsMissing) {
     return <ErrorCard title="Sin datos" message="No se han recibido importes." onBack={() => router.push("/inverse-calculator")} />;
