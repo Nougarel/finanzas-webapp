@@ -3,6 +3,8 @@
 import { Fragment, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Alert } from "@/components/ui/alert";
+import { PageShell } from "@/components/ui/page-shell";
 import { useStudyAwareRouter } from "@/lib/research/useStudyAwareRouter";
 import {
   Briefcase, Clock, Laptop, PauseCircle,
@@ -15,7 +17,7 @@ import {
   BookOpen, GraduationCap, School,
   AlertCircle, CheckCircle2, Sparkles,
   X, TrendingDown, Minus,
-  Building,
+  Building, Landmark, Wallet,
 } from "lucide-react";
 import { PROFILE_COPY } from "@/lib/copy/profileCopy";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
@@ -184,6 +186,9 @@ const SUMMARY_SECTIONS = [
   { sectionIndex: 3, fields: ["emergencyFundStatus", "housingPurchaseGoal", "consumerDebt", "pensionRegime"] },
 ];
 
+// Icono representativo por sección (M35 G3 — discreto, junto al título)
+const SECTION_ICONS = [User, Home, Briefcase, Wallet];
+
 // Devuelve la definición de un campo desde SECTION_QUESTIONS (o null si no existe).
 function findFieldDef(fieldId) {
   for (const section of SECTION_QUESTIONS) {
@@ -216,21 +221,21 @@ function OptionCard({ option, selected, onSelect }) {
           onSelect();
         }
       }}
-      className={`flex items-start gap-3 rounded-xl border-2 p-4 cursor-pointer transition-all select-none
+      className={`flex items-start gap-3 rounded-xl border-2 p-4 cursor-pointer transition-colors duration-200 select-none
         ${selected
           ? "border-primary bg-primary/5"
           : "border-border hover:border-primary/40 hover:bg-muted/30"
         }`}
     >
       <div className={`mt-0.5 shrink-0 ${selected ? "text-primary" : "text-muted-foreground"}`}>
-        <Icon size={20} />
+        <Icon size={20} aria-hidden />
       </div>
       <div>
         <p className={`text-sm font-medium leading-snug ${selected ? "text-primary" : "text-foreground"}`}>
           {label}
         </p>
         {subtext && (
-          <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{subtext}</p>
+          <p className="text-xs font-light text-muted-foreground mt-0.5 leading-snug">{subtext}</p>
         )}
       </div>
     </div>
@@ -252,9 +257,28 @@ function ProgressBar({ currentStep, sections }) {
           />
         ))}
       </div>
-      <p className="text-xs text-muted-foreground">
+      <p className="text-xs font-light text-muted-foreground">
         Paso {currentStep + 1} de {sections.length} — {sections[currentStep].title}
       </p>
+    </div>
+  );
+}
+
+// ─── Subcomponente: badge de modo ────────────────────────────────────────────
+
+function ModeBadge({ mode }) {
+  if (mode === "inverse") {
+    return (
+      <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[color:var(--warning-subtle)] text-[color:var(--warning-foreground)] text-sm font-medium w-fit">
+        <Sparkles className="h-4 w-4" aria-hidden />
+        <span>Perfil ideal futuro</span>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[color:var(--info-subtle)] text-[color:var(--info-foreground)] text-sm font-medium w-fit">
+      <User className="h-4 w-4" aria-hidden />
+      <span>Perfil actual</span>
     </div>
   );
 }
@@ -457,6 +481,7 @@ function ProfileForm() {
 
   const renderSection = (sectionIndex) => {
     const section = copy.sections[sectionIndex];
+    const SectionIcon = SECTION_ICONS[sectionIndex];
     // Filtramos preguntas no visibles en el modo actual
     const questions = SECTION_QUESTIONS[sectionIndex].filter(
       (q) => isFieldVisibleInMode(q, currentMode)
@@ -467,21 +492,18 @@ function ProfileForm() {
         <ProgressBar currentStep={sectionIndex} sections={copy.sections} />
 
         {/* Badge sticky de modo — ancla mental durante todo el cuestionario */}
-        {currentMode === "inverse" ? (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-100 text-amber-800 text-sm font-medium w-fit">
-            <Sparkles className="h-4 w-4" />
-            <span>Perfil ideal futuro</span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 text-sm font-medium w-fit">
-            <User className="h-4 w-4" />
-            <span>Perfil actual</span>
-          </div>
-        )}
+        <ModeBadge mode={currentMode} />
 
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">{section.title}</h1>
-          <p className="text-sm text-muted-foreground">{section.subtitle}</p>
+          <div className="flex items-center gap-2.5">
+            <SectionIcon className="size-5 text-muted-foreground shrink-0" aria-hidden />
+            <h1 className="font-display font-black tracking-display text-3xl sm:text-4xl text-foreground">
+              {section.title}
+            </h1>
+          </div>
+          {section.subtitle && (
+            <p className="text-base font-light text-muted-foreground">{section.subtitle}</p>
+          )}
         </div>
 
         {questions.map((question) => {
@@ -496,14 +518,14 @@ function ProfileForm() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="text-sm font-medium">{questionLabel}</p>
                   {isOptional && (
-                    <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full leading-none">
+                    <span className="text-xs font-light text-muted-foreground bg-muted px-2 py-0.5 rounded-full leading-none">
                       Opcional
                     </span>
                   )}
                 </div>
 
                 {question.helpText && (
-                  <p className="text-xs text-muted-foreground">{question.helpText}</p>
+                  <p className="text-xs font-light text-muted-foreground">{question.helpText}</p>
                 )}
 
                 <div className={gridClass}>
@@ -526,7 +548,7 @@ function ProfileForm() {
                     <p className="text-sm font-medium">
                       {copy.questions.monthlyDebtPayment}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs font-light text-muted-foreground">
                       Sin contar hipoteca ni vehículo. Incluye préstamos personales, financiaciones de productos, tarjetas con saldo pendiente, deudas con familiares, etc.
                     </p>
                   </div>
@@ -549,12 +571,14 @@ function ProfileForm() {
                         }));
                       }}
                       placeholder="0"
-                      className={`w-32 rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary ${debtError ? "border-red-500" : "border-border"}`}
+                      className={`w-32 rounded-lg border bg-background px-3 py-2 text-sm tabular-nums transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${debtError ? "border-destructive" : "border-border"}`}
                     />
-                    <span className="text-sm text-muted-foreground">€/mes</span>
+                    <span className="text-sm font-light text-muted-foreground">€/mes</span>
                   </div>
                   {debtError && (
-                    <p className="text-xs text-red-500 mt-1">{debtError}</p>
+                    <Alert variant="error" size="compact">
+                      {debtError}
+                    </Alert>
                   )}
                 </div>
               )}
@@ -671,18 +695,30 @@ function ProfileForm() {
           );
         })}
 
-        {/* Navegación */}
-        <div className="flex justify-between pt-2">
-          {sectionIndex > 0 ? (
-            <Button variant="outline" onClick={handlePrev}>
-              Anterior
+        {/* Navegación — sticky en móvil para formulario largo */}
+        <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm pt-3 pb-4 -mx-4 px-4 sm:static sm:bg-transparent sm:backdrop-blur-none sm:pt-2 sm:pb-0 sm:mx-0 sm:px-0 border-t border-border sm:border-0 mt-2">
+          <div className="flex gap-3">
+            {sectionIndex > 0 ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handlePrev}
+                className="flex-1 transition-colors duration-200"
+              >
+                Anterior
+              </Button>
+            ) : (
+              <span className="flex-1" />
+            )}
+            <Button
+              type="button"
+              onClick={handleNext}
+              disabled={isNextDisabled}
+              className="flex-1 transition-colors duration-200"
+            >
+              Siguiente
             </Button>
-          ) : (
-            <span />
-          )}
-          <Button onClick={handleNext} disabled={isNextDisabled}>
-            Siguiente
-          </Button>
+          </div>
         </div>
       </div>
     );
@@ -693,21 +729,13 @@ function ProfileForm() {
   const renderSummary = () => (
     <div className="space-y-8">
       {/* Badge sticky de modo también en el resumen */}
-      {currentMode === "inverse" ? (
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-100 text-amber-800 text-sm font-medium w-fit">
-          <Sparkles className="h-4 w-4" />
-          <span>Perfil ideal futuro</span>
-        </div>
-      ) : (
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 text-sm font-medium w-fit">
-          <User className="h-4 w-4" />
-          <span>Perfil actual</span>
-        </div>
-      )}
+      <ModeBadge mode={currentMode} />
 
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{copy.summary.title}</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="font-display font-black tracking-display text-3xl sm:text-4xl text-foreground">
+          {copy.summary.title}
+        </h1>
+        <p className="text-base font-light text-muted-foreground">
           {copy.summary.subtitle}
         </p>
       </div>
@@ -716,11 +744,11 @@ function ProfileForm() {
         <div key={sectionIndex} className="space-y-3">
           {/* Cabecera de sección */}
           <div className="flex items-center justify-between border-b pb-2">
-            <h2 className="text-sm font-semibold">{copy.sections[sectionIndex].title}</h2>
+            <h2 className="text-sm font-medium text-foreground">{copy.sections[sectionIndex].title}</h2>
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 text-xs"
+              className="h-7 text-xs transition-colors duration-200"
               onClick={() => setCurrentStep(sectionIndex)}
             >
               Editar
@@ -782,26 +810,40 @@ function ProfileForm() {
         </div>
       ))}
 
-      {/* Navegación final */}
-      <div className="flex justify-between pt-2">
-        <Button variant="outline" onClick={handlePrev}>
-          Anterior
-        </Button>
-        <Button size="lg" onClick={handleConfirm}>
-          {copy.summary.cta}
-        </Button>
+      {/* Navegación final — sticky en móvil */}
+      <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm pt-3 pb-4 -mx-4 px-4 sm:static sm:bg-transparent sm:backdrop-blur-none sm:pt-2 sm:pb-0 sm:mx-0 sm:px-0 border-t border-border sm:border-0 mt-2">
+        <div className="flex gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handlePrev}
+            className="flex-1 transition-colors duration-200"
+          >
+            Anterior
+          </Button>
+          <Button
+            type="button"
+            size="lg"
+            onClick={handleConfirm}
+            className="flex-1 transition-colors duration-200"
+          >
+            {copy.summary.cta}
+          </Button>
+        </div>
       </div>
-      <p className="text-xs text-muted-foreground text-center pt-3">
+      <p className="text-xs font-light text-muted-foreground text-center pt-3">
         {copy.summary.footer}
       </p>
     </div>
   );
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-start p-8 pt-12">
-      <div className="w-full max-w-2xl space-y-6">
-        {currentStep < 4 ? renderSection(currentStep) : renderSummary()}
-      </div>
+    <main className="flex flex-1 flex-col">
+      <PageShell variant="profile">
+        <div className="space-y-6">
+          {currentStep < 4 ? renderSection(currentStep) : renderSummary()}
+        </div>
+      </PageShell>
     </main>
   );
 }
@@ -809,8 +851,8 @@ function ProfileForm() {
 export default function ProfilePage() {
   return (
     <Suspense fallback={
-      <main className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground">Cargando...</p>
+      <main className="flex flex-1 items-center justify-center">
+        <p className="text-muted-foreground font-light">Cargando…</p>
       </main>
     }>
       <ProfileForm />
