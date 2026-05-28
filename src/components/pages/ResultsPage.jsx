@@ -52,9 +52,33 @@ function IneReference({ ineData, block }) {
   );
 }
 
+// Barra proporcional monocromática (navy).
+// maxPct: valor máximo del bloque para normalizar la escala.
+// Se normaliza al máximo del bloque (no al 100% del ingreso) para que las
+// barras tengan rango visual útil — las categorías individuales raramente
+// superan el 15-20% del ingreso, por lo que una escala absoluta produciría
+// barras demasiado pequeñas para distinguir entre sí.
+function PercentBar({ pct, maxPct }) {
+  const width = maxPct > 0 ? Math.round((pct / maxPct) * 100) : 0;
+  return (
+    <div
+      className="mt-1.5 h-1 w-full rounded-full bg-muted overflow-hidden"
+      role="presentation"
+      aria-hidden="true"
+    >
+      <div
+        className="h-full rounded-full bg-primary transition-[width] duration-300"
+        style={{ width: `${width}%` }}
+      />
+    </div>
+  );
+}
+
 // Columnas para DataTable de categorías dentro de un bloque.
 // Las alertas y referencias INE se renderizan debajo del nombre.
-function buildCategoryColumns(result, blockKey, formatPct) {
+// maxBlockPct: porcentaje máximo entre las categorías del bloque,
+// usado para normalizar la escala de las barras.
+function buildCategoryColumns(result, blockKey, formatPct, maxBlockPct) {
   return [
     {
       key: "label",
@@ -90,9 +114,12 @@ function buildCategoryColumns(result, blockKey, formatPct) {
       header: "% ingreso",
       className: "text-right align-top",
       render: (val) => (
-        <span className="tabular-nums text-sm text-muted-foreground">
-          {formatPct(val)}
-        </span>
+        <div className="flex flex-col items-end gap-0">
+          <span className="tabular-nums text-sm text-muted-foreground">
+            {formatPct(val)}
+          </span>
+          <PercentBar pct={val} maxPct={maxBlockPct} />
+        </div>
       ),
     },
   ];
@@ -372,7 +399,10 @@ function ResultsContent() {
                   alert: result.alerts[cat.id] ?? null,
                 }));
 
-                const columns = buildCategoryColumns(result, blockKey, formatPct);
+                // Máximo de % en el bloque para normalizar la escala de las barras
+                const maxBlockPct = Math.max(...tableData.map((r) => r.percentage), 0);
+
+                const columns = buildCategoryColumns(result, blockKey, formatPct, maxBlockPct);
 
                 return (
                   <section key={blockKey} aria-labelledby={`block-${blockKey}-heading`}>

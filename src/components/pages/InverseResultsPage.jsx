@@ -236,37 +236,62 @@ export default function InverseResultsPage() {
       })
     : [];
 
-  // Columnas para las tablas de distribución saludable por bloque
-  const distributionColumns = [
-    {
-      key: "label",
-      header: "Categoría",
-      render: (val, row) => (
-        <span className="inline-flex items-center gap-2">
-          {val}
-          {row.isSpecified && (
-            <span className="text-xs rounded-full bg-primary/10 text-primary px-1.5 py-0.5 font-medium">
-              fijado
-            </span>
-          )}
-        </span>
-      ),
-    },
-    {
-      key: "percentage",
-      header: "% del ingreso",
-      className: "text-right",
-      render: (val) => (
-        <span className="tabular-nums text-sm text-muted-foreground">{fmtPct(val)}</span>
-      ),
-    },
-    {
-      key: "amount",
-      header: "Importe",
-      className: "text-right",
-      render: (val) => <MoneyValue amount={val} size="table" />,
-    },
-  ];
+  // Barra proporcional monocromática (navy) normalizada al máximo del bloque.
+  // Se normaliza al máximo del bloque (no al 100% del ingreso) para que las
+  // barras tengan rango visual útil dentro de cada sección.
+  function PercentBar({ pct, maxPct }) {
+    const width = maxPct > 0 ? Math.round((pct / maxPct) * 100) : 0;
+    return (
+      <div
+        className="mt-1.5 h-1 w-full rounded-full bg-muted overflow-hidden"
+        role="presentation"
+        aria-hidden="true"
+      >
+        <div
+          className="h-full rounded-full bg-primary transition-[width] duration-300"
+          style={{ width: `${width}%` }}
+        />
+      </div>
+    );
+  }
+
+  // Construye columnas para la tabla de distribución saludable de un bloque.
+  // maxBlockPct: valor máximo de % en el bloque, para normalizar las barras.
+  function buildDistributionColumns(maxBlockPct) {
+    return [
+      {
+        key: "label",
+        header: "Categoría",
+        render: (val, row) => (
+          <span className="inline-flex items-center gap-2">
+            {val}
+            {row.isSpecified && (
+              <span className="text-xs rounded-full bg-primary/10 text-primary px-1.5 py-0.5 font-medium">
+                fijado
+              </span>
+            )}
+          </span>
+        ),
+      },
+      {
+        key: "percentage",
+        header: "% del ingreso",
+        className: "text-right",
+        render: (val) => (
+          <div className="flex flex-col items-end gap-0">
+            <span className="tabular-nums text-sm text-muted-foreground">{fmtPct(val)}</span>
+            <PercentBar pct={val} maxPct={maxBlockPct} />
+          </div>
+        ),
+      },
+      {
+        key: "amount",
+        header: "Importe",
+        className: "text-right",
+        render: (val) => <MoneyValue amount={val} size="table" />,
+      },
+    ];
+  }
 
   return (
     <main className="flex min-h-screen flex-col">
@@ -373,13 +398,16 @@ export default function InverseResultsPage() {
                   })
                   .filter(Boolean);
 
+                // Máximo de % en el bloque para normalizar la escala de las barras
+                const maxBlockPct = Math.max(...blockData.map((r) => r.percentage), 0);
+
                 return (
                   <div key={block}>
                     <h3 className="text-base font-medium text-foreground mb-2">
                       {BLOCK_LABELS[block]}
                     </h3>
                     <DataTable
-                      columns={distributionColumns}
+                      columns={buildDistributionColumns(maxBlockPct)}
                       data={blockData}
                       caption={`Distribución saludable — ${BLOCK_LABELS[block]}`}
                     />
