@@ -2,11 +2,14 @@
 
 import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import { Alert } from "@/components/ui/alert";
+import { PageShell } from "@/components/ui/page-shell";
+import { MoneyValue } from "@/components/ui/money-value";
 import { CATEGORIES_UI } from "@/lib/models/categories";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { validateAmount } from "@/lib/validators";
@@ -20,10 +23,6 @@ const BLOCK_META = {
   savings: { label: "Ahorro",      defaultOpen: false },
 };
 const BLOCK_ORDER = ["needs", "wants", "savings"];
-
-function fmtCurrency(n) {
-  return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(n);
-}
 
 function DiagnosisForm() {
   const router = useStudyAwareRouter();
@@ -55,23 +54,33 @@ function DiagnosisForm() {
   // Estados de carga / error
   if (!incomeParam || isNaN(income) || income <= 0) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center p-8">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6">
-            <p className="text-lg font-semibold mb-2">Ingreso no válido</p>
-            <p className="text-muted-foreground mb-4">Vuelve a la pantalla de resultados.</p>
+      <main className="flex flex-1 items-center">
+        <PageShell variant="form">
+          <Alert
+            variant="error"
+            title="Ingreso no válido"
+          >
+            <p className="mt-2">
+              Vuelve a la pantalla de resultados para acceder al diagnóstico.
+            </p>
             {!study && (
-              <Button onClick={() => router.push("/")}>Inicio</Button>
+              <Button
+                size="sm"
+                onClick={() => router.push("/")}
+                className="mt-4 transition-colors duration-200"
+              >
+                Inicio
+              </Button>
             )}
-          </CardContent>
-        </Card>
+          </Alert>
+        </PageShell>
       </main>
     );
   }
 
   if (!mounted) {
     return (
-      <main className="flex min-h-screen items-center justify-center">
+      <main className="flex flex-1 items-center justify-center">
         <p className="text-muted-foreground font-light">Cargando…</p>
       </main>
     );
@@ -79,19 +88,28 @@ function DiagnosisForm() {
 
   if (profileMissing) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center p-8">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6">
-            <p className="text-lg font-semibold mb-2">Perfil no encontrado</p>
-            <p className="text-muted-foreground mb-4">
+      <main className="flex flex-1 items-center">
+        <PageShell variant="form">
+          <Alert
+            variant="error"
+            title="Perfil no encontrado"
+          >
+            <p className="mt-2">
               Necesitas completar el cuestionario antes de diagnosticar tu situación.
             </p>
-            <Button onClick={() => router.push("/profile")}>Completar perfil</Button>
-          </CardContent>
-        </Card>
+            <Button
+              size="sm"
+              onClick={() => router.push("/profile")}
+              className="mt-4 transition-colors duration-200"
+            >
+              Completar perfil
+            </Button>
+          </Alert>
+        </PageShell>
       </main>
     );
   }
+
   const handleChange = (catId, value) => {
     setAmounts((prev) => ({ ...prev, [catId]: value }));
     if (formError) setFormError("");
@@ -145,9 +163,11 @@ function DiagnosisForm() {
     if (totalReal > 0 && income > 0) {
       const deviation = Math.abs(totalReal - income) / income;
       if (deviation > 0.30) {
+        const totalFormatted = new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(totalReal);
+        const incomeFormatted = new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(income);
         setFormError(
-          `La suma de tus gastos reales (${fmtCurrency(totalReal)}) se aleja considerablemente ` +
-          `de tu ingreso mensual (${fmtCurrency(income)}). Revisa las cifras antes de continuar.`
+          `La suma de tus gastos reales (${totalFormatted}) se aleja considerablemente ` +
+          `de tu ingreso mensual (${incomeFormatted}). Revisa las cifras antes de continuar.`
         );
         return;
       }
@@ -164,89 +184,128 @@ function DiagnosisForm() {
     catsByBlock[block] = CATEGORIES_UI.filter((c) => c.block === block);
   }
 
+  // Total introducido en tiempo real
+  const totalEntered = Object.values(amounts).reduce((s, v) => {
+    const n = parseFloat(v);
+    return s + (isNaN(n) ? 0 : n);
+  }, 0);
+
   return (
-    <main className="flex min-h-screen flex-col items-center py-12 px-4">
-      <div className="w-full max-w-lg space-y-6">
+    <main className="flex flex-1 flex-col">
+      <PageShell variant="profile">
+        <div className="space-y-6">
 
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight">Tu gasto real</h1>
-          <p className="text-sm text-muted-foreground">
-            Introduce tus importes reales del último mes para cada categoría. Si dejas una casilla
-            vacía se considerará 0€.
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-3">
-
-          {formError && (
-            <div className="flex gap-3 bg-red-50 border border-red-200 text-red-800 rounded-lg p-4">
-              <AlertTriangle className="shrink-0 size-5 mt-0.5" />
-              <p className="text-sm">{formError}</p>
-            </div>
-          )}
-
-          {BLOCK_ORDER.map((block) => {
-            const meta = BLOCK_META[block];
-            const cats = catsByBlock[block];
-            const isOpen = openBlocks[block];
-
-            return (
-              <Card key={block}>
-                <button
-                  type="button"
-                  onClick={() => toggleBlock(block)}
-                  className="w-full flex items-center justify-between px-6 py-4 text-left"
-                >
-                  <span className="font-semibold">{meta.label}</span>
-                  {isOpen ? (
-                    <ChevronUp className="size-4 text-muted-foreground" />
-                  ) : (
-                    <ChevronDown className="size-4 text-muted-foreground" />
-                  )}
-                </button>
-
-                {isOpen && (
-                  <CardContent className="pt-0 space-y-4">
-                    {cats.map((cat) => (
-                      <div key={cat.id} className="space-y-1">
-                        <Label htmlFor={cat.id} className="text-sm font-medium">{cat.label}</Label>
-                        <Input
-                          id={cat.id}
-                          type="number"
-                          min="0"
-                          step="1"
-                          placeholder="0"
-                          value={amounts[cat.id] ?? ""}
-                          onChange={(e) => handleChange(cat.id, e.target.value)}
-                          onBlur={(e) => handleBlur(cat.id, e.target.value)}
-                          className={`h-9 ${fieldErrors[cat.id] ? "border-red-500" : ""}`}
-                        />
-                        {fieldErrors[cat.id] && (
-                          <p className="text-xs text-red-500 mt-0.5">{fieldErrors[cat.id]}</p>
-                        )}
-                      </div>
-                    ))}
-                  </CardContent>
-                )}
-              </Card>
-            );
-          })}
-
-          <div className="flex gap-3 pt-1">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.push(`/results?income=${income}`)}
-              className="flex-1"
-            >
-              Volver
-            </Button>
-            <Button type="submit" className="flex-1">
-              Ver diagnóstico
-            </Button>
+          {/* Encabezado */}
+          <div className="space-y-2">
+            <h1 className="font-display font-black tracking-display text-3xl sm:text-4xl text-foreground">
+              Tu gasto real
+            </h1>
+            <p className="text-base font-light text-muted-foreground">
+              Introduce tus importes reales del último mes para cada categoría.
+              Si dejas una casilla vacía se considerará 0 €.
+            </p>
           </div>
-        </form>
-      </div>
+
+          <form onSubmit={handleSubmit} className="space-y-3">
+
+            {formError && (
+              <Alert variant="error">
+                {formError}
+              </Alert>
+            )}
+
+            {BLOCK_ORDER.map((block) => {
+              const meta = BLOCK_META[block];
+              const cats = catsByBlock[block];
+              const isOpen = openBlocks[block];
+
+              return (
+                <Card key={block} className="overflow-hidden">
+                  {/* Header del bloque — botón accesible con teclado */}
+                  <button
+                    type="button"
+                    onClick={() => toggleBlock(block)}
+                    aria-expanded={isOpen}
+                    className="w-full flex items-center justify-between px-6 py-4 text-left transition-colors duration-200 hover:bg-muted/50"
+                  >
+                    <span className="text-base font-medium text-foreground">{meta.label}</span>
+                    {isOpen
+                      ? <ChevronUp className="size-4 text-muted-foreground" aria-hidden />
+                      : <ChevronDown className="size-4 text-muted-foreground" aria-hidden />
+                    }
+                  </button>
+
+                  {isOpen && (
+                    <CardContent className="pt-0 pb-5 space-y-5 border-t border-border">
+                      {cats.map((cat) => (
+                        <div key={cat.id} className="space-y-1.5 pt-5 first:pt-5">
+                          <Label
+                            htmlFor={cat.id}
+                            className="text-sm font-medium text-foreground"
+                          >
+                            {cat.label}
+                          </Label>
+                          <Input
+                            id={cat.id}
+                            type="number"
+                            min="0"
+                            step="1"
+                            placeholder="0"
+                            value={amounts[cat.id] ?? ""}
+                            onChange={(e) => handleChange(cat.id, e.target.value)}
+                            onBlur={(e) => handleBlur(cat.id, e.target.value)}
+                            className={`h-9 tabular-nums transition-colors duration-200${fieldErrors[cat.id] ? " border-destructive focus-visible:ring-destructive" : ""}`}
+                          />
+                          {fieldErrors[cat.id] && (
+                            <Alert variant="error" size="compact">
+                              {fieldErrors[cat.id]}
+                            </Alert>
+                          )}
+                        </div>
+                      ))}
+                    </CardContent>
+                  )}
+                </Card>
+              );
+            })}
+
+            {/* Total en tiempo real */}
+            {totalEntered > 0 && (
+              <div className="rounded-lg bg-muted/50 border border-border px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-light text-muted-foreground">Total introducido</span>
+                  <MoneyValue amount={totalEntered} size="table" />
+                </div>
+                <p className="text-xs font-light text-muted-foreground mt-1.5">
+                  Ingreso mensual de referencia:{" "}
+                  <MoneyValue amount={income} size="table" className="font-medium" />
+                </p>
+              </div>
+            )}
+
+            {/* Botones CTA — sticky en móvil para formulario largo */}
+            <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm pt-3 pb-4 -mx-4 px-4 sm:static sm:bg-transparent sm:backdrop-blur-none sm:pt-2 sm:pb-0 sm:mx-0 sm:px-0 border-t border-border sm:border-0 mt-2">
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => router.push(`/results?income=${income}`)}
+                  className="flex-1 transition-colors duration-200"
+                >
+                  Volver
+                </Button>
+                <Button
+                  type="submit"
+                  className="flex-1 transition-colors duration-200"
+                >
+                  Ver diagnóstico
+                </Button>
+              </div>
+            </div>
+          </form>
+
+        </div>
+      </PageShell>
     </main>
   );
 }
@@ -254,8 +313,8 @@ function DiagnosisForm() {
 export default function DiagnosisFormPage() {
   return (
     <Suspense fallback={
-      <main className="flex min-h-screen items-center justify-center">
-        <p>Cargando...</p>
+      <main className="flex flex-1 items-center justify-center">
+        <p className="text-muted-foreground font-light">Cargando…</p>
       </main>
     }>
       <DiagnosisForm />
