@@ -1,8 +1,8 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertTriangle } from "lucide-react";
+import { Alert } from "@/components/ui/alert";
+import { PageShell } from "@/components/ui/page-shell";
 import { CATEGORIES_UI } from "@/lib/models/categories";
 
 /**
@@ -18,50 +18,61 @@ export default function CoherenceWarningScreen({
   onForceCalculate,
 }) {
   return (
-    <main className="flex min-h-[100dvh] flex-col items-center justify-center p-4 py-8">
-      <Card className="w-full max-w-2xl">
-        <CardHeader>
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="size-6 text-amber-500 shrink-0 mt-1" />
-            <CardTitle className="text-xl">
-              Hemos detectado algo que no encaja con tu perfil
-            </CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <p className="text-sm text-muted-foreground">
-            Antes de calcular el ingreso necesario, queremos asegurarnos de que estos importes son los que querías. Pueden inflar el resultado de forma artificial.
-          </p>
+    <main className="flex flex-1 items-center">
+      <PageShell variant="form">
+        <div className="space-y-8">
 
-          <div className="space-y-4">
+          {/* Encabezado */}
+          <div className="space-y-3">
+            <h1 className="font-display font-black tracking-display text-3xl sm:text-4xl text-foreground">
+              Hemos detectado algo que no encaja con tu perfil
+            </h1>
+            <p className="text-base font-light text-muted-foreground">
+              Antes de calcular el ingreso necesario, queremos asegurarnos de que estos importes son los que querías. Pueden inflar el resultado de forma artificial.
+            </p>
+          </div>
+
+          {/* Lista de outliers — cada uno en su propio Alert warning */}
+          <div className="space-y-3" role="list" aria-label="Importes inconsistentes detectados">
             {outliers.map((o) => (
-              <div key={o.catId} className="rounded-md border border-amber-200 bg-amber-50 p-4">
-                <p className="font-medium text-sm">
-                  Has fijado <span className="font-bold">{Math.round(o.amount)}€</span> en <span className="font-bold">{getCategoryLabel(o.catId)}</span>
-                </p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  {o.inconsistencyMessage}
-                </p>
-                <p className="text-xs text-muted-foreground mt-2 italic">
-                  {o.inconsistencySuggestion}
-                </p>
-              </div>
+              <Alert
+                key={o.catId}
+                variant="warning"
+                title={`Has fijado ${Math.round(o.amount)}€ en ${getCategoryLabel(o.catId)}`}
+                role="listitem"
+              >
+                <p>{o.inconsistencyMessage}</p>
+                <p className="mt-1 font-extralight">{o.inconsistencySuggestion}</p>
+              </Alert>
             ))}
           </div>
 
+          {/* Botones CTA */}
           <div className="flex flex-col sm:flex-row gap-2 pt-2">
-            <Button onClick={onEditProfile} variant="outline" className="flex-1">
+            <Button
+              onClick={onEditProfile}
+              variant="outline"
+              className="flex-1 transition-colors duration-200"
+            >
               Editar perfil
             </Button>
-            <Button onClick={onEditAmounts} variant="outline" className="flex-1">
+            <Button
+              onClick={onEditAmounts}
+              variant="outline"
+              className="flex-1 transition-colors duration-200"
+            >
               Editar importes
             </Button>
-            <Button onClick={onForceCalculate} className="flex-1">
+            <Button
+              onClick={onForceCalculate}
+              className="flex-1 transition-colors duration-200"
+            >
               Calcular igualmente
             </Button>
           </div>
-        </CardContent>
-      </Card>
+
+        </div>
+      </PageShell>
     </main>
   );
 }
