@@ -18,6 +18,7 @@ import {
   AlertCircle, CheckCircle2, Sparkles,
   X, TrendingDown, Minus,
   Building, Landmark, Wallet,
+  Check,
 } from "lucide-react";
 import { PROFILE_COPY } from "@/lib/copy/profileCopy";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
@@ -214,6 +215,7 @@ function OptionCard({ option, selected, onSelect }) {
     <div
       role="button"
       tabIndex={0}
+      aria-pressed={selected}
       onClick={onSelect}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -221,23 +223,28 @@ function OptionCard({ option, selected, onSelect }) {
           onSelect();
         }
       }}
-      className={`flex items-start gap-3 rounded-xl border-2 p-4 cursor-pointer transition-colors duration-200 select-none
+      className={`relative flex items-start gap-3 rounded-xl p-4 cursor-pointer transition-colors duration-200 select-none
         ${selected
-          ? "border-primary bg-primary/5"
-          : "border-border hover:border-primary/40 hover:bg-muted/30"
+          ? "border-2 border-primary bg-primary/8"
+          : "border border-border hover:border-primary/40 hover:bg-muted/50"
         }`}
     >
       <div className={`mt-0.5 shrink-0 ${selected ? "text-primary" : "text-muted-foreground"}`}>
         <Icon size={20} aria-hidden />
       </div>
-      <div>
-        <p className={`text-sm font-medium leading-snug ${selected ? "text-primary" : "text-foreground"}`}>
+      <div className="flex-1 min-w-0">
+        <p className={`text-sm leading-snug ${selected ? "font-semibold text-primary" : "font-medium text-foreground"}`}>
           {label}
         </p>
         {subtext && (
           <p className="text-xs font-light text-muted-foreground mt-0.5 leading-snug">{subtext}</p>
         )}
       </div>
+      {selected && (
+        <div className="shrink-0 mt-0.5 text-primary" aria-hidden>
+          <Check size={16} strokeWidth={2.5} />
+        </div>
+      )}
     </div>
   );
 }
