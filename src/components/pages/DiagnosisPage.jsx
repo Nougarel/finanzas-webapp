@@ -9,6 +9,7 @@ import { Alert } from "@/components/ui/alert";
 import { DataTable } from "@/components/ui/data-table";
 import { MoneyValue } from "@/components/ui/money-value";
 import { PageShell } from "@/components/ui/page-shell";
+import { HealthGauge } from "@/components/ui/health-gauge";
 import { CATEGORIES_UI } from "@/lib/models/categories";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useStudyContextOptional } from "@/lib/research/useStudyContext";
@@ -22,124 +23,6 @@ const BLOCK_ORDER = ["needs", "wants", "savings"];
 // - mild   → warning (ámbar)
 function alertVariantFromLevel(level) {
   return level === "severe" ? "error" : "warning";
-}
-
-// Configuración de apariencia del healthScore según nivel de salud financiera.
-// Mapea cada nivel a tokens semánticos (sin hardcodes de color).
-// Consistente con ResultsPage.jsx — mismos tokens, mismo mapeo.
-const HEALTH_SCORE_CONFIG = {
-  excellent: {
-    // Excelente → success
-    bg:     "bg-[color:var(--success-subtle)]",
-    border: "border-[color:var(--success)]",
-    text:   "text-[color:var(--success-foreground)]",
-    bar:    "bg-[color:var(--success)]",
-    label:  "Excelente",
-  },
-  good: {
-    // Bueno → success (mismo token, nivel ligeramente inferior)
-    bg:     "bg-[color:var(--success-subtle)]",
-    border: "border-[color:var(--success)]",
-    text:   "text-[color:var(--success-foreground)]",
-    bar:    "bg-[color:var(--success)]",
-    label:  "Buena",
-  },
-  acceptable: {
-    // Aceptable → warning
-    bg:     "bg-[color:var(--warning-subtle)]",
-    border: "border-[color:var(--warning)]",
-    text:   "text-[color:var(--warning-foreground)]",
-    bar:    "bg-[color:var(--warning)]",
-    label:  "Aceptable",
-  },
-  improvable: {
-    // Mejorable → warning (no hay token naranja; warning es el más próximo)
-    bg:     "bg-[color:var(--warning-subtle)]",
-    border: "border-[color:var(--warning)]",
-    text:   "text-[color:var(--warning-foreground)]",
-    bar:    "bg-[color:var(--warning)]",
-    label:  "Mejorable",
-  },
-  critical: {
-    // Crítico → destructive
-    bg:     "bg-destructive/8",
-    border: "border-destructive",
-    text:   "text-destructive",
-    bar:    "bg-destructive",
-    label:  "Crítica",
-  },
-};
-
-// Devuelve la config de apariencia para el nivel dado.
-// Si el backend devuelve un nivel desconocido, fallback a acceptable.
-function getHealthScoreConfig(level) {
-  return HEALTH_SCORE_CONFIG[level] ?? HEALTH_SCORE_CONFIG.acceptable;
-}
-
-// ─── HealthScoreCard ───────────────────────────────────────────────────────────
-
-function HealthScoreCard({ healthScore, categoryLabels }) {
-  if (!healthScore) return null;
-  const { score, label, level, penalties } = healthScore;
-  const cfg = getHealthScoreConfig(level);
-  const labelFor = (k) => categoryLabels[k] ?? k;
-
-  return (
-    <div
-      className={`rounded-lg border p-5 space-y-3 transition-colors duration-200 ${cfg.bg} ${cfg.border}`}
-    >
-      <div className="flex items-baseline justify-between gap-4">
-        <div>
-          <p className={`text-xs font-medium uppercase tracking-meta ${cfg.text}`}>
-            Salud financiera de tu situación real
-          </p>
-          <p
-            className={`text-4xl font-black font-display tracking-display mt-0.5 tabular-nums ${cfg.text}`}
-          >
-            {score}
-            <span className="text-xl font-medium">/100</span>
-          </p>
-        </div>
-        <span className={`text-sm font-medium ${cfg.text}`}>{cfg.label}</span>
-      </div>
-
-      {/* Barra de progreso */}
-      <div className="h-1.5 rounded-full bg-current/10 overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all duration-200 ${cfg.bar}`}
-          style={{ width: `${Math.min(score, 100)}%` }}
-          role="progressbar"
-          aria-valuenow={score}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label={`Puntuación de salud financiera: ${score} de 100`}
-        />
-      </div>
-
-      <p className="text-xs text-muted-foreground">
-        Basado en la desviación de tu gasto real respecto a la distribución saludable para tu perfil.
-      </p>
-
-      {penalties.length > 0 && (
-        <details className="text-xs">
-          <summary className="cursor-pointer text-muted-foreground hover:text-foreground transition-colors duration-200">
-            Ver desglose ({penalties.length}{" "}
-            {penalties.length === 1 ? "factor resta" : "factores restan"} puntos)
-          </summary>
-          <ul className="mt-2 space-y-1 pl-2">
-            {penalties.map((p, i) => (
-              <li key={i} className="flex justify-between gap-2 text-muted-foreground">
-                <span>
-                  <strong>{labelFor(p.category)}:</strong> {p.reason}
-                </span>
-                <span className="font-mono font-medium shrink-0">{p.points}</span>
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
-    </div>
-  );
 }
 
 // ─── StatusIcon + statusText ───────────────────────────────────────────────────
@@ -407,7 +290,7 @@ function DiagnosisContent() {
 
   const formatPct = (n) => `${n.toFixed(1)}%`;
 
-  // Mapa label para HealthScoreCard y banners
+  // Mapa label para HealthGauge (penalties) y banners
   const categoryLabels = {
     ...Object.fromEntries(CATEGORIES_UI.map((c) => [c.id, c.label])),
     _wants_block:   "Bloque de deseos",
@@ -470,10 +353,15 @@ function DiagnosisContent() {
           </div>
 
           {/* Score de salud */}
-          <HealthScoreCard
-            healthScore={diagnosis.healthScore}
-            categoryLabels={categoryLabels}
-          />
+          {diagnosis.healthScore && (
+            <HealthGauge
+              score={diagnosis.healthScore.score}
+              level={diagnosis.healthScore.level}
+              label="Salud financiera de tu situación real"
+              penalties={diagnosis.healthScore.penalties ?? []}
+              categoryLabels={categoryLabels}
+            />
+          )}
 
           {/* Nota de ingreso efectivo (deuda fija) */}
           {diagnosis.monthlyDebtPayment > 0 && (

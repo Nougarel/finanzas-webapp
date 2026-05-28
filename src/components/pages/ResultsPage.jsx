@@ -8,6 +8,7 @@ import { Alert } from "@/components/ui/alert";
 import { DataTable } from "@/components/ui/data-table";
 import { MoneyValue } from "@/components/ui/money-value";
 import { PageShell } from "@/components/ui/page-shell";
+import { HealthGauge } from "@/components/ui/health-gauge";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useStudyContextOptional } from "@/lib/research/useStudyContext";
 import { useStudyAwareRouter } from "@/lib/research/useStudyAwareRouter";
@@ -28,57 +29,6 @@ function dtiColorClass(total) {
   if (total < 35) return "text-[color:var(--success-foreground)]";
   if (total < 40) return "text-[color:var(--warning-foreground)]";
   return "text-destructive";
-}
-
-// Configuración de apariencia del healthScore según nivel de salud financiera.
-// Mapea cada nivel a tokens semánticos (sin hardcodes de color).
-const HEALTH_SCORE_CONFIG = {
-  excellent: {
-    // Excelente → success
-    bg:   "bg-[color:var(--success-subtle)]",
-    border: "border-[color:var(--success)]",
-    text: "text-[color:var(--success-foreground)]",
-    bar:  "bg-[color:var(--success)]",
-    label: "Excelente",
-  },
-  good: {
-    // Bueno → success (mismo token, nivel ligeramente inferior)
-    bg:   "bg-[color:var(--success-subtle)]",
-    border: "border-[color:var(--success)]",
-    text: "text-[color:var(--success-foreground)]",
-    bar:  "bg-[color:var(--success)]",
-    label: "Buena",
-  },
-  acceptable: {
-    // Aceptable → warning
-    bg:   "bg-[color:var(--warning-subtle)]",
-    border: "border-[color:var(--warning)]",
-    text: "text-[color:var(--warning-foreground)]",
-    bar:  "bg-[color:var(--warning)]",
-    label: "Aceptable",
-  },
-  improvable: {
-    // Mejorable → warning (no tenemos token naranja; warning es el más próximo)
-    bg:   "bg-[color:var(--warning-subtle)]",
-    border: "border-[color:var(--warning)]",
-    text: "text-[color:var(--warning-foreground)]",
-    bar:  "bg-[color:var(--warning)]",
-    label: "Mejorable",
-  },
-  critical: {
-    // Crítico → destructive
-    bg:   "bg-destructive/8",
-    border: "border-destructive",
-    text: "text-destructive",
-    bar:  "bg-destructive",
-    label: "Crítica",
-  },
-};
-
-// Devuelve la config de apariencia para el nivel dado.
-// Si el backend devuelve un nivel desconocido, fallback a acceptable.
-function getHealthScoreConfig(level) {
-  return HEALTH_SCORE_CONFIG[level] ?? HEALTH_SCORE_CONFIG.acceptable;
 }
 
 // Referencia INE: media nacional para una categoría.
@@ -270,11 +220,6 @@ function ResultsContent() {
   const budgetAlert = result.alerts?._budget_block;
   const debtAlert   = result.alerts?._debt_block;
 
-  // Configuración visual del healthScore
-  const hsLevel  = result.healthScore?.level ?? "acceptable";
-  const hsScore  = result.healthScore?.score ?? 0;
-  const hsConfig = getHealthScoreConfig(hsLevel);
-
   return (
     <main className="flex min-h-screen flex-col">
       <PageShell variant="table">
@@ -345,36 +290,12 @@ function ResultsContent() {
 
           {/* Salud financiera */}
           {result.healthScore && (
-            <div
-              className={`rounded-lg border p-5 space-y-3 transition-colors duration-200 ${hsConfig.bg} ${hsConfig.border}`}
-            >
-              <div className="flex items-baseline justify-between gap-4">
-                <div>
-                  <p className={`text-xs font-medium uppercase tracking-meta ${hsConfig.text}`}>
-                    Salud financiera
-                  </p>
-                  <p className={`text-4xl font-black font-display tracking-display mt-0.5 tabular-nums ${hsConfig.text}`}>
-                    {hsScore}
-                    <span className="text-xl font-medium">/100</span>
-                  </p>
-                </div>
-                <span className={`text-sm font-medium ${hsConfig.text}`}>
-                  {hsConfig.label}
-                </span>
-              </div>
-              {/* Barra de progreso */}
-              <div className="h-1.5 rounded-full bg-current/10 overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all duration-200 ${hsConfig.bar}`}
-                  style={{ width: `${Math.min(hsScore, 100)}%` }}
-                  role="progressbar"
-                  aria-valuenow={hsScore}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-label={`Puntuación de salud financiera: ${hsScore} de 100`}
-                />
-              </div>
-            </div>
+            <HealthGauge
+              score={result.healthScore.score}
+              level={result.healthScore.level}
+              label="Salud financiera"
+              penalties={result.healthScore.penalties ?? []}
+            />
           )}
 
           {/* Selector de vista */}
