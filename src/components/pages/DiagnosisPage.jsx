@@ -451,7 +451,21 @@ function DiagnosisContent() {
             </h1>
             <p className="text-muted-foreground font-light">
               Comparación de tu gasto real contra la distribución saludable para tu perfil
-              (ingreso <MoneyValue amount={income} size="inline" className="font-medium text-foreground" />)
+            </p>
+          </div>
+
+          {/* Ingreso de referencia — hero invertido (navy) */}
+          <div className="rounded-2xl bg-primary px-6 py-8 space-y-3 transition-colors duration-200">
+            <p className="text-xs font-medium uppercase tracking-meta text-primary-foreground/70">
+              Ingreso neto de referencia
+            </p>
+            <MoneyValue
+              amount={income}
+              size="hero"
+              className="text-5xl text-primary-foreground"
+            />
+            <p className="text-sm text-primary-foreground/80 font-light">
+              La distribución saludable está calculada sobre este ingreso mensual neto.
             </p>
           </div>
 

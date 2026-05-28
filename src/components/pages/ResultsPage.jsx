@@ -312,36 +312,36 @@ function ResultsContent() {
             )}
           </div>
 
-          {/* Ingreso mensual — hero */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="space-y-3">
-                <MoneyValue amount={income} size="hero" />
-                <p className="text-sm text-muted-foreground font-light">
-                  Ingreso mensual neto de referencia
-                </p>
-                {result.monthlyDebtPayment > 0 && (
-                  <div className="mt-1 space-y-1 border-t pt-3">
-                    <div className="flex justify-between text-sm text-muted-foreground">
-                      <span>Ingreso neto</span>
-                      <MoneyValue amount={income} size="inline" />
-                    </div>
-                    <div className="flex justify-between text-sm text-muted-foreground">
-                      <span>Cuota fija de deuda</span>
-                      <span>
-                        −<MoneyValue amount={result.monthlyDebtPayment} size="inline" />{" "}
-                        ({formatPct(result.monthlyDebtPayment / income * 100)})
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm font-medium border-t pt-2 mt-1">
-                      <span>Disponible para distribuir</span>
-                      <MoneyValue amount={result.effectiveIncome} size="inline" className="font-medium" />
-                    </div>
-                  </div>
-                )}
+          {/* Ingreso mensual — hero invertido (navy) */}
+          <div className="rounded-2xl bg-primary px-6 py-8 space-y-3 transition-colors duration-200">
+            <p className="text-xs font-medium uppercase tracking-meta text-primary-foreground/70">
+              Ingreso mensual neto de referencia
+            </p>
+            <MoneyValue
+              amount={income}
+              size="hero"
+              className="text-5xl text-primary-foreground"
+            />
+            {result.monthlyDebtPayment > 0 && (
+              <div className="mt-1 space-y-1 border-t border-primary-foreground/20 pt-3">
+                <div className="flex justify-between text-sm text-primary-foreground/80">
+                  <span>Ingreso neto</span>
+                  <MoneyValue amount={income} size="inline" className="text-primary-foreground/80" />
+                </div>
+                <div className="flex justify-between text-sm text-primary-foreground/80">
+                  <span>Cuota fija de deuda</span>
+                  <span>
+                    −<MoneyValue amount={result.monthlyDebtPayment} size="inline" className="text-primary-foreground/80" />{" "}
+                    ({formatPct(result.monthlyDebtPayment / income * 100)})
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm font-medium border-t border-primary-foreground/20 pt-2 mt-1">
+                  <span className="text-primary-foreground">Disponible para distribuir</span>
+                  <MoneyValue amount={result.effectiveIncome} size="inline" className="font-medium text-primary-foreground" />
+                </div>
               </div>
-            </CardContent>
-          </Card>
+            )}
+          </div>
 
           {/* Salud financiera */}
           {result.healthScore && (

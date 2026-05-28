@@ -283,24 +283,27 @@ export default function InverseResultsPage() {
             </p>
           </div>
 
-          {/* Hero: ingreso requerido */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="space-y-3">
-                <MoneyValue amount={requiredIncome} size="hero" />
-                <p className="text-sm text-muted-foreground font-light">
-                  Con este ingreso neto mensual, los importes que has fijado son financieramente sostenibles.
-                </p>
-                {monthlyDebtPayment > 0 && (
-                  <p className="text-sm text-muted-foreground font-light">
-                    Incluye{" "}
-                    <MoneyValue amount={monthlyDebtPayment} size="inline" className="font-medium" />
-                    /mes de cuotas de deuda fija.
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          {/* Hero: ingreso requerido — bloque invertido (navy) */}
+          <div className="rounded-2xl bg-primary px-6 py-8 space-y-3 transition-colors duration-200">
+            <p className="text-xs font-medium uppercase tracking-meta text-primary-foreground/70">
+              Ingreso mínimo necesario
+            </p>
+            <MoneyValue
+              amount={requiredIncome}
+              size="hero"
+              className="text-5xl text-primary-foreground"
+            />
+            <p className="text-sm text-primary-foreground/80 font-light">
+              Con este ingreso neto mensual, los importes que has fijado son financieramente sostenibles.
+            </p>
+            {monthlyDebtPayment > 0 && (
+              <p className="text-sm text-primary-foreground/80 font-light">
+                Incluye{" "}
+                <MoneyValue amount={monthlyDebtPayment} size="inline" className="font-medium text-primary-foreground" />
+                /mes de cuotas de deuda fija.
+              </p>
+            )}
+          </div>
 
           {/* Advertencias */}
           {warnings && warnings.length > 0 && (
