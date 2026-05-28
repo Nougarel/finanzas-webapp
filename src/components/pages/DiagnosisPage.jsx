@@ -66,6 +66,14 @@ function statusText(status) {
   return "—";
 }
 
+// Clases del pill de estado según el token semántico correspondiente.
+function statusPillClass(status) {
+  if (status === "on_target")     return "bg-[color:var(--success-subtle)] text-[color:var(--success-foreground)]";
+  if (status === "above_healthy") return "bg-[color:var(--warning-subtle)] text-[color:var(--warning-foreground)]";
+  if (status === "below_healthy") return "bg-[color:var(--info-subtle)] text-[color:var(--info-foreground)]";
+  return "bg-muted text-muted-foreground";
+}
+
 // ─── Resumen de bloque (tarjeta) ──────────────────────────────────────────────
 // Usa tokens semánticos para la desviación: para gasto (needs/wants) menos es
 // mejor → positivo es warning, negativo es success. Para ahorro es al revés.
@@ -137,10 +145,12 @@ function buildComparisonColumns(formatPct) {
       header: "Estado",
       className: "text-center align-top",
       render: (val) => (
-        <div className="inline-flex items-center gap-1 justify-center">
+        <span
+          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium transition-colors duration-200 ${statusPillClass(val)}`}
+        >
           <StatusIcon status={val} />
-          <span className="text-xs text-muted-foreground">{statusText(val)}</span>
-        </div>
+          {statusText(val)}
+        </span>
       ),
     },
   ];
