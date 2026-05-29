@@ -34,25 +34,34 @@ Formalizadas como ADR-10 y ADR-11 en el vault (`arquitectura/decisiones-diseno.m
 
 ### El *explanation object* (ADR-10 — frontera del secreto)
 
-El motor emite, por categoría, una estructura **user-safe**:
+El motor emite **solo** los drivers dinámicos por categoría. Todo lo demás
+(`relevance`, `sources`, plantillas) vive en el cliente y se compone desde el
+catálogo (que ya viaja).
 
 ```
 explanation: {
-  housing: {
-    drivers:   ["RENT_STATUS", "ZONE_STANDARD", "OCDE_HOUSEHOLD"],  // tokenIds
-    direction: "raised" | "lowered" | "neutral",                    // ternario, sin delta
-    sources:   ["INE", "BDE_DTI"]                                   // tokenIds
-  },
+  housing:  { drivers: ["HOUSING_STATUS", "HOUSEHOLD_SIZE", "GEOGRAPHIC_ZONE", "INCOME_TIER"] },
+  clothing: { drivers: ["INCOME_TIER"] },
   ...
 }
 ```
 
-- `drivers` y `sources` son **identificadores de un diccionario cerrado**. El
-  cliente solo tiene el diccionario de *etiquetas legibles*, nunca los
-  coeficientes.
-- `direction` es **ternaria** (sube / baja / neutral), nunca un delta numérico.
-- La narrativa ("Tu situación de alquiler en zona estándar elevó este margen")
-  se compone en el cliente a partir de los tokens.
+- **`drivers`** = los modificadores que **directamente tocan el target** de esa
+  categoría dentro de su `calc*Target`. Las dinámicas indirectas del LP
+  (un ahorro inexistente que comprime vivienda, etc.) NO son drivers de esa
+  categoría — no modifican su target.
+- Cada driver se traduce en un **bullet propio** en el panel (HOW + WHY en
+  lenguaje del mundo real), no en una frase única. Ver
+  `M36-token-dictionary.md`.
+- **Sin `direction` ternaria** — cada bullet expresa su efecto en lenguaje
+  natural; un global "sube/baja vs media" sería redundante y, además,
+  conceptualmente inexacto (el motor no compara contra ninguna media, deriva
+  targets personalizados).
+- **`relevance`** (sustituye a "reliability") clasifica la fuente en tres
+  niveles según su papel en salud financiera: `THRESHOLD` (umbrales
+  institucionales), `NORMATIVE` (principios consolidados) o `CONTEXTUAL` (INE
+  descriptivo, no prescriptivo). Las `CONTEXTUAL` llevan **mensaje explícito
+  de flexibilidad**.
 
 **Lo que NUNCA sale del servidor:** `lpWeight`, `factibleMin/Max`, factores
 OCDE, deltas numéricos, el orden de aplicación de modificadores, `rawTargets`
@@ -95,11 +104,17 @@ intacto; el split vive *dentro* de `main`.
 
 ### Fase 2 — Drivers cualitativos (la joya del TFG) · backend + frontend
 - **Backend:** instrumentar las ~12 funciones `calc*Target` para devolver
-  `{ target, drivers, direction }` (condición y etiqueta **juntas**). Emitir
-  `drivers`/`direction`/`sources` por categoría en las 3 APIs (aditivo).
+  `{ target, drivers }` (condición y etiqueta **juntas**, para que no diverjan).
+  Solo los modificadores **directos** del target de cada categoría. Emitir
+  `explanation: { [catId]: { drivers: [...] } }` en las 3 APIs (aditivo).
 - **Seguridad:** dejar de enviar `rawTargets` crudos al cliente.
-- **Frontend:** capa 2 del panel — narrativa "por qué este valor para ti"
-  compuesta desde el diccionario de tokens.
+- **Frontend (copy):** poblar el diccionario `M36-token-dictionary.md` con la
+  matriz completa de plantillas categoría × driver (los ejemplares de la v2
+  marcan el tono y la forma). Cada driver = un bullet con HOW + WHY en
+  lenguaje del mundo real, sin coeficientes.
+- **Frontend (capa 2 del panel):** lista de bullets generada desde los drivers
+  emitidos y las plantillas; mensaje explícito de flexibilidad en categorías
+  `CONTEXTUAL`.
 - **Validación:** confirmar que ningún número de la lógica se filtra al cliente.
 
 ### Fase 3 — Animaciones y pedagogía · frontend + backend (mínimo)
