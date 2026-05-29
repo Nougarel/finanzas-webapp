@@ -111,10 +111,16 @@ export function DetailPanelLayout({
               // Sin focus ring en el contenedor — el botón de cierre ya tiene el suyo
               "outline-none"
             )}
-            aria-label="Detalle de categoría"
-            // Dialog.Title es requerido por accesibilidad en Radix; lo ponemos en el contenido
             aria-describedby={undefined}
           >
+            {/*
+              Dialog.Title requerido por Radix para accesibilidad (evita advertencia de AT).
+              Oculto visualmente — el contenido real del panel ya tiene su propio h2.
+            */}
+            <Dialog.Title className="sr-only">
+              Detalle de categoría
+            </Dialog.Title>
+
             {/* Indicador de arrastre visual */}
             <div className="flex justify-center mb-3" aria-hidden="true">
               <div className="h-1 w-10 rounded-full bg-muted-foreground/30" />

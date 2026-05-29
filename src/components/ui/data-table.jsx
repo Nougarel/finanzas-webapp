@@ -85,10 +85,12 @@ function DataTable({
               return (
                 <tr
                   key={key ?? rowIdx}
-                  // Cuando la fila es interactiva: semántica de botón para teclado y AT.
-                  role={isInteractive ? "button" : undefined}
+                  // Filas interactivas: tabIndex para navegación por teclado.
+                  // No se usa role="button" porque <tr> tiene rol implícito "row"
+                  // y cambiar el rol rompería la semántica de tabla para AT.
+                  // aria-selected es válido en role="row" para indicar selección.
                   tabIndex={isInteractive ? 0 : undefined}
-                  aria-pressed={isInteractive ? isActive : undefined}
+                  aria-selected={isInteractive ? isActive : undefined}
                   onClick={isInteractive ? () => onRowClick(row) : undefined}
                   onKeyDown={isInteractive ? (e) => {
                     if (e.key === "Enter" || e.key === " ") {

@@ -9,6 +9,8 @@ import { DataTable } from "@/components/ui/data-table";
 import { MoneyValue } from "@/components/ui/money-value";
 import { PageShell } from "@/components/ui/page-shell";
 import { HealthGauge } from "@/components/ui/health-gauge";
+import { DetailPanelLayout } from "@/components/ui/detail-panel-layout";
+import { CategoryDetail } from "@/components/ui/category-detail";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useStudyContextOptional } from "@/lib/research/useStudyContext";
 import { useStudyAwareRouter } from "@/lib/research/useStudyAwareRouter";
@@ -132,6 +134,8 @@ function ResultsContent() {
   const mounted = useMounted();
 
   const [viewMode, setViewMode] = useState("detailed");
+  // Estado efímero del panel de detalle (ADR-11 — no en URL)
+  const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [profile] = useState(() => {
     if (typeof window === "undefined") return null;
     try {
@@ -315,14 +319,60 @@ function ResultsContent() {
             )}
           </div>
 
-          {/* Salud financiera */}
+          {/* Salud financiera — colapsado por defecto (M36: secundario, bajo demanda) */}
           {result.healthScore && (
-            <HealthGauge
-              score={result.healthScore.score}
-              level={result.healthScore.level}
-              label="Salud financiera"
-              penalties={result.healthScore.penalties ?? []}
-            />
+            <details className="group rounded-lg border border-border bg-card">
+              <summary
+                className={[
+                  "flex cursor-pointer items-center justify-between",
+                  "px-5 py-3.5 text-sm font-medium text-foreground",
+                  "hover:bg-muted/30 transition-colors rounded-lg",
+                  "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring",
+                  "list-none [&::-webkit-details-marker]:hidden",
+                ].join(" ")}
+              >
+                <span className="flex items-center gap-2">
+                  <span className="text-xs font-medium uppercase tracking-meta text-muted-foreground">
+                    Salud financiera
+                  </span>
+                  <span
+                    className="tabular-nums text-sm font-bold"
+                    style={{
+                      color:
+                        result.healthScore.level === "excellent" || result.healthScore.level === "good"
+                          ? "var(--success-foreground)"
+                          : result.healthScore.level === "critical"
+                          ? "var(--destructive)"
+                          : "var(--warning-foreground)",
+                    }}
+                  >
+                    {result.healthScore.score}/100 — {
+                      { excellent: "Excelente", good: "Buena", acceptable: "Aceptable",
+                        improvable: "Mejorable", critical: "Crítica" }[result.healthScore.level] ?? result.healthScore.level
+                    }
+                  </span>
+                </span>
+                {/* Chevron que rota al expandir */}
+                <svg
+                  className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-open:rotate-180"
+                  aria-hidden="true"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </summary>
+              <div className="border-t border-border">
+                <HealthGauge
+                  score={result.healthScore.score}
+                  level={result.healthScore.level}
+                  label="Salud financiera"
+                  penalties={result.healthScore.penalties ?? []}
+                />
+              </div>
+            </details>
           )}
 
           {/* Selector de vista */}
@@ -370,80 +420,110 @@ function ResultsContent() {
             )}
           </div>
 
-          {/* Vista detallada: bloque → DataTable de categorías */}
+          {/* Vista detallada: bloque → DataTable de categorías + panel de detalle M36 */}
           {viewMode === "detailed" && (
-            <div className="space-y-8">
-
-              {/* Guía de lectura (J4) */}
-              <p className="text-sm font-light text-muted-foreground leading-relaxed">
-                Cada bloque agrupa categorías relacionadas: <span className="font-medium text-foreground">Necesidades</span> (gastos
-                imprescindibles), <span className="font-medium text-foreground">Deseos</span> (calidad de vida) y{" "}
-                <span className="font-medium text-foreground">Ahorro</span> (tu futuro financiero). El porcentaje
-                indica qué parte de tu ingreso mensual se destina a cada categoría. Las alertas señalan categorías
-                donde la distribución se aleja de los umbrales saludables para tu perfil.
-              </p>
-
-              {BLOCK_ORDER.map((blockKey) => {
-                const block = result.blocks[blockKey];
-                const cats = Object.values(result.categories).filter((c) => c.block === blockKey);
-                const blockAlert = result.alerts?.[`_${blockKey}_block`];
-
-                // Construir filas para DataTable
-                const tableData = cats.map((cat) => ({
-                  id: cat.id,
-                  label: cat.label,
-                  description: cat.description,
-                  amount: cat.amount,
-                  percentage: cat.percentage,
-                  ineData: result.ineComparison?.[cat.id] ?? null,
-                  alert: result.alerts[cat.id] ?? null,
-                }));
-
-                // Máximo de % en el bloque para normalizar la escala de las barras
-                const maxBlockPct = Math.max(...tableData.map((r) => r.percentage), 0);
-
-                const columns = buildCategoryColumns(result, blockKey, formatPct, maxBlockPct);
-
-                return (
-                  <section key={blockKey} aria-labelledby={`block-${blockKey}-heading`}>
-                    {/* Cabecera de bloque */}
-                    <div className="flex items-baseline justify-between border-b-2 border-foreground/10 pb-2 mb-3">
-                      <div className="flex items-baseline gap-3">
-                        <h2
-                          id={`block-${blockKey}-heading`}
-                          className="text-lg font-bold text-foreground"
-                        >
-                          {block.label}
-                        </h2>
-                        <span className="text-sm text-muted-foreground">{formatPct(block.percentage)}</span>
-                      </div>
-                      <MoneyValue amount={block.amount} size="table" className="text-xl font-bold" />
-                    </div>
-
-                    {/* Alerta de bloque */}
-                    {blockAlert && (
-                      <div className="mb-3">
-                        <Alert variant={alertVariantFromLevel(blockAlert.level)}>
-                          {block.label}: {blockAlert.message}
-                        </Alert>
-                      </div>
-                    )}
-
-                    <DataTable
-                      columns={columns}
-                      data={tableData}
-                      caption={`Distribución de ${block.label}`}
+            <DetailPanelLayout
+              selectedCategoryId={selectedCategoryId}
+              onClose={() => setSelectedCategoryId(null)}
+              panelContent={
+                selectedCategoryId && result.categories[selectedCategoryId]
+                  ? (
+                    <CategoryDetail
+                      category={result.categories[selectedCategoryId]}
+                      ineData={result.ineComparison?.[selectedCategoryId] ?? null}
+                      income={income}
+                      onClose={() => setSelectedCategoryId(null)}
                     />
-                  </section>
-                );
-              })}
+                  )
+                  : null
+              }
+            >
+              <div className="space-y-8">
 
-              {/* Nota al pie sobre datos INE */}
-              <p className="text-xs text-muted-foreground italic border-t pt-3">
-                Datos de referencia del INE (Instituto Nacional de Estadística). Los porcentajes medios
-                pueden variar según la composición del hogar y la comunidad autónoma.
-              </p>
-            </div>
+                {/* Guía de lectura (J4) */}
+                <p className="text-sm font-light text-muted-foreground leading-relaxed">
+                  Cada bloque agrupa categorías relacionadas: <span className="font-medium text-foreground">Necesidades</span> (gastos
+                  imprescindibles), <span className="font-medium text-foreground">Deseos</span> (calidad de vida) y{" "}
+                  <span className="font-medium text-foreground">Ahorro</span> (tu futuro financiero). El porcentaje
+                  indica qué parte de tu ingreso mensual se destina a cada categoría. Las alertas señalan categorías
+                  donde la distribución se aleja de los umbrales saludables para tu perfil.
+                </p>
+
+                {/* Hint clicable — solo en vista detallada, desaparece cuando el panel está abierto */}
+                {!selectedCategoryId && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                    <span aria-hidden="true">›</span>
+                    Toca cualquier categoría para ver el respaldo institucional de su cálculo.
+                  </p>
+                )}
+
+                {BLOCK_ORDER.map((blockKey) => {
+                  const block = result.blocks[blockKey];
+                  const cats = Object.values(result.categories).filter((c) => c.block === blockKey);
+                  const blockAlert = result.alerts?.[`_${blockKey}_block`];
+
+                  // Construir filas para DataTable
+                  const tableData = cats.map((cat) => ({
+                    id: cat.id,
+                    label: cat.label,
+                    description: cat.description,
+                    amount: cat.amount,
+                    percentage: cat.percentage,
+                    ineData: result.ineComparison?.[cat.id] ?? null,
+                    alert: result.alerts[cat.id] ?? null,
+                  }));
+
+                  // Máximo de % en el bloque para normalizar la escala de las barras
+                  const maxBlockPct = Math.max(...tableData.map((r) => r.percentage), 0);
+
+                  const columns = buildCategoryColumns(result, blockKey, formatPct, maxBlockPct);
+
+                  return (
+                    <section key={blockKey} aria-labelledby={`block-${blockKey}-heading`}>
+                      {/* Cabecera de bloque */}
+                      <div className="flex items-baseline justify-between border-b-2 border-foreground/10 pb-2 mb-3">
+                        <div className="flex items-baseline gap-3">
+                          <h2
+                            id={`block-${blockKey}-heading`}
+                            className="text-lg font-bold text-foreground"
+                          >
+                            {block.label}
+                          </h2>
+                          <span className="text-sm text-muted-foreground">{formatPct(block.percentage)}</span>
+                        </div>
+                        <MoneyValue amount={block.amount} size="table" className="text-xl font-bold" />
+                      </div>
+
+                      {/* Alerta de bloque */}
+                      {blockAlert && (
+                        <div className="mb-3">
+                          <Alert variant={alertVariantFromLevel(blockAlert.level)}>
+                            {block.label}: {blockAlert.message}
+                          </Alert>
+                        </div>
+                      )}
+
+                      <DataTable
+                        columns={columns}
+                        data={tableData}
+                        caption={`Distribución de ${block.label}`}
+                        rowKey="id"
+                        onRowClick={(row) => setSelectedCategoryId(
+                          selectedCategoryId === row.id ? null : row.id
+                        )}
+                        activeRowKey={selectedCategoryId}
+                      />
+                    </section>
+                  );
+                })}
+
+                {/* Nota al pie sobre datos INE */}
+                <p className="text-xs text-muted-foreground italic border-t pt-3">
+                  Datos de referencia del INE (Instituto Nacional de Estadística). Los porcentajes medios
+                  pueden variar según la composición del hogar y la comunidad autónoma.
+                </p>
+              </div>
+            </DetailPanelLayout>
           )}
 
           {/* Vista macro: cards de bloque */}
