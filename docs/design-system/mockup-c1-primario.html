@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mockup C1 — Primario · M35 Flouss</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: #FAFAFA;
+      color: #14213D;
+      padding: 48px 24px;
+      line-height: 1.5;
+    }
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+    .intro {
+      max-width: 800px;
+      margin: 0 auto 48px;
+      color: #555;
+      font-size: 15px;
+    }
+    .intro strong { color: #14213D; }
+    .grid {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+      gap: 24px;
+    }
+    .card {
+      background: #FFFFFF;
+      border: 1px solid #E5E7EB;
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    }
+    .swatch-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #F1F3F5;
+    }
+    .swatch {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+    .swatch-text strong {
+      display: block;
+      font-size: 15px;
+      font-weight: 600;
+      color: #14213D;
+    }
+    .swatch-text small {
+      display: block;
+      font-size: 13px;
+      color: #6B7280;
+      font-family: ui-monospace, "SF Mono", Menlo, Monaco, monospace;
+      margin-top: 2px;
+    }
+    /* Wordmark */
+    .wordmark {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .wordmark svg { display: block; }
+    .wordmark span {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .tagline {
+      font-size: 13px;
+      color: #6B7280;
+      margin-bottom: 28px;
+    }
+    /* Botones */
+    .button-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+    .btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: opacity 0.15s ease;
+      font-family: inherit;
+    }
+    .btn:hover { opacity: 0.9; }
+    .btn-primary { color: white; }
+    .btn-outline { background: transparent; }
+    /* Card interna de ejemplo */
+    .inner-card {
+      padding: 16px;
+      border: 1px solid #E5E7EB;
+      border-radius: 10px;
+      background: #FAFAFA;
+    }
+    .inner-card .label {
+      font-size: 12px;
+      color: #6B7280;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .inner-card .value {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .inner-card .delta {
+      font-size: 12px;
+      margin-top: 4px;
+    }
+    /* Bloque inverso */
+    .inverse-section {
+      max-width: 1200px;
+      margin: 64px auto 0;
+    }
+    .inverse-section h2 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #14213D;
+    }
+    .inverse-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .inverse-card {
+      padding: 32px 24px;
+      border-radius: 16px;
+      color: white;
+      min-height: 140px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .inverse-card .inv-wordmark {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .inverse-card .inv-wordmark span {
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .inverse-card .inv-hex {
+      font-family: ui-monospace, "SF Mono", Menlo, Monaco, monospace;
+      font-size: 12px;
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+  <h1>Mockup C1 — Primario · M35 Flouss</h1>
+  <p class="intro">
+    Comparativa de los 4 azules marino candidatos aplicados al wordmark, botones y card de ejemplo.
+    El <strong>#14213D Navy clásico</strong> es la elección actual; el <strong>#0F2A4F Navy cyan-tech</strong>
+    queda como alternativa. Los otros 2 quedan como referencia.
+  </p>
+
+  <!-- Sección principal: cards con fondo blanco, primario aplicado a wordmark + botón -->
+  <div class="grid">
+    <!-- Card 1: Navy clásico -->
+    <div class="card">
+      <div class="swatch-info">
+        <div class="swatch" style="background: #14213D;"></div>
+        <div class="swatch-text">
+          <strong>Navy clásico ⭐ ELEGIDO</strong>
+          <small>#14213D</small>
+        </div>
+      </div>
+      <div class="wordmark">
+        <!-- Símbolo: curva con bifurcación -->
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <path d="M4 16 Q12 16 16 8" stroke="#14213D" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <path d="M4 16 Q12 16 16 24" stroke="#14213D" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <circle cx="4" cy="16" r="2" fill="#14213D"/>
+          <circle cx="16" cy="8" r="2" fill="#14213D"/>
+          <circle cx="16" cy="24" r="2" fill="#14213D"/>
+        </svg>
+        <span style="color: #14213D;">flouss</span>
+      </div>
+      <div class="tagline">Distribuye con criterio</div>
+      <div class="button-row">
+        <button class="btn btn-primary" style="background: #14213D;">Comenzar</button>
+        <button class="btn btn-outline" style="color: #14213D; border-color: #14213D;">Volver</button>
+      </div>
+      <div class="inner-card">
+        <div class="label">Ingreso necesario</div>
+        <div class="value" style="color: #14213D;">2.847,50 €</div>
+        <div class="delta" style="color: #6B7280;">+12% sobre tu ingreso actual</div>
+      </div>
+    </div>
+
+    <!-- Card 2: Navy con tinte púrpura -->
+    <div class="card">
+      <div class="swatch-info">
+        <div class="swatch" style="background: #1E1B4B;"></div>
+        <div class="swatch-text">
+          <strong>Navy púrpura (Stripe-like)</strong>
+          <small>#1E1B4B</small>
+        </div>
+      </div>
+      <div class="wordmark">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <path d="M4 16 Q12 16 16 8" stroke="#1E1B4B" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <path d="M4 16 Q12 16 16 24" stroke="#1E1B4B" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <circle cx="4" cy="16" r="2" fill="#1E1B4B"/>
+          <circle cx="16" cy="8" r="2" fill="#1E1B4B"/>
+          <circle cx="16" cy="24" r="2" fill="#1E1B4B"/>
+        </svg>
+        <span style="color: #1E1B4B;">flouss</span>
+      </div>
+      <div class="tagline">Distribuye con criterio</div>
+      <div class="button-row">
+        <button class="btn btn-primary" style="background: #1E1B4B;">Comenzar</button>
+        <button class="btn btn-outline" style="color: #1E1B4B; border-color: #1E1B4B;">Volver</button>
+      </div>
+      <div class="inner-card">
+        <div class="label">Ingreso necesario</div>
+        <div class="value" style="color: #1E1B4B;">2.847,50 €</div>
+        <div class="delta" style="color: #6B7280;">+12% sobre tu ingreso actual</div>
+      </div>
+    </div>
+
+    <!-- Card 3: Navy cyan-tech (alternativa) -->
+    <div class="card">
+      <div class="swatch-info">
+        <div class="swatch" style="background: #0F2A4F;"></div>
+        <div class="swatch-text">
+          <strong>Navy cyan-tech 🔄 ALTERNATIVA</strong>
+          <small>#0F2A4F</small>
+        </div>
+      </div>
+      <div class="wordmark">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <path d="M4 16 Q12 16 16 8" stroke="#0F2A4F" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <path d="M4 16 Q12 16 16 24" stroke="#0F2A4F" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <circle cx="4" cy="16" r="2" fill="#0F2A4F"/>
+          <circle cx="16" cy="8" r="2" fill="#0F2A4F"/>
+          <circle cx="16" cy="24" r="2" fill="#0F2A4F"/>
+        </svg>
+        <span style="color: #0F2A4F;">flouss</span>
+      </div>
+      <div class="tagline">Distribuye con criterio</div>
+      <div class="button-row">
+        <button class="btn btn-primary" style="background: #0F2A4F;">Comenzar</button>
+        <button class="btn btn-outline" style="color: #0F2A4F; border-color: #0F2A4F;">Volver</button>
+      </div>
+      <div class="inner-card">
+        <div class="label">Ingreso necesario</div>
+        <div class="value" style="color: #0F2A4F;">2.847,50 €</div>
+        <div class="delta" style="color: #6B7280;">+12% sobre tu ingreso actual</div>
+      </div>
+    </div>
+
+    <!-- Card 4: Indigo profundo -->
+    <div class="card">
+      <div class="swatch-info">
+        <div class="swatch" style="background: #312E81;"></div>
+        <div class="swatch-text">
+          <strong>Indigo profundo</strong>
+          <small>#312E81</small>
+        </div>
+      </div>
+      <div class="wordmark">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <path d="M4 16 Q12 16 16 8" stroke="#312E81" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <path d="M4 16 Q12 16 16 24" stroke="#312E81" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <circle cx="4" cy="16" r="2" fill="#312E81"/>
+          <circle cx="16" cy="8" r="2" fill="#312E81"/>
+          <circle cx="16" cy="24" r="2" fill="#312E81"/>
+        </svg>
+        <span style="color: #312E81;">flouss</span>
+      </div>
+      <div class="tagline">Distribuye con criterio</div>
+      <div class="button-row">
+        <button class="btn btn-primary" style="background: #312E81;">Comenzar</button>
+        <button class="btn btn-outline" style="color: #312E81; border-color: #312E81;">Volver</button>
+      </div>
+      <div class="inner-card">
+        <div class="label">Ingreso necesario</div>
+        <div class="value" style="color: #312E81;">2.847,50 €</div>
+        <div class="delta" style="color: #6B7280;">+12% sobre tu ingreso actual</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bloque inverso: fondo color, texto blanco (para ver el efecto inversión) -->
+  <section class="inverse-section">
+    <h2>Versión inversa — fondo color, texto blanco (para heros o secciones destacadas)</h2>
+    <div class="inverse-grid">
+      <div class="inverse-card" style="background: #14213D;">
+        <div class="inv-wordmark">
+          <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+            <path d="M4 16 Q12 16 16 8" stroke="white" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+            <path d="M4 16 Q12 16 16 24" stroke="white" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+            <circle cx="4" cy="16" r="2" fill="white"/>
+            <circle cx="16" cy="8" r="2" fill="white"/>
+            <circle cx="16" cy="24" r="2" fill="white"/>
+          </svg>
+          <span>flouss</span>
+        </div>
+        <div class="inv-hex">#14213D · Navy clásico</div>
+      </div>
+      <div class="inverse-card" style="background: #1E1B4B;">
+        <div class="inv-wordmark">
+          <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+            <path d="M4 16 Q12 16 16 8" stroke="white" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+            <path d="M4 16 Q12 16 16 24" stroke="white" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+            <circle cx="4" cy="16" r="2" fill="white"/>
+            <circle cx="16" cy="8" r="2" fill="white"/>
+            <circle cx="16" cy="24" r="2" fill="white"/>
+          </svg>
+          <span>flouss</span>
+        </div>
+        <div class="inv-hex">#1E1B4B · Navy púrpura</div>
+      </div>
+      <div class="inverse-card" style="background: #0F2A4F;">
+        <div class="inv-wordmark">
+          <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+            <path d="M4 16 Q12 16 16 8" stroke="white" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+            <path d="M4 16 Q12 16 16 24" stroke="white" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+            <circle cx="4" cy="16" r="2" fill="white"/>
+            <circle cx="16" cy="8" r="2" fill="white"/>
+            <circle cx="16" cy="24" r="2" fill="white"/>
+          </svg>
+          <span>flouss</span>
+        </div>
+        <div class="inv-hex">#0F2A4F · Navy cyan-tech</div>
+      </div>
+      <div class="inverse-card" style="background: #312E81;">
+        <div class="inv-wordmark">
+          <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+            <path d="M4 16 Q12 16 16 8" stroke="white" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+            <path d="M4 16 Q12 16 16 24" stroke="white" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+            <circle cx="4" cy="16" r="2" fill="white"/>
+            <circle cx="16" cy="8" r="2" fill="white"/>
+            <circle cx="16" cy="24" r="2" fill="white"/>
+          </svg>
+          <span>flouss</span>
+        </div>
+        <div class="inv-hex">#312E81 · Indigo profundo</div>
+      </div>
+    </div>
+  </section>
+
+  <p style="max-width: 800px; margin: 64px auto 0; color: #6B7280; font-size: 13px; text-align: center;">
+    Nota: el símbolo "curva con bifurcación" es un boceto rápido. La versión final del logo se afinará en Fase 2.
+    Las tipografías mostradas son del sistema operativo, no la final (la familia se decide en Bloque D).
+  </p>
+</body>
+</html>

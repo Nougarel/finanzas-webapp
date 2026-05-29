@@ -6,6 +6,8 @@ import { useStudyAwareRouter } from "@/lib/research/useStudyAwareRouter";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert } from "@/components/ui/alert";
+import { PageShell } from "@/components/ui/page-shell";
 import { validateIncome } from "@/lib/validators";
 
 /**
@@ -48,85 +50,91 @@ function CalculatorForm() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-8">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Tu ingreso</CardTitle>
-          <CardDescription>
-            Introduce tu ingreso para calcular la distribución ideal
-          </CardDescription>
-        </CardHeader>
+    <main className="flex flex-1 items-center">
+      <PageShell variant="form">
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle className="font-display font-black tracking-display text-2xl">
+              Tu ingreso
+            </CardTitle>
+            <CardDescription className="font-light">
+              Introduce tu ingreso para calcular la distribución ideal
+            </CardDescription>
+          </CardHeader>
 
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              {/* Fila label + toggle */}
-              <div className="flex items-center justify-between">
-                <Label htmlFor="income">
-                  {incomeMode === "monthly" ? "Ingreso mensual (€)" : "Ingreso anual (€)"}
-                </Label>
-                <div className="flex rounded-md border overflow-hidden text-xs">
-                  <button
-                    type="button"
-                    onClick={() => handleModeChange("monthly")}
-                    className={`px-3 py-1 transition-colors ${
-                      incomeMode === "monthly"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-background text-muted-foreground hover:bg-muted"
-                    }`}
-                  >
-                    Mensual
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleModeChange("annual")}
-                    className={`px-3 py-1 transition-colors border-l ${
-                      incomeMode === "annual"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-background text-muted-foreground hover:bg-muted"
-                    }`}
-                  >
-                    Anual
-                  </button>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                {/* Fila label + toggle */}
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="income" className="font-medium">
+                    {incomeMode === "monthly" ? "Ingreso mensual (€)" : "Ingreso anual (€)"}
+                  </Label>
+                  <div className="flex rounded-md border overflow-hidden text-xs">
+                    <button
+                      type="button"
+                      onClick={() => handleModeChange("monthly")}
+                      className={`px-3 py-1 transition-colors duration-200 ${
+                        incomeMode === "monthly"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-background text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      Mensual
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleModeChange("annual")}
+                      className={`px-3 py-1 transition-colors duration-200 border-l ${
+                        incomeMode === "annual"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-background text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      Anual
+                    </button>
+                  </div>
                 </div>
+
+                <Input
+                  id="income"
+                  type="number"
+                  placeholder={incomeMode === "monthly" ? "2000" : "24000"}
+                  value={income}
+                  onChange={handleIncomeChange}
+                  min="0"
+                  step="0.01"
+                  className={`tabular-nums${error ? " border-destructive" : ""}`}
+                />
+
+                {/* Texto de ayuda contextual */}
+                <p className="text-xs text-muted-foreground font-light">{HELP_TEXT[incomeMode]}</p>
+
+                {error && (
+                  <Alert variant="error" size="compact">
+                    {error}
+                  </Alert>
+                )}
               </div>
 
-              <Input
-                id="income"
-                type="number"
-                placeholder={incomeMode === "monthly" ? "2000" : "24000"}
-                value={income}
-                onChange={handleIncomeChange}
-                min="0"
-                step="0.01"
-                className={error ? "border-red-500" : ""}
-              />
+              <div className="flex gap-4 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => router.push("/profile")}
+                  className="flex-1 transition-colors duration-200"
+                >
+                  Volver
+                </Button>
 
-              {/* Texto de ayuda contextual */}
-              <p className="text-xs text-muted-foreground">{HELP_TEXT[incomeMode]}</p>
-
-              {error && (
-                <p className="text-sm text-red-500">{error}</p>
-              )}
-            </div>
-
-            <div className="flex gap-4 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => router.push("/profile")}
-                className="flex-1"
-              >
-                Volver
-              </Button>
-
-              <Button type="submit" className="flex-1">
-                Calcular
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+                <Button type="submit" className="flex-1 transition-colors duration-200">
+                  Calcular
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </PageShell>
     </main>
   );
 }
@@ -139,8 +147,8 @@ function CalculatorForm() {
 export default function CalculatorPage() {
   return (
     <Suspense fallback={
-      <main className="flex min-h-screen items-center justify-center">
-        <p>Cargando...</p>
+      <main className="flex flex-1 items-center justify-center">
+        <p className="text-muted-foreground font-light">Cargando...</p>
       </main>
     }>
       <CalculatorForm />

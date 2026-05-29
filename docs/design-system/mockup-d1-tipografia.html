@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mockup D1 — Tipografía A vs B · M35 Flouss</title>
+
+  <!-- Fuentes: Geist 200-900 + Inter 200-800 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@200;300;400;500;600;700;800;900&family=Inter:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy: #14213D;
+      --gray-50: #FAFAFA;
+      --gray-100: #F1F3F5;
+      --gray-200: #E5E7EB;
+      --gray-500: #6B7280;
+      --gray-600: #4B5563;
+    }
+    body {
+      background: var(--gray-50);
+      color: var(--navy);
+      padding: 32px 24px;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+      line-height: 1.5;
+    }
+    .container { max-width: 1400px; margin: 0 auto; }
+
+    /* Header del mockup */
+    .page-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .page-header h1 {
+      font-family: Geist, sans-serif;
+      font-weight: 800;
+      font-size: 28px;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+    .page-header p {
+      color: var(--gray-500);
+      font-size: 14px;
+      font-weight: 300;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    /* Grid de 2 columnas */
+    .compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    @media (max-width: 1024px) {
+      .compare { grid-template-columns: 1fr; }
+    }
+
+    /* Cada columna (A o B) */
+    .column {
+      background: white;
+      border: 2px solid var(--navy);
+      border-radius: 20px;
+      padding: 32px;
+      position: relative;
+    }
+    .col-badge {
+      position: absolute;
+      top: -12px;
+      left: 32px;
+      background: var(--navy);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-family: Inter, sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .col-title {
+      font-family: Geist, sans-serif;
+      font-weight: 800;
+      font-size: 20px;
+      letter-spacing: -0.02em;
+      margin-bottom: 4px;
+    }
+    .col-spec {
+      font-family: Inter, sans-serif;
+      font-weight: 300;
+      font-size: 12px;
+      color: var(--gray-500);
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--gray-100);
+    }
+    .col-spec strong {
+      color: var(--navy);
+      font-weight: 500;
+    }
+
+    /* Paneles internos (uno encima del otro) */
+    .panel {
+      padding: 24px;
+      background: var(--gray-50);
+      border-radius: 12px;
+      margin-bottom: 16px;
+    }
+    .panel:last-child { margin-bottom: 0; }
+
+    /* Panel wordmark + hero */
+    .wordmark-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+    .wordmark-row svg { display: block; }
+    .panel .tagline {
+      font-family: Inter, sans-serif;
+      font-weight: 300;
+      font-size: 13px;
+      color: var(--gray-500);
+      margin-bottom: 28px;
+    }
+    .panel .hero-num-label {
+      font-family: Inter, sans-serif;
+      font-weight: 400;
+      font-size: 12px;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+    .panel .hero-num-desc { /* "Con este ingreso neto mensual..." */
+      font-size: 13px;
+      color: var(--gray-500);
+      margin-bottom: 28px;
+    }
+    .panel .body-text { /* "Tu plan financiero personalizado..." */
+      font-size: 14px;
+      color: var(--gray-600);
+      line-height: 1.65;
+      margin-bottom: 24px;
+    }
+    .panel .buttons {
+      display: flex;
+      gap: 12px;
+    }
+    .panel .btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-family: Inter, sans-serif;
+      font-weight: 500;
+      font-size: 14px;
+      cursor: pointer;
+      border: 1px solid transparent;
+    }
+    .panel .btn-primary {
+      background: var(--navy);
+      color: white;
+    }
+    .panel .btn-outline {
+      background: transparent;
+      color: var(--navy);
+      border-color: var(--navy);
+    }
+
+    /* Panel tabla */
+    .demo-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .demo-table caption {
+      font-family: Geist, sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      text-align: left;
+      margin-bottom: 16px;
+      color: var(--navy);
+    }
+    .demo-table th {
+      font-family: Inter, sans-serif;
+      font-weight: 500;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--gray-500);
+      padding: 8px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--gray-200);
+    }
+    .demo-table th.num { text-align: right; }
+    .demo-table td {
+      font-family: Inter, sans-serif;
+      font-size: 14px;
+      color: var(--navy);
+      padding: 12px;
+      border-bottom: 1px solid var(--gray-100);
+    }
+    .demo-table td.num {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ─── COLUMNA A — Propuesta original ───────────────────────────────── */
+    .col-a .panel .wordmark {
+      font-family: Geist, sans-serif;
+      font-weight: 800;
+      font-size: 32px;
+      letter-spacing: -0.03em;
+      color: var(--navy);
+    }
+    .col-a .panel .hero-num {
+      font-family: Geist, sans-serif;
+      font-weight: 800;
+      font-size: 48px;
+      letter-spacing: -0.03em;
+      color: var(--navy);
+      font-variant-numeric: tabular-nums;
+      margin-bottom: 4px;
+    }
+    .col-a .panel .hero-num-desc {
+      font-family: Inter, sans-serif;
+      font-weight: 300;
+    }
+    .col-a .panel .body-text {
+      font-family: Inter, sans-serif;
+      font-weight: 300;
+    }
+    .col-a .demo-table td {
+      font-weight: 400;
+    }
+    .col-a .demo-table td.num {
+      font-weight: 500;
+    }
+
+    /* ─── COLUMNA B — Variante con tu propuesta de pesos ──────────────── */
+    .col-b .panel .wordmark {
+      font-family: Geist, sans-serif;
+      font-weight: 900;
+      font-size: 32px;
+      letter-spacing: -0.03em;
+      color: var(--navy);
+    }
+    .col-b .panel .hero-num {
+      font-family: Geist, sans-serif;
+      font-weight: 900;
+      font-size: 48px;
+      letter-spacing: -0.03em;
+      color: var(--navy);
+      font-variant-numeric: tabular-nums;
+      margin-bottom: 4px;
+    }
+    .col-b .panel .hero-num-desc {
+      font-family: Inter, sans-serif;
+      font-weight: 200;
+    }
+    .col-b .panel .body-text {
+      font-family: Inter, sans-serif;
+      font-weight: 300;
+    }
+    .col-b .demo-table td {
+      font-weight: 500;
+    }
+    .col-b .demo-table td.num {
+      font-weight: 500;
+    }
+
+    /* Notas */
+    .notes {
+      max-width: 900px;
+      margin: 40px auto 0;
+      padding: 20px 24px;
+      background: white;
+      border: 1px solid var(--gray-200);
+      border-radius: 12px;
+    }
+    .notes h4 {
+      font-family: Geist, sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+    .notes ul {
+      font-family: Inter, sans-serif;
+      font-weight: 300;
+      font-size: 13px;
+      color: var(--gray-600);
+      padding-left: 20px;
+      line-height: 1.7;
+    }
+    .notes li { margin-bottom: 4px; }
+    .notes code {
+      background: var(--gray-100);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 400;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <header class="page-header">
+      <h1>Mockup D1 — Tipografía · A vs B</h1>
+      <p>Comparativa lado a lado de la propuesta original (A) frente a la variante con tus ajustes (B).</p>
+    </header>
+
+    <div class="compare">
+
+      <!-- ═══════════════════ COLUMNA A ═══════════════════ -->
+      <section class="column col-a">
+        <span class="col-badge">A · Propuesta original</span>
+        <h2 class="col-title">Geist 800 + Inter 300</h2>
+        <p class="col-spec">
+          Wordmark/hero <strong>Geist Bold 800</strong> · body fino <strong>Inter Light 300</strong> · tabla <strong>Inter Regular 400</strong> (números <strong>Inter Medium 500</strong>) · botones <strong>Inter Medium 500</strong>.
+        </p>
+
+        <!-- Panel 1: wordmark + hero + body + botones -->
+        <div class="panel">
+          <div class="wordmark-row">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+              <path d="M4 16 Q12 16 16 8" stroke="#14213D" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+              <path d="M4 16 Q12 16 16 24" stroke="#14213D" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+              <circle cx="4" cy="16" r="2" fill="#14213D"/>
+              <circle cx="16" cy="8" r="2" fill="#14213D"/>
+              <circle cx="16" cy="24" r="2" fill="#14213D"/>
+            </svg>
+            <span class="wordmark">flouss</span>
+          </div>
+          <p class="tagline">Distribuye con criterio</p>
+
+          <div class="hero-num-label">Ingreso necesario</div>
+          <div class="hero-num">2.847,50 €</div>
+          <p class="hero-num-desc">Con este ingreso neto mensual, los importes que has fijado son financieramente sostenibles.</p>
+
+          <p class="body-text">
+            Tu plan financiero personalizado para alcanzar el estilo de vida que has definido. Hemos comparado tu situación actual con las recomendaciones del Banco de España y del INE para tu perfil concreto.
+          </p>
+
+          <div class="buttons">
+            <button class="btn btn-primary">Comenzar</button>
+            <button class="btn btn-outline">Volver</button>
+          </div>
+        </div>
+
+        <!-- Panel 2: tabla -->
+        <div class="panel">
+          <table class="demo-table">
+            <caption>Tu distribución mensual</caption>
+            <thead>
+              <tr>
+                <th>Categoría</th>
+                <th class="num">%</th>
+                <th class="num">Importe</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Vivienda</td><td class="num">28,3 %</td><td class="num">805,84 €</td></tr>
+              <tr><td>Alimentación</td><td class="num">14,7 %</td><td class="num">418,58 €</td></tr>
+              <tr><td>Transporte</td><td class="num">8,5 %</td><td class="num">242,04 €</td></tr>
+              <tr><td>Restaurantes y bares</td><td class="num">5,2 %</td><td class="num">148,07 €</td></tr>
+              <tr><td>Inversión y jubilación</td><td class="num">15,0 %</td><td class="num">427,13 €</td></tr>
+              <tr><td>Fondo de emergencia</td><td class="num">3,0 %</td><td class="num">85,43 €</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ═══════════════════ COLUMNA B ═══════════════════ -->
+      <section class="column col-b">
+        <span class="col-badge">B · Tu variante</span>
+        <h2 class="col-title">Jerarquía 4 niveles</h2>
+        <p class="col-spec">
+          Títulos <strong>Geist Black 900</strong> · secundarios <strong>Inter Light 300</strong> · terciarios <strong>Inter ExtraLight 200</strong> · botones y tablas <strong>Inter Medium 500</strong>.
+        </p>
+
+        <!-- Panel 1 -->
+        <div class="panel">
+          <div class="wordmark-row">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+              <path d="M4 16 Q12 16 16 8" stroke="#14213D" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+              <path d="M4 16 Q12 16 16 24" stroke="#14213D" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+              <circle cx="4" cy="16" r="2" fill="#14213D"/>
+              <circle cx="16" cy="8" r="2" fill="#14213D"/>
+              <circle cx="16" cy="24" r="2" fill="#14213D"/>
+            </svg>
+            <span class="wordmark">flouss</span>
+          </div>
+          <p class="tagline">Distribuye con criterio</p>
+
+          <div class="hero-num-label">Ingreso necesario</div>
+          <div class="hero-num">2.847,50 €</div>
+          <p class="hero-num-desc">Con este ingreso neto mensual, los importes que has fijado son financieramente sostenibles.</p>
+
+          <p class="body-text">
+            Tu plan financiero personalizado para alcanzar el estilo de vida que has definido. Hemos comparado tu situación actual con las recomendaciones del Banco de España y del INE para tu perfil concreto.
+          </p>
+
+          <div class="buttons">
+            <button class="btn btn-primary">Comenzar</button>
+            <button class="btn btn-outline">Volver</button>
+          </div>
+        </div>
+
+        <!-- Panel 2 -->
+        <div class="panel">
+          <table class="demo-table">
+            <caption>Tu distribución mensual</caption>
+            <thead>
+              <tr>
+                <th>Categoría</th>
+                <th class="num">%</th>
+                <th class="num">Importe</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Vivienda</td><td class="num">28,3 %</td><td class="num">805,84 €</td></tr>
+              <tr><td>Alimentación</td><td class="num">14,7 %</td><td class="num">418,58 €</td></tr>
+              <tr><td>Transporte</td><td class="num">8,5 %</td><td class="num">242,04 €</td></tr>
+              <tr><td>Restaurantes y bares</td><td class="num">5,2 %</td><td class="num">148,07 €</td></tr>
+              <tr><td>Inversión y jubilación</td><td class="num">15,0 %</td><td class="num">427,13 €</td></tr>
+              <tr><td>Fondo de emergencia</td><td class="num">3,0 %</td><td class="num">85,43 €</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Notas -->
+    <aside class="notes">
+      <h4>Jerarquía tipográfica de la columna B</h4>
+      <ul>
+        <li><strong>Títulos</strong> (wordmark, número hero, caption de tabla): <code>Geist 900 Black</code>.</li>
+        <li><strong>Textos secundarios</strong> (tagline, body de párrafo "Tu plan financiero…"): <code>Inter 300 Light</code>.</li>
+        <li><strong>Textos terciarios</strong> (texto auxiliar debajo del hero "Con este ingreso neto mensual…"): <code>Inter 200 ExtraLight</code>.</li>
+        <li><strong>Botones y tablas</strong> (categorías + números + texto de botón): <code>Inter 500 Medium</code>, con <code>tabular-nums</code> en columnas numéricas.</li>
+        <li><strong>Header de tabla</strong>: <code>Inter 500 Medium</code> uppercase con tracking ampliado (label de columna).</li>
+      </ul>
+      <h4 style="margin-top: 20px;">Diferencia frente a A</h4>
+      <ul>
+        <li>A usaba Geist 800 (Bold) en títulos · B usa <code>900 Black</code>: más contundente.</li>
+        <li>A usaba Inter 300 también para texto terciario · B introduce <code>200 ExtraLight</code> como nivel adicional para crear más jerarquía con el body principal (300).</li>
+        <li>A usaba Inter 400 en celdas de tabla · B usa <code>500 Medium</code> en todas las celdas para una presencia más uniforme y densidad legible.</li>
+      </ul>
+    </aside>
+
+  </div>
+</body>
+</html>

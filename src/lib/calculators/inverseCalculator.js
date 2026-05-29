@@ -36,6 +36,51 @@ const MIN_NEED_COVERAGE    = 0.80;  // Cond. 1a: necesidades ≥ 80% target esca
 const MIN_SAVINGS_COVERAGE = 0.70;  // Cond. 1b: ahorro total ≥ 70% targets ahorro
 const MIN_WANTS_PCT        = 5;     // Cond. 1c: deseos ≥ 5% del ingreso
 
+// ─── Constantes de la búsqueda del ingreso mínimo ────────────────────────────
+// El predicado isIncomeFeasible NO es monótono sobre todo el rango de ingreso:
+// es infactible con ingresos bajos (los importes fijados pesan un % demasiado
+// alto), factible en una franja media, e infactible de nuevo con ingresos
+// altísimos (los fijados tienden a ~0% y las categorías libres + el techo de
+// wants no alcanzan el 100% que exige el solver, que impone budget = 100). Por
+// eso no se puede aplicar una binaria sobre todo el dominio: primero hay que
+// localizar la franja factible (galopante) y luego afinar el mínimo en ella
+// (binaria, segura porque dentro de la franja el predicado sí es monótono).
+const EPS                   = 1;          // Precisión en € (1€ ⇒ céntimos)
+const MAX_INCOME            = 1_000_000;  // Tope absoluto de la galopante
+const MAX_GALLOP_ITERATIONS = 40;         // Salvaguarda de iteraciones
+const GALLOP_FACTOR         = 1.5;        // Doblado moderado: reduce el riesgo
+                                          // de saltarse una franja estrecha (×2
+                                          // tiene más punto ciego que ×1.5)
+
+// Techo colectivo de deseos (wants_ub) que impone el solver. Debe coincidir con
+// lpSolver.js, porque el pre-check estructural replica esa restricción sin
+// llamar al solver.
+const WANTS_CAP_PCT = 80;
+
+// Pre-check estructural (puramente aritmético, sin llamar al solver).
+// El solver exige budget = 100: las categorías deben sumar EXACTAMENTE el 100%
+// del ingreso. El máximo % que el presupuesto puede alcanzar es la suma de los
+// techos (factibleMax) de needs + savings, más los wants topados al WANTS_CAP_PCT
+// colectivo. Si ese máximo absoluto no llega al 100%, es imposible cuadrar el
+// presupuesto para CUALQUIER ingreso (importes estructuralmente indistribuibles).
+//
+// Se usa el factibleMax estático del catálogo como techo: factibleMaxOverrides
+// solo puede REBAJAR un techo, nunca elevarlo, así que el estático es la cota
+// más permisiva — la correcta para un test de imposibilidad (sin falsos negativos).
+function isStructurallyDistributable() {
+  // Techo acumulado de needs + savings (los wants no tienen factibleMax
+  // individual: aportan como mucho el WANTS_CAP_PCT colectivo).
+  let nonWantsCap = 0;
+  for (const cat of CATEGORIES_CATALOG) {
+    if (cat.block !== 'wants') {
+      nonWantsCap += cat.factibleMax ?? 0;
+    }
+  }
+
+  const maxBudgetPct = nonWantsCap + WANTS_CAP_PCT;
+  return maxBudgetPct >= 100;
+}
+
 /**
  * Ejecuta el LP con un ingreso dado y los importes fijados del usuario.
  * Devuelve también los targets para que el caller no tenga que recalcularlos.
@@ -213,21 +258,64 @@ export function calculateInverse(profile, specifiedAmounts = {}, options = {}) {
     }
   }
 
-  // 3. Búsqueda binaria [0, 50M] con ε = 1€
-  const HI_BOUND = 50_000_000;
-  const EPS      = 1;
+  // 3. Búsqueda del ingreso mínimo factible (3 piezas que se complementan).
+  //
+  // 3.a Pre-check estructural — sin tocar el solver.
+  //     Si el presupuesto no puede sumar el 100% ni en su mejor caso, no existe
+  //     ningún ingreso que resuelva el problema. Mensaje honesto: es una
+  //     imposibilidad real, no el falso "ingreso extraordinariamente alto"
+  //     que devolvía el guard a 50M (con un ingreso enorme los importes fijados
+  //     valen ~0% y el LP es infactible aunque el caso sea perfectamente normal).
+  const STRUCTURAL_ERROR =
+    'Estos importes no pueden distribuirse en un presupuesto válido. Revisa los valores.';
 
-  // Guard: si el tope superior no es factible, los importes son irrazonables
-  if (!isIncomeFeasible(profileForInverse, HI_BOUND, specifiedAmounts, baseTargetMap)) {
-    return {
-      feasible: false,
-      specifiedAmounts,
-      error: 'Los importes especificados requieren un ingreso extraordinariamente alto. Revisa los valores introducidos.',
-    };
+  if (!isStructurallyDistributable()) {
+    return { feasible: false, specifiedAmounts, error: STRUCTURAL_ERROR };
   }
 
-  let low  = 0;
-  let high = HI_BOUND;
+  // 3.b Búsqueda galopante — localiza la franja factible.
+  //     Suelo natural: la suma de importes fijados (el ingreso no puede ser
+  //     menor que lo ya comprometido). Si el suelo ya es factible, la franja
+  //     empieza ahí. Si no, se sube doblando (×GALLOP_FACTOR) hasta el primer
+  //     ingreso factible, guardando el último infactible como cota izquierda.
+  const fixedSum = Object.values(specifiedAmounts).reduce(
+    (acc, val) => acc + (val > 0 ? val : 0),
+    0
+  );
+  const floor = Math.max(fixedSum, EPS);
+
+  let lastInfeasible = null; // mayor ingreso infactible conocido (cota izquierda)
+  let firstFeasible  = null; // menor ingreso factible conocido (cota derecha)
+
+  if (isIncomeFeasible(profileForInverse, floor, specifiedAmounts, baseTargetMap)) {
+    firstFeasible = floor; // el mínimo no puede estar por debajo del suelo
+  } else {
+    lastInfeasible = floor;
+    let income     = floor;
+    let iterations = 0;
+
+    while (iterations < MAX_GALLOP_ITERATIONS && income < MAX_INCOME) {
+      income = Math.min(income * GALLOP_FACTOR, MAX_INCOME);
+      if (isIncomeFeasible(profileForInverse, income, specifiedAmounts, baseTargetMap)) {
+        firstFeasible = income;
+        break;
+      }
+      lastInfeasible = income;
+      iterations++;
+    }
+  }
+
+  // La galopante agotó el tope sin hallar franja factible. El pre-check pasó,
+  // así que es un caso patológico de franja inalcanzable: infactible honesto.
+  if (firstFeasible === null) {
+    return { feasible: false, specifiedAmounts, error: STRUCTURAL_ERROR };
+  }
+
+  // 3.c Búsqueda binaria — afina el mínimo dentro de la franja acotada.
+  //     Entre lastInfeasible y firstFeasible el predicado es monótono, así que
+  //     la binaria localiza con seguridad el borde izquierdo (ingreso mínimo).
+  let low  = lastInfeasible ?? floor; // si el suelo era factible, low = floor
+  let high = firstFeasible;
   while (high - low > EPS) {
     const mid = (low + high) / 2;
     if (isIncomeFeasible(profileForInverse, mid, specifiedAmounts, baseTargetMap)) {

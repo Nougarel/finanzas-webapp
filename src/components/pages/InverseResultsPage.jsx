@@ -1,21 +1,23 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { AlertTriangle, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Alert } from "@/components/ui/alert";
+import { DataTable } from "@/components/ui/data-table";
+import { MoneyValue } from "@/components/ui/money-value";
+import { PageShell } from "@/components/ui/page-shell";
 import { CATEGORIES_UI } from "@/lib/models/categories";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useStudyContextOptional } from "@/lib/research/useStudyContext";
 import { useStudyAwareRouter } from "@/lib/research/useStudyAwareRouter";
 import CoherenceWarningScreen from "@/components/pages/CoherenceWarningScreen";
+import { useMounted } from "@/lib/hooks/useMounted";
 
 const BLOCK_LABELS = { needs: "Necesidades", wants: "Deseos", savings: "Ahorro" };
 const BLOCK_ORDER  = ["needs", "wants", "savings"];
 
-function fmt(n) {
-  return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(n);
-}
 function fmtPct(n) {
   return `${n.toFixed(1)} %`;
 }
@@ -36,6 +38,7 @@ function ErrorCard({ title, message, onBack }) {
 
 export default function InverseResultsPage() {
   const router = useStudyAwareRouter();
+  const mounted = useMounted();
 
   const [amountsMissing] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -125,6 +128,14 @@ export default function InverseResultsPage() {
 
   const goBack = () => router.push("/inverse-calculator");
 
+  if (!mounted) {
+    return (
+      <main className="flex min-h-screen items-center justify-center">
+        <p className="text-muted-foreground font-light">Cargando…</p>
+      </main>
+    );
+  }
+
   if (amountsMissing) {
     return <ErrorCard title="Sin datos" message="No se han recibido importes." onBack={() => router.push("/inverse-calculator")} />;
   }
@@ -152,158 +163,279 @@ export default function InverseResultsPage() {
 
   const { requiredIncome, monthlyDebtPayment, healthyDistribution, specifiedAmounts, comparison, warnings } = result;
 
-  // Agrupar categorías por bloque para la tabla de distribución saludable
+  // Agrupar categorías por bloque para las tablas de distribución saludable
   const catsByBlock = {};
   for (const block of BLOCK_ORDER) {
     catsByBlock[block] = CATEGORIES_UI.filter(c => c.block === block);
   }
 
+  // Columnas y datos para la tabla comparativa
+  const comparisonColumns = [
+    {
+      key: "label",
+      header: "Categoría",
+    },
+    {
+      key: "specifiedAmount",
+      header: "Especificado",
+      className: "text-right",
+      render: (val) => <MoneyValue amount={val} size="table" />,
+    },
+    {
+      key: "healthyAmount",
+      header: "Ref. INE",
+      className: "text-right",
+      render: (val, row) => (
+        <span className="inline-flex items-center gap-1.5 justify-end">
+          <MoneyValue amount={val} size="table" className="text-muted-foreground" />
+          <span className="text-xs text-muted-foreground tabular-nums">({fmtPct(row.healthyPct)})</span>
+        </span>
+      ),
+    },
+    {
+      key: "diff",
+      header: "Diferencia",
+      className: "text-right",
+      render: (diff) => {
+        if (diff === 0) {
+          return (
+            <span className="inline-flex items-center gap-1 text-muted-foreground justify-end">
+              <Minus className="size-3" aria-hidden />
+              <span>—</span>
+            </span>
+          );
+        }
+        if (diff > 0) {
+          return (
+            <span className="inline-flex items-center gap-1 text-[color:var(--warning-foreground)] justify-end">
+              <TrendingUp className="size-3" aria-hidden />
+              <MoneyValue amount={diff} size="table" className="text-[color:var(--warning-foreground)]" />
+            </span>
+          );
+        }
+        return (
+          <span className="inline-flex items-center gap-1 text-[color:var(--success-foreground)] justify-end">
+            <TrendingDown className="size-3" aria-hidden />
+            <MoneyValue amount={Math.abs(diff)} size="table" className="text-[color:var(--success-foreground)]" />
+          </span>
+        );
+      },
+    },
+  ];
+
+  const comparisonData = comparison
+    ? Object.entries(comparison).map(([catId, row]) => {
+        const cat = CATEGORIES_UI.find(c => c.id === catId);
+        return {
+          label: cat?.label ?? catId,
+          specifiedAmount: row.specifiedAmount,
+          healthyAmount: row.healthyAmount,
+          healthyPct: row.healthyPct,
+          diff: row.diff,
+        };
+      })
+    : [];
+
+  // Barra proporcional monocromática (navy) normalizada al máximo del bloque.
+  // Se normaliza al máximo del bloque (no al 100% del ingreso) para que las
+  // barras tengan rango visual útil dentro de cada sección.
+  function PercentBar({ pct, maxPct }) {
+    const width = maxPct > 0 ? Math.round((pct / maxPct) * 100) : 0;
+    return (
+      <div
+        className="mt-1.5 h-1 w-full rounded-full bg-muted overflow-hidden"
+        role="presentation"
+        aria-hidden="true"
+      >
+        <div
+          className="h-full rounded-full bg-primary transition-[width] duration-300"
+          style={{ width: `${width}%` }}
+        />
+      </div>
+    );
+  }
+
+  // Construye columnas para la tabla de distribución saludable de un bloque.
+  // maxBlockPct: valor máximo de % en el bloque, para normalizar las barras.
+  function buildDistributionColumns(maxBlockPct) {
+    return [
+      {
+        key: "label",
+        header: "Categoría",
+        render: (val, row) => (
+          <span className="inline-flex items-center gap-2">
+            {val}
+            {row.isSpecified && (
+              <span className="text-xs rounded-full bg-primary/10 text-primary px-1.5 py-0.5 font-medium">
+                fijado
+              </span>
+            )}
+          </span>
+        ),
+      },
+      {
+        key: "percentage",
+        header: "% del ingreso",
+        className: "text-right",
+        render: (val) => (
+          <div className="flex flex-col items-end gap-0">
+            <span className="tabular-nums text-sm text-muted-foreground">{fmtPct(val)}</span>
+            <PercentBar pct={val} maxPct={maxBlockPct} />
+          </div>
+        ),
+      },
+      {
+        key: "amount",
+        header: "Importe",
+        className: "text-right",
+        render: (val) => <MoneyValue amount={val} size="table" />,
+      },
+    ];
+  }
+
   return (
-    <main className="flex min-h-screen flex-col items-center py-12 px-4">
-      <div className="w-full max-w-3xl space-y-6">
+    <main className="flex min-h-screen flex-col">
+      <PageShell variant="table">
+        <div className="space-y-8">
 
-        {/* Encabezado */}
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight">Resultado</h1>
-          <p className="text-sm text-muted-foreground">
-            Ingreso mínimo mensual necesario para sostener los importes especificados
-          </p>
-        </div>
+          {/* Encabezado */}
+          <div className="space-y-1">
+            <h1 className="font-display font-black tracking-display text-2xl sm:text-3xl text-foreground">
+              Ingreso mínimo necesario
+            </h1>
+            <p className="text-muted-foreground font-light">
+              Ingreso neto mensual para sostener los importes que has especificado
+            </p>
+          </div>
 
-        {/* Ingreso requerido */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Ingreso mínimo necesario</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-5xl font-bold tracking-tight">{fmt(requiredIncome)}</p>
-            <p className="text-sm text-muted-foreground mt-2">
+          {/* Hero: ingreso requerido — bloque invertido (navy) */}
+          <div className="rounded-2xl bg-primary px-6 py-8 space-y-3 transition-colors duration-200">
+            <p className="text-xs font-medium uppercase tracking-meta text-primary-foreground/70">
+              Ingreso mínimo necesario
+            </p>
+            <MoneyValue
+              amount={requiredIncome}
+              size="hero"
+              className="text-5xl text-primary-foreground"
+            />
+            <p className="text-sm text-primary-foreground/80 font-light">
               Con este ingreso neto mensual, los importes que has fijado son financieramente sostenibles.
             </p>
             {monthlyDebtPayment > 0 && (
-              <p className="text-sm text-muted-foreground mt-2">
-                Incluye {fmt(monthlyDebtPayment)}/mes de cuotas de deuda fija.
+              <p className="text-sm text-primary-foreground/80 font-light">
+                Incluye{" "}
+                <MoneyValue amount={monthlyDebtPayment} size="inline" className="font-medium text-primary-foreground" />
+                /mes de cuotas de deuda fija.
               </p>
             )}
-          </CardContent>
-        </Card>
-
-        {/* Advertencias */}
-        {warnings && warnings.length > 0 && (
-          <div className="space-y-2">
-            {warnings.map((w, i) => (
-              <div key={i} className="flex gap-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-4 py-3">
-                <AlertTriangle className="shrink-0 size-5 mt-0.5" />
-                <p className="text-sm">{w}</p>
-              </div>
-            ))}
           </div>
-        )}
 
-        {/* Comparativa: especificado vs. saludable */}
-        {comparison && Object.keys(comparison).length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Comparativa</CardTitle>
-              <CardDescription>Tus importes frente a la distribución saludable con el ingreso calculado</CardDescription>
-            </CardHeader>
-            <CardContent className="p-0">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/30">
-                    <th className="text-left px-4 py-2 font-medium text-muted-foreground">Categoría</th>
-                    <th className="text-right px-4 py-2 font-medium text-muted-foreground">Especificado</th>
-                    <th className="text-right px-4 py-2 font-medium text-muted-foreground">Ref. INE</th>
-                    <th className="text-right px-4 py-2 font-medium text-muted-foreground">Diferencia</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.entries(comparison).map(([catId, row]) => {
-                    const cat  = CATEGORIES_UI.find(c => c.id === catId);
-                    const diff = row.diff; // positivo = especificado > saludable
-                    return (
-                      <tr key={catId} className="border-b last:border-0">
-                        <td className="px-4 py-2">{cat?.label ?? catId}</td>
-                        <td className="text-right px-4 py-2 font-medium">{fmt(row.specifiedAmount)}</td>
-                        <td className="text-right px-4 py-2 text-muted-foreground">
-                          {fmt(row.healthyAmount)}
-                          <span className="ml-1 text-xs text-muted-foreground/70">({fmtPct(row.healthyPct)})</span>
-                        </td>
-                        <td className="text-right px-4 py-2">
-                          {diff === 0 ? (
-                            <span className="inline-flex items-center gap-1 text-muted-foreground"><Minus className="size-3" /> —</span>
-                          ) : diff > 0 ? (
-                            <span className="inline-flex items-center gap-1 text-amber-600">
-                              <TrendingUp className="size-3" />{fmt(diff)}
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-emerald-600">
-                              <TrendingDown className="size-3" />{fmt(Math.abs(diff))}
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Distribución saludable completa */}
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Distribución saludable completa</h2>
-          {BLOCK_ORDER.map(block => (
-            <Card key={block}>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">{BLOCK_LABELS[block]}</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <table className="w-full text-sm">
-                  <tbody>
-                    {catsByBlock[block].map(cat => {
-                      const h = healthyDistribution[cat.id];
-                      if (!h) return null;
-                      const isSpecified = catId => catId in (specifiedAmounts ?? {});
-                      return (
-                        <tr key={cat.id} className="border-b last:border-0">
-                          <td className="px-4 py-2">
-                            {cat.label}
-                            {isSpecified(cat.id) && (
-                              <span className="ml-2 text-xs rounded-full bg-primary/10 text-primary px-1.5 py-0.5">fijado</span>
-                            )}
-                          </td>
-                          <td className="text-right px-4 py-2 text-muted-foreground">{fmtPct(h.percentage)}</td>
-                          <td className="text-right px-4 py-2 font-medium">{fmt(h.amount)}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Acciones */}
-        <div className="flex gap-3 justify-center pt-2">
-          <Button variant="outline" onClick={goBack}>
-            Volver y ajustar
-          </Button>
-          {!study && (
-            <Button variant="outline" onClick={() => router.push("/")}>
-              Inicio
-            </Button>
+          {/* Advertencias */}
+          {warnings && warnings.length > 0 && (
+            <div className="space-y-2">
+              {warnings.map((w, i) => (
+                <Alert key={i} variant="warning">
+                  {w}
+                </Alert>
+              ))}
+            </div>
           )}
-          {study && (
-            <Button variant="outline" onClick={() => router.push("/study/home")}>
-              Volver al menú del estudio
-            </Button>
-          )}
-        </div>
 
-      </div>
+          {/* Comparativa: especificado vs. saludable */}
+          {comparisonData.length > 0 && (
+            <section aria-labelledby="comparison-heading">
+              <div className="mb-4 space-y-1">
+                <h2 id="comparison-heading" className="font-display font-black tracking-display text-xl text-foreground">
+                  Comparativa
+                </h2>
+                <p className="text-sm text-muted-foreground font-light">
+                  Tus importes frente a la distribución saludable con el ingreso calculado
+                </p>
+              </div>
+              {/* Guía de lectura (J4) */}
+              <p className="text-sm font-light text-muted-foreground mb-4 leading-relaxed">
+                La columna <span className="font-medium text-foreground">Especificado</span> recoge
+                los importes que fijaste. <span className="font-medium text-foreground">Ref. INE</span>{" "}
+                es lo que correspondería en una distribución saludable para el ingreso calculado.
+                Una diferencia positiva <span className="text-[color:var(--warning-foreground)] font-medium">(↑)</span>{" "}
+                indica que estás gastando más de lo recomendado en esa categoría;
+                negativa <span className="text-[color:var(--success-foreground)] font-medium">(↓)</span>, menos.
+              </p>
+              <DataTable
+                columns={comparisonColumns}
+                data={comparisonData}
+                caption="Comparativa de importes especificados frente a distribución saludable"
+              />
+            </section>
+          )}
+
+          {/* Distribución saludable completa */}
+          <section aria-labelledby="distribution-heading">
+            <div className="mb-4 space-y-1">
+              <h2 id="distribution-heading" className="font-display font-black tracking-display text-xl text-foreground">
+                Distribución saludable completa
+              </h2>
+              {/* Guía de lectura (J4) */}
+              <p className="text-sm font-light text-muted-foreground leading-relaxed">
+                Esta es la distribución óptima para el ingreso calculado. Las categorías marcadas
+                como <span className="font-medium text-primary">fijado</span> respetan exactamente
+                los importes que indicaste; el resto se calcula automáticamente para mantener la
+                salud financiera del conjunto.
+              </p>
+            </div>
+            <div className="space-y-6">
+              {BLOCK_ORDER.map(block => {
+                const blockData = catsByBlock[block]
+                  .map(cat => {
+                    const h = healthyDistribution[cat.id];
+                    if (!h) return null;
+                    return {
+                      label: cat.label,
+                      percentage: h.percentage,
+                      amount: h.amount,
+                      isSpecified: cat.id in (specifiedAmounts ?? {}),
+                    };
+                  })
+                  .filter(Boolean);
+
+                // Máximo de % en el bloque para normalizar la escala de las barras
+                const maxBlockPct = Math.max(...blockData.map((r) => r.percentage), 0);
+
+                return (
+                  <div key={block}>
+                    <h3 className="text-base font-medium text-foreground mb-2">
+                      {BLOCK_LABELS[block]}
+                    </h3>
+                    <DataTable
+                      columns={buildDistributionColumns(maxBlockPct)}
+                      data={blockData}
+                      caption={`Distribución saludable — ${BLOCK_LABELS[block]}`}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* Acciones */}
+          <div className="flex gap-3 justify-center pt-2">
+            <Button variant="outline" onClick={goBack}>
+              Volver y ajustar
+            </Button>
+            {!study && (
+              <Button variant="outline" onClick={() => router.push("/")}>
+                Inicio
+              </Button>
+            )}
+            {study && (
+              <Button variant="outline" onClick={() => router.push("/study/home")}>
+                Volver al menú del estudio
+              </Button>
+            )}
+          </div>
+
+        </div>
+      </PageShell>
     </main>
   );
 }
