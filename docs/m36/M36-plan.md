@@ -141,6 +141,17 @@ intacto; el split vive *dentro* de `main`.
 | Animación que canse/confunda | Barras-equilibrio (legibles) + politopo solo bajo demanda + saltable |
 | Coste de mantenimiento de drivers | Condición + etiqueta acopladas en cada `calc*Target` |
 
+## Mejoras diferidas (a futura iteración)
+
+- **Tamaño del panel de detalle**: hoy el panel queda atrapado en `max-w-5xl` y
+  se siente pequeño (~410px en viewport 1280). Se ha diferido el rediseño a
+  media pantalla (split 50/50 ensanchando el contenedor) para hacerlo cuando
+  Fase 2 haya poblado el panel con los bullets de drivers — un panel grande
+  con poco contenido sentiría vacío. Decidido tras piloto de Fase 1 (2026-05-30).
+- **Duplicación visual en las cards móvil de `DataTable`** (la primera columna
+  se repite). Candidato a refactor cuando se adapten DiagnosisPage e
+  InverseResultsPage.
+
 ## NO scope
 
 - No revelar la lógica de negocio (fórmulas, pesos, deltas).
