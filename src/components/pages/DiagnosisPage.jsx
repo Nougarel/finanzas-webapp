@@ -128,7 +128,7 @@ function buildComparisonColumns(formatPct) {
       render: (val, row) => (
         <span className="inline-flex flex-col items-end gap-0.5">
           <MoneyValue amount={val} size="table" className="text-muted-foreground" />
-          <span className="text-xs text-muted-foreground/70 tabular-nums">
+          <span className="text-xs text-muted-foreground tabular-nums">
             ({formatPct(row.healthyPercentage)})
           </span>
         </span>

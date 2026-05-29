@@ -188,7 +188,7 @@ export default function InverseResultsPage() {
       render: (val, row) => (
         <span className="inline-flex items-center gap-1.5 justify-end">
           <MoneyValue amount={val} size="table" className="text-muted-foreground" />
-          <span className="text-xs text-muted-foreground/70 tabular-nums">({fmtPct(row.healthyPct)})</span>
+          <span className="text-xs text-muted-foreground tabular-nums">({fmtPct(row.healthyPct)})</span>
         </span>
       ),
     },

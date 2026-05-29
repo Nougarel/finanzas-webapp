@@ -54,7 +54,7 @@ function DataTable({
                   key={col.key}
                   scope="col"
                   className={cn(
-                    "px-4 py-3 text-left text-xs font-medium text-muted-foreground tracking-meta uppercase",
+                    "px-4 py-3 text-left text-xs font-semibold text-foreground tracking-meta uppercase",
                     col.className
                   )}
                 >
