@@ -1,14 +1,17 @@
 /**
- * CategoryDetail — Panel de detalle de categoría (M36 Fase 1, capa 1).
+ * CategoryDetail — Panel de detalle de categoría (M36 Fase 1 + Fase 2b).
  *
- * Muestra la procedencia semántica de una categoría sin revelar lógica interna.
- * Solo necesita los datos que ya viajan en la API (categories[id] + ineComparison[id]).
+ * Fase 1 (capa 1): procedencia semántica, indicador de relevance, comparación INE.
+ * Fase 2b (capa 2): bullets cualitativos "Cómo afecta tu perfil" generados desde
+ *   los drivers emitidos por el motor y las plantillas del diccionario M36.
  *
  * Props:
- *   category   {object}  — entrada de result.categories[catId]
- *   ineData    {object|null} — entrada de result.ineComparison[catId], puede ser null
- *   income     {number}  — ingreso mensual para formatear importes
- *   onClose    {function} — callback para cerrar el panel
+ *   category   {object}       — entrada de result.categories[catId]
+ *   ineData    {object|null}  — entrada de result.ineComparison[catId], puede ser null
+ *   income     {number}       — ingreso mensual para formatear importes
+ *   onClose    {function}     — callback para cerrar el panel
+ *   drivers    {string[]}     — tokens de drivers de result.explanation[catId].drivers
+ *   profile    {object|null}  — perfil del usuario (de localStorage)
  */
 
 import * as React from "react";
@@ -19,6 +22,7 @@ import {
   getRelevanceInfo,
   CONTEXTUAL_FLEXIBILITY_MESSAGE,
 } from "@/lib/m36/relevance";
+import { getDriverBullets } from "@/lib/m36/explanations";
 
 // ── Indicador de puntos de relevance ────────────────────────────────────────
 
@@ -77,9 +81,40 @@ function IneComparison({ ineData, block }) {
   );
 }
 
+// ── Sección de bullets de perfil (Fase 2b) ──────────────────────────────────
+
+/**
+ * Renderiza la lista de bullets "Cómo afecta tu perfil".
+ * Solo se muestra cuando hay bullets que mostrar (drivers no vacíos en categorías
+ * de necesidades/ahorro). Los bullets del bloque deseos llegan vacíos → null.
+ */
+function ProfileDriversBullets({ bullets }) {
+  if (!bullets || bullets.length === 0) return null;
+
+  return (
+    <div className="space-y-1.5">
+      <p className="text-xs font-medium text-muted-foreground uppercase tracking-meta">
+        Cómo afecta tu perfil
+      </p>
+      <dl className="space-y-3.5">
+        {bullets.map((bullet, idx) => (
+          <div key={idx} className="space-y-0.5">
+            <dt className="text-sm font-semibold text-foreground leading-snug">
+              {bullet.label}
+            </dt>
+            <dd className="text-sm text-muted-foreground leading-relaxed">
+              {bullet.text}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
 // ── Componente principal ─────────────────────────────────────────────────────
 
-export function CategoryDetail({ category, ineData, income, onClose }) {
+export function CategoryDetail({ category, ineData, income, onClose, drivers, profile }) {
   if (!category) return null;
 
   const relevanceInfo = getRelevanceInfo({
@@ -91,6 +126,11 @@ export function CategoryDetail({ category, ineData, income, onClose }) {
 
   // Frase de procedencia compuesta desde las fuentes traducidas
   const sourceSentence = buildSourceSentence(sources);
+
+  // Bullets de Fase 2b — solo si hay drivers y perfil disponibles
+  const profileBullets = (drivers && profile)
+    ? getDriverBullets(category.id, drivers, profile)
+    : [];
 
   return (
     <div className="flex flex-col h-full" data-slot="category-detail">
@@ -146,6 +186,9 @@ export function CategoryDetail({ category, ineData, income, onClose }) {
             </p>
           </div>
         )}
+
+        {/* Bullets cualitativos "Cómo afecta tu perfil" (Fase 2b) */}
+        <ProfileDriversBullets bullets={profileBullets} />
 
         {/* Comparación INE */}
         <IneComparison ineData={ineData} block={category.block} />

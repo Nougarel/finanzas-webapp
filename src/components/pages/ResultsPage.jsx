@@ -433,6 +433,8 @@ function ResultsContent() {
                       ineData={result.ineComparison?.[selectedCategoryId] ?? null}
                       income={income}
                       onClose={() => setSelectedCategoryId(null)}
+                      drivers={result.explanation?.[selectedCategoryId]?.drivers ?? []}
+                      profile={profile}
                     />
                   )
                   : null
