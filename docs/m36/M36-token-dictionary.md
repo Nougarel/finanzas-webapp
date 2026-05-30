@@ -406,7 +406,7 @@ traducciones cerradas con Noufel:
 | housingStatus | rent | alquiler |
 | housingStatus | mortgage | hipoteca |
 | housingStatus | owned | propiedad sin deuda |
-| housingStatus | family_free | vivienda cedida o familiar |
+| housingStatus | family | vivienda cedida o familiar |
 | geographicZone | expensive_city | zona cara |
 | geographicZone | rural | zona rural |
 | vehicleStatus | none | sin vehículo |

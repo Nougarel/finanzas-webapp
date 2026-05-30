@@ -21,7 +21,7 @@ const PROFILE_LABELS = {
     rent:        'alquiler',
     mortgage:    'hipoteca',
     owned:       'propiedad sin deuda',
-    family_free: 'vivienda cedida o familiar',
+    family:      'vivienda cedida o familiar',
   },
   geographicZone: {
     expensive_city: 'zona cara',
@@ -121,7 +121,7 @@ const DRIVER_BULLETS = {
         rent:        'Tu vivienda en alquiler es un gasto mensual sostenido con un perfil de riesgo propio (depende del mercado, posibles subidas y movimientos del propietario). El Banco de España publica referencias específicas para esta situación y el cálculo partió de la que aplica a tu caso.',
         mortgage:    'Tu vivienda con hipoteca implica una carga mensual estructural durante años. Los criterios del Banco de España para hipoteca incluyen el ratio de endeudamiento (DTI) y son los que orientan el margen aplicado a tu caso.',
         owned:       'Tu propiedad sin deuda libera la mayor parte del presupuesto que en otros casos absorbe la vivienda, así que el margen aplicado es notablemente menor. Aun así se reserva una parte para mantenimiento, comunidad e IBI.',
-        family_free: 'Vivir en una vivienda cedida por familia o sin gasto directo en vivienda libera el margen que normalmente absorbe esta categoría. El cálculo reserva una parte mínima por si aparecen gastos puntuales relacionados.',
+        family:      'Vivir en una vivienda cedida por familia o sin gasto directo en vivienda libera el margen que normalmente absorbe esta categoría. El cálculo reserva una parte mínima por si aparecen gastos puntuales relacionados.',
       },
     },
     GEOGRAPHIC_ZONE: {
