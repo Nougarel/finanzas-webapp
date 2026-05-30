@@ -151,6 +151,17 @@ intacto; el split vive *dentro* de `main`.
 - **Duplicación visual en las cards móvil de `DataTable`** (la primera columna
   se repite). Candidato a refactor cuando se adapten DiagnosisPage e
   InverseResultsPage.
+- **Dashboard de cumplimiento de umbrales institucionales** (debajo de la
+  tabla, junto al DTI que ya tenemos): una nueva sección "Cumplimiento de
+  referencias institucionales" que muestre cada umbral relevante (BdE 30-35%
+  vivienda, UE 10% pobreza energética, regla 20/4/10 transporte, OMS 10%
+  gasto sanitario catastrófico, BdE 3-6 meses fondo de emergencia, OCDE/Pfau
+  10-15% jubilación) con el valor de la distribución actual y su distancia al
+  umbral. Sería evidencia visible y centralizada del rigor del modelo, mucho
+  más persuasiva que tener el dato disperso en cada panel. Decidido tras
+  pulido de Fase 2b (2026-05-31): por ahora se mantiene la referencia
+  institucional como bullet dentro del panel de cada categoría; el dashboard
+  global se aborda como mejora aparte cuando hayamos cerrado M36.
 
 ## NO scope
 
