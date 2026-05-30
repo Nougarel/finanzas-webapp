@@ -77,19 +77,19 @@ const PROFILE_LABELS = {
 const INSTITUTIONAL_BULLETS = {
   housing: {
     label: 'Referencia institucional',
-    text: 'El Banco de España fija como referencia de endeudamiento sostenible un ratio máximo del 30-35% del ingreso neto del hogar destinado a vivienda (incluyendo hipoteca, alquiler, comunidad y suministros vinculados). El cálculo orienta tu margen de vivienda dentro de ese rango para preservar la salud financiera del conjunto, considerando tu perfil completo.',
+    text: 'El Banco de España fija un máximo del 30-35% del ingreso neto destinado a vivienda (hipoteca o alquiler, comunidad y suministros vinculados). El cálculo orienta tu margen dentro de ese rango.',
   },
   utilities: {
     label: 'Referencia institucional',
-    text: 'El concepto de "pobreza energética", adoptado por la Comisión Europea como indicador de vulnerabilidad, se asocia con hogares que dedican una proporción excesiva de su ingreso a suministros (la referencia habitual sitúa esa frontera por encima del 10% del ingreso del hogar). El cálculo orienta tu margen claramente por debajo de ese umbral considerando el conjunto de tu perfil.',
+    text: 'La Comisión Europea define "pobreza energética" como dedicar por encima del 10% del ingreso del hogar a suministros. El cálculo orienta tu margen claramente por debajo de ese umbral.',
   },
   transport: {
     label: 'Referencia institucional',
-    text: 'La regla financiera 20/4/10 (consolidada en educación financiera anglosajona y aplicable al contexto español) sugiere no destinar más del 10% del ingreso mensual a transporte (combustible, mantenimiento, seguro y cuota si la hay). El cálculo orienta tu margen alrededor de ese referente, ajustando por tu perfil concreto.',
+    text: 'La regla financiera 20/4/10 sugiere no destinar más del 10% del ingreso mensual a transporte (combustible, mantenimiento, seguro y cuota si la hay). El cálculo orienta tu margen alrededor de ese referente.',
   },
   health: {
     label: 'Referencia institucional',
-    text: 'La OMS define como "gasto sanitario catastrófico" cualquier desembolso superior al 10% del ingreso del hogar. El cálculo orienta tu margen sanitario claramente por debajo de ese umbral, considerando el conjunto de tu perfil. Este es el suelo de fiabilidad de toda la categoría, independientemente de tus drivers personales.',
+    text: 'La OMS define como "gasto sanitario catastrófico" cualquier desembolso por encima del 10% del ingreso del hogar. El cálculo orienta tu margen claramente por debajo de ese umbral.',
   },
   emergency_fund: {
     label: 'Referencia institucional',
@@ -118,26 +118,26 @@ const DRIVER_BULLETS = {
     HOUSING_STATUS: {
       label: 'Tu situación de vivienda',
       variants: {
-        rent:        'Tu vivienda en alquiler es un gasto mensual sostenido con un perfil de riesgo propio (depende del mercado, posibles subidas y movimientos del propietario). El Banco de España publica referencias específicas para esta situación y el cálculo partió de la que aplica a tu caso.',
-        mortgage:    'Tu vivienda con hipoteca implica una carga mensual estructural durante años. Los criterios del Banco de España para hipoteca incluyen el ratio de endeudamiento (DTI) y son los que orientan el margen aplicado a tu caso.',
-        owned:       'Tu propiedad sin deuda libera la mayor parte del presupuesto que en otros casos absorbe la vivienda, así que el margen aplicado es notablemente menor. Aun así se reserva una parte para mantenimiento, comunidad e IBI.',
-        family:      'Vivir en una vivienda cedida por familia o sin gasto directo en vivienda libera el margen que normalmente absorbe esta categoría. El cálculo reserva una parte mínima por si aparecen gastos puntuales relacionados.',
+        rent:        'Tu vivienda en alquiler: gasto mensual con perfil de riesgo propio (subidas de mercado, movimientos del propietario). El Banco de España publica referencias específicas y el cálculo parte de la que aplica.',
+        mortgage:    'Tu vivienda con hipoteca: carga mensual estructural durante años. Los criterios del Banco de España incluyen el ratio de endeudamiento (DTI) y orientan el margen aplicado.',
+        owned:       'Tu propiedad sin deuda libera la mayor parte del presupuesto que en otros casos absorbe la vivienda. Se reserva una parte para mantenimiento, comunidad e IBI.',
+        family:      'Tu vivienda cedida (o sin gasto directo en vivienda) libera el margen que normalmente absorbe esta categoría. Se reserva una parte mínima por si aparecen gastos puntuales.',
       },
     },
     GEOGRAPHIC_ZONE: {
       label: 'Tu zona geográfica',
       variants: {
-        expensive_city: 'Vives en una zona cara (gran ciudad o área metropolitana). Eurostat e INE documentan que el precio de la vivienda en estas zonas se aleja bastante de la media nacional, así que el margen se ajusta hacia arriba para reflejar la realidad de tu mercado.',
-        rural:          'Vivir en una zona rural baja sensiblemente el coste de la vivienda respecto a la media nacional. El cálculo ajusta el margen hacia abajo, en línea con los datos del INE sobre diferencias regionales en España.',
+        expensive_city: 'Vives en una zona cara (gran ciudad o área metropolitana). Eurostat e INE documentan precios sensiblemente por encima de la media nacional, así que el margen se ajusta al alza.',
+        rural:          'Vives en una zona rural: el coste de la vivienda baja respecto a la media nacional, en línea con los datos del INE. El margen se ajusta a la baja.',
       },
     },
     HOUSEHOLD_SIZE: {
       label: 'Composición de tu hogar',
-      text: 'Tu hogar con {N} dependientes aumenta la necesidad habitacional. El ajuste no es lineal: el peso crece más cuando el hogar empieza a necesitar más cuartos (no es lo mismo dos personas compartiendo que cuatro). Esa relación entre composición y espacio es la que guía el aumento aplicado.',
+      text: 'Tu hogar con {N} dependientes aumenta la necesidad habitacional. El ajuste no es lineal: el peso sube más cuando el hogar exige más cuartos (no es lo mismo dos personas compartiendo que cuatro).',
     },
     INCOME_TIER: {
       label: 'Tu tramo de ingreso',
-      text: 'En tu tramo de ingreso, la vivienda no pesa igual como porcentaje del total. A ingresos bajos suele absorber una parte mayor del presupuesto; a ingresos altos, proporcionalmente menos. El cálculo escala el margen de acuerdo a tu tramo, así que no te aplica la misma referencia que a alguien con un ingreso muy distinto.',
+      text: 'En tu tramo de ingreso, la vivienda absorbe una parte mayor del presupuesto a ingresos bajos y proporcionalmente menos a ingresos altos. El cálculo escala el margen según tu tramo.',
     },
   },
 
@@ -145,19 +145,19 @@ const DRIVER_BULLETS = {
   utilities: {
     HOUSEHOLD_SIZE: {
       label: 'Composición de tu hogar',
-      text: 'Tu hogar con {N} dependientes en casa incrementa el consumo de suministros. Más personas significa más luz, más agua caliente, más horas de calefacción y más dispositivos conectados a la vez. El cálculo añade un margen por persona sin asumir duplicación exacta, porque parte del consumo es estructural y se comparte (la nevera, el termo, la calefacción central).',
+      text: 'Tu hogar con {N} dependientes en casa eleva el consumo de luz, agua caliente, horas de calefacción y dispositivos conectados a la vez. El cálculo añade un margen por persona sin asumir duplicación: parte del consumo es estructural y se comparte (nevera, termo, calefacción central).',
     },
     EMPLOYMENT: {
       label: 'Tu actividad laboral',
-      text: 'Como autónomo es habitual pasar más horas en casa a la semana, con efecto directo en los suministros: más luz, más climatización (verano e invierno), más internet de alto consumo, más electricidad para equipos. El cálculo añade un margen específico que no existe en una jornada de oficina fuera del hogar.',
+      text: 'Como autónomo es habitual pasar más horas en casa, con efecto directo en luz, climatización, internet y electricidad para equipos. El cálculo añade un margen específico que no aplica a una jornada fuera del hogar.',
     },
     GEOGRAPHIC_ZONE: {
       label: 'Tu zona geográfica',
-      text: 'Vivir en una zona rural suele encarecer los suministros. El acceso a gas ciudad es limitado y muchas viviendas calefactan con gasóleo, butano o pellets (sensiblemente más caros). El agua puede depender de depósitos o pozos con mantenimiento propio, y el internet rural sigue siendo más caro y peor que en ciudad. El cálculo refleja ese sobrecoste estructural.',
+      text: 'Vives en una zona rural y los suministros suelen encarecerse: acceso limitado a gas ciudad (gasóleo, butano o pellets son más caros), agua de depósito o pozo con mantenimiento propio, internet rural más caro y peor. El cálculo refleja ese sobrecoste estructural.',
     },
     INCOME_TIER: {
       label: 'Tu tramo de ingreso',
-      text: 'En tu tramo de ingreso, los suministros tienen un comportamiento mixto. Son un gasto bastante inelástico (la nevera y el termo se mantienen aunque baje el ingreso), así que a ingresos bajos pesan proporcionalmente más en el presupuesto; a ingresos altos suele crecer el consumo (más climatización, más dispositivos, tarifas premium) pero el peso relativo baja. El cálculo escala el margen reconociendo esa elasticidad observada en la EPF del INE.',
+      text: 'En tu tramo de ingreso, los suministros son un gasto inelástico (la nevera y el termo se mantienen aunque baje el ingreso), así que pesan más en proporción a ingresos bajos. A ingresos altos crece el consumo (climatización, dispositivos, tarifas premium) pero el peso relativo baja. El cálculo lo refleja siguiendo la elasticidad de la EPF del INE.',
     },
   },
 
@@ -165,11 +165,11 @@ const DRIVER_BULLETS = {
   groceries: {
     HOUSEHOLD_SIZE: {
       label: 'Composición de tu hogar',
-      text: 'Tu hogar con {N} dependientes incrementa la base de alimentación, pero no se duplica con cada persona adicional. Parte del gasto se comparte (compras a granel, comidas conjuntas, aprovechamiento de ingredientes), por eso el aumento es menor del que sugeriría la simple suma de bocas. Este principio está documentado en la metodología de la OCDE sobre equivalencia de hogares.',
+      text: 'Tu hogar con {N} dependientes incrementa la base de alimentación, pero no se duplica con cada persona: parte del gasto se comparte (compras a granel, comidas conjuntas, aprovechamiento de ingredientes). Lo documenta la OCDE en su metodología de equivalencia de hogares.',
     },
     INCOME_TIER: {
       label: 'Tu tramo de ingreso',
-      text: 'En tu tramo de ingreso, la alimentación pesa diferente como porcentaje del total. A ingresos más bajos suele absorber una parte mayor del presupuesto (es de las primeras necesidades cubiertas); a ingresos altos, proporcionalmente menos, aunque la cifra absoluta tienda a crecer. Es lo que la economía conoce como ley de Engel, y el INE lo refleja en su Encuesta de Presupuestos Familiares.',
+      text: 'En tu tramo de ingreso, la alimentación absorbe una parte mayor del presupuesto a ingresos bajos (es de las primeras necesidades) y pesa menos en proporción a ingresos altos, aunque la cifra absoluta tienda a crecer. Es la ley de Engel, observable en la EPF del INE.',
     },
   },
 
@@ -178,27 +178,27 @@ const DRIVER_BULLETS = {
     VEHICLE: {
       label: 'Tu situación de vehículo',
       variants: {
-        none:       'No tienes vehículo propio. La base del cálculo es la más baja porque te apoyas principalmente en transporte público y servicios bajo demanda, sin gastos fijos de combustible, mantenimiento ni seguro. Se reserva un margen para esos servicios.',
-        owned_paid: 'Tienes vehículo en propiedad sin deuda asociada. El cálculo contempla los gastos sostenidos que conlleva (combustible, mantenimiento, seguro, ITV, impuestos), pero sin cuotas mensuales que sumen carga.',
-        financed:   'Tu vehículo financiado añade una cuota mensual al margen sostenido (combustible, mantenimiento, seguro). El Banco de España considera ambos componentes al evaluar el peso del transporte en el presupuesto.',
-        leasing:    'Tu vehículo en leasing implica un coste fijo mensual que normalmente cubre mantenimiento y seguro dentro de la cuota. El cálculo trata esa cuota como gasto estructural durante el contrato.',
+        none:       'No tienes vehículo propio: la base parte baja. Sin gastos fijos de combustible, mantenimiento ni seguro, solo transporte público y servicios bajo demanda. Se reserva margen para ellos.',
+        owned_paid: 'Tu vehículo en propiedad sin deuda: el cálculo contempla los gastos sostenidos (combustible, mantenimiento, seguro, ITV, impuestos), sin cuotas mensuales que sumen carga.',
+        financed:   'Tu vehículo financiado: cuota mensual sobre el margen sostenido (combustible, mantenimiento, seguro). El Banco de España considera ambos componentes al evaluar el peso del transporte.',
+        leasing:    'Tu vehículo en leasing: coste fijo mensual que normalmente incluye mantenimiento y seguro. El cálculo lo trata como gasto estructural durante el contrato.',
       },
     },
     GEOGRAPHIC_ZONE: {
       label: 'Tu zona geográfica',
-      text: 'Vivir en una zona rural eleva el peso del transporte. Cuando el transporte público es limitado o inexistente, el vehículo deja de ser opcional para convertirse en parte de la infraestructura cotidiana (trabajo, compras, sanidad), y el cálculo refleja esa dependencia con un margen mayor.',
+      text: 'Vives en una zona rural donde el transporte público es limitado o inexistente, así que el vehículo deja de ser opcional para ser infraestructura cotidiana (trabajo, compras, sanidad). El cálculo refleja esa dependencia con un margen mayor.',
     },
     EMPLOYMENT: {
       label: 'Tu actividad laboral',
-      text: 'Como autónomo con viajes profesionales habituales, sumas costes recurrentes de desplazamiento que no aparecen en una jornada de oficina (combustible, peajes, kilometraje, mantenimiento por uso intensivo). El cálculo añade un margen específico para reconocer esa carga sostenida.',
+      text: 'Como autónomo con viajes profesionales habituales, sumas costes recurrentes de desplazamiento (combustible, peajes, kilometraje, mantenimiento por uso intensivo) que una jornada de oficina no tiene. El cálculo añade un margen específico.',
     },
     HOUSEHOLD_SIZE: {
       label: 'Composición de tu hogar',
-      text: 'Tu hogar con {N} dependientes incrementa el uso del transporte (rutas al colegio, actividades extraescolares, desplazamientos coordinados). No es solo más personas moviéndose, también más viajes simultáneos que el cálculo contempla en el margen.',
+      text: 'Tu hogar con {N} dependientes incrementa el uso del transporte (rutas al colegio, extraescolares, desplazamientos coordinados): más personas y también más viajes simultáneos. El cálculo lo contempla.',
     },
     INCOME_TIER: {
       label: 'Tu tramo de ingreso',
-      text: 'En tu tramo de ingreso, el transporte ocupa un papel distinto en el presupuesto. A ingresos más bajos suele ser una necesidad rígida (llegar al trabajo es innegociable, y el coste pesa más en proporción); a ingresos altos, el peso relativo baja aunque las opciones se amplíen. El cálculo escala el margen reconociendo esa elasticidad observada en la EPF del INE.',
+      text: 'En tu tramo de ingreso, el transporte es una necesidad rígida a ingresos bajos (llegar al trabajo es innegociable, y el coste pesa más en proporción) y baja en peso relativo a ingresos altos aunque las opciones se amplíen. El cálculo lo refleja según la EPF del INE.',
     },
   },
 
@@ -207,25 +207,25 @@ const DRIVER_BULLETS = {
     AGE: {
       label: 'Tu edad',
       variants: {
-        under35: 'A tu edad la salud suele requerir un margen modesto (revisiones de rutina, alguna especialidad puntual, prevención). La base del cálculo arranca baja, en línea con los patrones de uso del sistema sanitario que documenta el INE en la EPF.',
-        '35to50': 'En tu rango de edad la salud empieza a pesar algo más (revisiones más frecuentes, prevención de problemas crónicos, posibles tratamientos puntuales). La base se ajusta hacia arriba para reflejar ese cambio de etapa, observado en los datos sanitarios por tramo de edad.',
-        over50:  'A partir de los 50 la salud requiere un margen claramente mayor (medicación sostenida, más visitas médicas, dental y óptica con mayor frecuencia, prevención de enfermedades crónicas). La base se eleva reconociendo esa realidad biológica, alineada con los datos del INE sobre gasto sanitario por tramo de edad.',
+        under35: 'A tu edad (menos de 35) la salud suele requerir un margen modesto (revisiones de rutina, alguna especialidad puntual, prevención). La base parte baja, en línea con los patrones de uso que documenta el INE en la EPF.',
+        '35to50': 'En tu rango de edad (35 a 50) la salud empieza a pesar más (revisiones más frecuentes, prevención de crónicos, posibles tratamientos puntuales). La base se ajusta al alza, observada en los datos sanitarios por tramo de edad.',
+        over50:  'A tu edad (más de 50) la salud requiere un margen claramente mayor (medicación sostenida, más visitas, dental y óptica más frecuentes, prevención de crónicos). La base se eleva alineada con los datos del INE sobre gasto sanitario por edad.',
       },
     },
     HEALTH_INSURANCE: {
       label: 'Tu seguro médico privado',
       variants: {
-        basic:    'Tu seguro médico privado básico añade una prima mensual recurrente al margen sanitario, además de copagos puntuales. El cálculo incluye esa carga sostenida como parte estructural del bloque.',
-        complete: 'Tu seguro médico privado completo añade una prima mensual más alta a cambio de menos copagos. El cálculo reconoce esa carga sostenida y la incorpora al margen del bloque.',
+        basic:    'Tu seguro médico privado básico: prima mensual recurrente más copagos puntuales. El cálculo lo incluye como gasto estructural.',
+        complete: 'Tu seguro médico privado completo: prima mensual más alta a cambio de menos copagos. El cálculo incorpora esa carga sostenida.',
       },
     },
     HOUSEHOLD_SIZE: {
       label: 'Composición de tu hogar',
-      text: 'Tu hogar con {N} dependientes amplía el margen sanitario. Cada persona aporta sus revisiones, vacunas, tratamientos dentales, ópticos y posibles imprevistos, y el cálculo contempla ese gasto sostenido sin asumir que se replique de forma exacta por cabeza.',
+      text: 'Tu hogar con {N} dependientes amplía el margen sanitario. Cada persona aporta revisiones, vacunas, dental, óptica y posibles imprevistos. El cálculo lo contempla sin asumir réplica exacta por cabeza.',
     },
     INCOME_TIER: {
       label: 'Tu tramo de ingreso',
-      text: 'En tu tramo de ingreso, la salud se ajusta de forma matizada: a ingresos altos suele crecer el gasto en sanidad privada, dental, óptica y servicios fuera del sistema público; a ingresos más bajos esos gastos opcionales se reducen y el margen baja. El INE documenta esa elasticidad en la EPF, aunque el efecto es menor que en otras categorías por el carácter universal del sistema sanitario público español.',
+      text: 'En tu tramo de ingreso, la salud se ajusta de forma matizada: a ingresos altos crece el gasto en sanidad privada, dental, óptica y servicios fuera del sistema público; a ingresos bajos esos opcionales se reducen. El efecto es menor que en otras categorías por el carácter universal del sistema sanitario público español. El INE lo documenta en la EPF.',
     },
   },
 
@@ -234,25 +234,25 @@ const DRIVER_BULLETS = {
     OWN_EDUCATION: {
       label: 'Tu formación propia',
       variants: {
-        continuous: 'Tu formación continua en curso (cursos, idiomas, certificaciones, especializaciones) añade un gasto sostenido al margen educativo. El cálculo contempla la inversión recurrente que implica mantenerse al día profesionalmente, sin asumir importes catastróficos pero reservando un colchón realista.',
-        formal:     'Tus estudios formales en curso (grado, máster, doctorado o equivalente) implican un margen claramente mayor en educación. Matrícula, tasas, materiales y posibles desplazamientos suman una carga sostenida durante todo el curso académico, y el cálculo la incorpora como parte estructural del bloque.',
+        continuous: 'Tu formación continua en curso (cursos, idiomas, certificaciones): gasto sostenido para mantenerse al día profesionalmente. El cálculo reserva un colchón realista.',
+        formal:     'Tus estudios formales en curso (grado, máster, doctorado): matrícula, tasas, materiales y posibles desplazamientos suman una carga sostenida durante todo el curso. Margen claramente mayor que con formación continua.',
       },
     },
     HOUSEHOLD_SIZE: {
       label: 'Composición de tu hogar',
-      text: 'Tu hogar con {N} hijos amplía el margen educativo. Materiales escolares, libros, uniformes, comedor, actividades extraescolares y, en muchos casos, refuerzos o academias suman un gasto sostenido durante toda la etapa educativa. El cálculo lo reconoce sin asumir que sea idéntico por hijo, porque parte del material y los recursos se aprovechan en familia.',
+      text: 'Tu hogar con {N} hijos amplía el margen educativo: materiales, libros, uniformes, comedor, extraescolares y, en muchos casos, refuerzos o academias. El cálculo no asume coste idéntico por hijo (parte del material se aprovecha en familia).',
     },
     CHILDREN_AT_UNIVERSITY: {
       label: 'Hijos en formación universitaria viviendo en casa',
-      text: 'Tienes {N} hijos cursando estudios universitarios sin haberse mudado del hogar familiar. La universidad añade matrícula, tasas, libros y materiales específicos sobre el gasto educativo previo, y aunque sigan en casa el peso es claramente superior al de etapas escolares. El cálculo refleja ese salto sin asumir movilidad fuera del hogar.',
+      text: 'Tienes {N} hijos universitarios viviendo en casa: matrícula, tasas, libros y materiales específicos suman al gasto educativo previo. El peso es claramente superior al escolar, aunque sin la carga de movilidad fuera del hogar.',
     },
     CHILDREN_STUDYING_AWAY: {
       label: 'Hijos estudiando fuera del hogar',
-      text: 'Tienes {N} hijos estudiando fuera del hogar familiar. Esto cambia radicalmente el peso del bloque educativo: además de matrícula, tasas y materiales, se suma una segunda economía doméstica (alquiler o residencia, manutención, transporte interurbano para visitas). Es uno de los modificadores más fuertes del cálculo, y por eso aparece como bullet propio en lugar de mezclarse con el resto.',
+      text: 'Tienes {N} hijos estudiando fuera del hogar: además de matrícula, tasas y materiales, se suma una segunda economía doméstica (alquiler o residencia, manutención, transporte interurbano). Es uno de los modificadores más fuertes del bloque.',
     },
     INCOME_TIER: {
       label: 'Tu tramo de ingreso',
-      text: 'En tu tramo de ingreso, la educación se mueve en dos direcciones distintas. A ingresos altos suele crecer el gasto en escolarización privada o concertada, idiomas, refuerzos y actividades enriquecedoras (música, deporte, viajes culturales); a ingresos más bajos el sistema educativo público cubre buena parte de la necesidad básica y el margen baja. El INE lo refleja en la EPF, con diferencias notables entre tramos.',
+      text: 'En tu tramo de ingreso, la educación se mueve en dos direcciones: a ingresos altos crece el gasto en escolarización privada o concertada, idiomas, refuerzos y actividades enriquecedoras (música, deporte, viajes culturales); a ingresos bajos el sistema público cubre la necesidad básica y el margen baja. El INE lo refleja en la EPF.',
     },
   },
 
