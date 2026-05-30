@@ -251,6 +251,12 @@ function calcEducationTarget(profile, income) {
         base += childrenInSchool         * 3;
         base += childrenAtUniversityHome * 5;
         base += childrenStudyingAway     * 12;
+        // Estos dos drivers van separados de HOUSEHOLD_SIZE porque las ramas
+        // que disparan tienen pesos muy distintos (5 vs 12) y las implicaciones
+        // para el usuario son cualitativamente diferentes (matrícula
+        // universitaria en casa vs. segunda economía doméstica).
+        if (childrenAtUniversityHome > 0) drivers.push('CHILDREN_AT_UNIVERSITY');
+        if (childrenStudyingAway     > 0) drivers.push('CHILDREN_STUDYING_AWAY');
       } else {
         // Fallback para perfiles sin Q5b/Q5c
         base += totalChildren * 3;
