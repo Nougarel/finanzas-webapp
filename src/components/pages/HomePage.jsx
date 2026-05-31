@@ -44,7 +44,7 @@ export default function HomePage() {
                 />
                 <div className="space-y-1">
                   <CardTitle className="text-primary-foreground">Cálculo directo</CardTitle>
-                  <CardDescription className="text-primary-foreground/70">
+                  <CardDescription className="text-primary-foreground/90">
                     Tengo un ingreso mensual y quiero saber cómo distribuirlo de forma saludable.
                   </CardDescription>
                 </div>

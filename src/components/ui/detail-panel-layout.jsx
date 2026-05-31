@@ -165,7 +165,8 @@ export function DetailPanelLayout({
             "shadow-[-8px_0_28px_0_rgba(20,33,61,0.10),-1px_0_2px_0_rgba(20,33,61,0.06),0_4px_32px_0_rgba(0,0,0,0.04)]",
             // Scroll interno gestionado por el div interior (overflow-hidden en el aside)
             "overflow-hidden",
-            // Padding interior
+            // Padding interior simétrico — la separación entre la scrollbar y
+            // el texto se gestiona dentro de panel-scroll-area (pr-3), no aquí.
             "p-5",
             // Animación de entrada
             "animate-in slide-in-from-right duration-[220ms] ease-out"

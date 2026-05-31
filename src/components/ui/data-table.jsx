@@ -15,6 +15,13 @@
 //   rowKey:       string — campo de data usado como identificador único de fila
 //   onRowClick:   (row) => void — handler al hacer clic/enter/space en una fila
 //   activeRowKey: any — valor de rowKey de la fila actualmente activa (resaltado)
+//
+// Prop opcional para integración con banner navy de bloque (M36):
+//   flushTop:     boolean — si true, la tabla se pega visualmente al banner de
+//                 bloque superior: sin border-top, sin radio en las esquinas
+//                 superiores, y header con tipografía más sutil para que el
+//                 banner navy mantenga la jerarquía de "título de sección"
+//                 frente al header como "rótulo de columna".
 
 import * as React from "react";
 import { ChevronRight } from "lucide-react";
@@ -42,6 +49,7 @@ function DataTable({
   rowKey,
   onRowClick,
   activeRowKey,
+  flushTop = false,
 }) {
   // Las filas son interactivas solo cuando se proveen rowKey y onRowClick.
   const isInteractive = !!(rowKey && onRowClick);
@@ -55,20 +63,39 @@ function DataTable({
 
   return (
     <div className={cn("w-full", className)}>
-      {/* ── Tabla en desktop (md+) ── */}
-      <div className="hidden md:block overflow-x-auto rounded-lg border border-border">
+      {/* ── Tabla en desktop (md+) ──
+          flushTop=true: el banner navy del bloque (M36) ya provee las esquinas
+          superiores redondeadas y el border-top. La tabla se pega debajo sin
+          duplicarlos para que se lean como una sola unidad visual. */}
+      <div
+        className={cn(
+          "hidden md:block overflow-x-auto border border-border",
+          flushTop ? "rounded-b-lg border-t-0" : "rounded-lg"
+        )}
+      >
         <table className="w-full text-sm">
           {caption && (
             <caption className="sr-only">{caption}</caption>
           )}
           <thead>
-            <tr className="border-b border-border bg-muted/50">
+            {/* Cuando flushTop, el header pasa a rótulo discreto de columnas:
+                tipografía menor y fondo transparente, para no competir con el
+                banner navy que ya actúa como cabecera de la sección. */}
+            <tr
+              className={cn(
+                "border-b border-border",
+                flushTop ? "bg-transparent" : "bg-muted/50"
+              )}
+            >
               {columns.map((col) => (
                 <th
                   key={col.key}
                   scope="col"
                   className={cn(
-                    "px-4 py-3 text-left text-xs font-semibold text-foreground tracking-meta uppercase",
+                    "px-4 text-left font-medium text-muted-foreground tracking-meta uppercase",
+                    flushTop
+                      ? "py-2 text-[10px]"
+                      : "py-3 text-xs font-semibold text-foreground",
                     col.className
                   )}
                 >

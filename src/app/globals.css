@@ -70,19 +70,24 @@
   --site-header-height: 53px;
   /* Fondo base off-white (M35 pulido G1) — slate-50 para que las cards blancas resalten */
   --background: oklch(0.984 0.003 247.858);
-  --foreground: oklch(0.129 0.042 264.695);
+  /* M36 — política de un único navy:
+     foreground (textos, títulos) y primary (banners, CTAs, logo) referencian
+     EL MISMO valor para garantizar que no se perciba ninguna diferencia
+     cromática entre títulos del cuerpo y banners. Cualquier cambio futuro de
+     --primary se propaga automáticamente a todos los _foreground sincronizados.
+     Contraste sobre white ≈ 12:1 (AAA — sobrado para AA). */
+  --foreground: var(--primary);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
-  /* Superficie del panel de detalle (M36): tint navy ligeramente más
-     perceptible que antes (0.992 → 0.982) para que el ojo perciba "esta
-     superficie es otro material" sin que se vea azulada.
-     Delta de luminosidad vs --background (0.984): ≈ 0.002 en L absoluto,
-     pero la croma 0.008 refuerza la temperatura y hace el tint perceptible.
-     Contraste AA garantizado: el texto foreground (oklch 0.129) sobre esta
-     superficie supera 12:1, muy por encima del 4.5:1 requerido por WCAG. */
-  --panel-surface: oklch(0.982 0.008 250);
+  --card-foreground: var(--primary);
+  /* Superficie del panel de detalle (M36): blanco puro como --card.
+     El tint navy se probó pero se percibía azulado en lugar de neutro;
+     se descarta. La diferenciación visual del drawer respecto al main
+     (slate-50) viene del delta de luminosidad blanco↔slate (≈0.016),
+     más la sombra multi-layer asimétrica, el borde izquierdo navy 20%
+     y las esquinas redondeadas. */
+  --panel-surface: oklch(1 0 0);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.129 0.042 264.695);
+  --popover-foreground: var(--primary);
   /* Primario navy #14213D (M35) */
   --primary: oklch(0.25 0.055 264.5);
   --primary-foreground: oklch(98.415% 0.00352 248.585);
@@ -115,7 +120,7 @@
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
   --sidebar: oklch(0.984 0.003 247.858);
-  --sidebar-foreground: oklch(0.129 0.042 264.695);
+  --sidebar-foreground: var(--primary);
   --sidebar-primary: oklch(0.208 0.042 265.755);
   --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
   --sidebar-accent: oklch(0.968 0.007 247.896);

@@ -196,7 +196,17 @@ export function CategoryDetail({ category, ineData, income, onClose, drivers, pr
           se aplica border-t border-border/50 pt-5 a cada sección
           excepto la primera para crear ritmo visual sin ruido.
       */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0 pt-4 panel-scroll-area">
+      {/* pr-3 separa el texto de la scrollbar — la barra queda cerca del
+          borde derecho del aside (sensación "del panel") y el contenido tiene
+          12px de aire respecto a ella.
+          tabIndex=0: el contenedor con overflow-y-auto debe ser focalizable
+          por teclado para que un usuario sin ratón pueda hacer scroll dentro
+          del panel (WCAG 2.1 — scrollable-region-focusable). */}
+      <div
+        ref={scrollRef}
+        tabIndex={0}
+        className="flex-1 overflow-y-auto min-h-0 pt-4 pr-3 panel-scroll-area focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring"
+      >
         <div className="space-y-0">
 
           {/* Sección 1 (primera — sin separador): Relevancia */}

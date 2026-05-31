@@ -353,7 +353,8 @@ function DiagnosisContent() {
 
           {/* Ingreso de referencia — hero invertido (navy) */}
           <div className="rounded-2xl bg-primary px-6 py-8 space-y-3 transition-colors duration-200">
-            <p className="text-xs font-medium uppercase tracking-meta text-primary-foreground/70">
+            {/* Label blanco puro — el /70 anterior daba sensación gris-azulada */}
+            <p className="text-xs font-normal uppercase tracking-meta text-primary-foreground">
               Ingreso neto de referencia
             </p>
             <MoneyValue
@@ -504,7 +505,7 @@ function DiagnosisContent() {
                     <div className="flex items-center justify-between rounded-t-lg bg-primary px-4 py-2.5">
                       <h2
                         id={`block-${blockKey}-heading`}
-                        className="text-xs font-semibold uppercase tracking-meta text-primary-foreground"
+                        className="text-xs font-bold uppercase tracking-meta text-primary-foreground"
                       >
                         {diagnosis.blocks[blockKey].label}
                       </h2>
@@ -529,6 +530,7 @@ function DiagnosisContent() {
                       data={tableData}
                       caption={`Comparativa de ${diagnosis.blocks[blockKey].label}`}
                       rowKey="id"
+                      flushTop
                       onRowClick={(row) => {
                         // Clic en fila activa = no-op (el drawer permanece abierto).
                         // Clic en fila distinta = cambia el contenido del drawer.

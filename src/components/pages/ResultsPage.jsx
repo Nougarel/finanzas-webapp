@@ -290,7 +290,9 @@ function ResultsContent() {
 
           {/* Ingreso mensual — hero invertido (navy) */}
           <div className="rounded-2xl bg-primary px-6 py-8 space-y-3 transition-colors duration-200">
-            <p className="text-xs font-medium uppercase tracking-meta text-primary-foreground/70">
+            {/* Label en blanco puro (sin opacity attenuation) — el /70 anterior
+                se percibía azul-grisáceo sobre el navy en lugar de blanco. */}
+            <p className="text-xs font-normal uppercase tracking-meta text-primary-foreground">
               Ingreso mensual neto de referencia
             </p>
             <MoneyValue
@@ -489,11 +491,11 @@ function ResultsContent() {
                         <div className="flex items-center gap-2">
                           <h2
                             id={`block-${blockKey}-heading`}
-                            className="text-xs font-semibold uppercase tracking-meta text-primary-foreground"
+                            className="text-xs font-bold uppercase tracking-meta text-primary-foreground"
                           >
                             {block.label}
                           </h2>
-                          <span className="text-xs text-primary-foreground/70 tabular-nums">
+                          <span className="text-xs font-medium text-primary-foreground/85 tabular-nums">
                             {formatPct(block.percentage)}
                           </span>
                         </div>
@@ -514,6 +516,7 @@ function ResultsContent() {
                         data={tableData}
                         caption={`Distribución de ${block.label}`}
                         rowKey="id"
+                        flushTop
                         onRowClick={(row) => {
                           // Clic en fila activa = no-op (el drawer permanece abierto).
                           // Clic en fila distinta = cambia el contenido del drawer.

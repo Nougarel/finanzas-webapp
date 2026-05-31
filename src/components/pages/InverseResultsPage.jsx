@@ -323,7 +323,8 @@ export default function InverseResultsPage() {
 
           {/* Hero: ingreso requerido — bloque invertido (navy) */}
           <div className="rounded-2xl bg-primary px-6 py-8 space-y-3 transition-colors duration-200">
-            <p className="text-xs font-medium uppercase tracking-meta text-primary-foreground/70">
+            {/* Label blanco puro — el /70 anterior daba sensación gris-azulada */}
+            <p className="text-xs font-normal uppercase tracking-meta text-primary-foreground">
               Ingreso mínimo necesario
             </p>
             <MoneyValue
@@ -473,7 +474,7 @@ export default function InverseResultsPage() {
                       <div key={block}>
                         {/* Banner navy de bloque — rounded-t-lg pegado a la DataTable
                             para que se lean como una unidad visual. */}
-                        <h3 className="flex items-center justify-between rounded-t-lg bg-primary px-4 py-2.5 text-xs font-semibold uppercase tracking-meta text-primary-foreground">
+                        <h3 className="flex items-center justify-between rounded-t-lg bg-primary px-4 py-2.5 text-xs font-bold uppercase tracking-meta text-primary-foreground">
                           {BLOCK_LABELS[block]}
                         </h3>
                         <DataTable
@@ -481,6 +482,7 @@ export default function InverseResultsPage() {
                           data={blockData}
                           caption={`Distribución saludable — ${BLOCK_LABELS[block]}`}
                           rowKey="id"
+                          flushTop
                           onRowClick={(row) => {
                             // Clic en fila activa = no-op (el drawer permanece abierto).
                             // Clic en fila distinta = cambia el contenido del drawer.
