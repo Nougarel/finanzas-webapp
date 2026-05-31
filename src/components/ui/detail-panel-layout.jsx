@@ -159,14 +159,19 @@ export function DetailPanelLayout({
           )}
         >
           {/*
-            Área scrollable que contiene el contenido del panel.
+            Contenedor del contenido del panel.
             aria-live="polite" + aria-atomic="true" (mejora 5 M36):
             cuando el usuario selecciona otra categoría con el panel
             ya abierto, los lectores de pantalla anuncian el nuevo
             contenido sin interrumpir lo que estén leyendo.
+
+            Modelo de altura adaptativa (mejora 1):
+            El <aside> tiene flex flex-col + overflow-hidden + max-h.
+            Este div intermedio propaga el flex con overflow-hidden para
+            que CategoryDetail pueda usar flex-shrink en el body scrollable.
           */}
           <div
-            className="flex-1 overflow-y-auto min-h-0"
+            className="flex flex-col overflow-hidden flex-1 min-h-0"
             aria-live="polite"
             aria-atomic="true"
           >

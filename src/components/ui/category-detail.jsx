@@ -1,9 +1,16 @@
+"use client";
+
 /**
  * CategoryDetail — Panel de detalle de categoría (M36 Fase 1 + Fase 2b).
  *
  * Fase 1 (capa 1): procedencia semántica, indicador de relevance, comparación INE.
  * Fase 2b (capa 2): bullets cualitativos "Cómo afecta tu perfil" generados desde
  *   los drivers emitidos por el motor y las plantillas del diccionario M36.
+ *
+ * Mejoras M36 Fase 2 aplicadas en este archivo:
+ *   - Mejora 2: jerarquía de cabecera — importe protagonista, nombre como label.
+ *   - Mejora 3: separadores hairline entre secciones del cuerpo.
+ *   - Mejora 4: reset de scroll al cambiar de categoría (useEffect + useRef).
  *
  * Props:
  *   category   {object}       — entrada de result.categories[catId]
@@ -115,6 +122,20 @@ function ProfileDriversBullets({ bullets }) {
 // ── Componente principal ─────────────────────────────────────────────────────
 
 export function CategoryDetail({ category, ineData, income, onClose, drivers, profile }) {
+  // Ref al contenedor scrollable interno — usado para el reset de scroll (mejora 4).
+  // Declarado antes del early return para no violar la regla de hooks.
+  const scrollRef = React.useRef(null);
+
+  // Reset de scroll al cambiar de categoría (mejora 4 M36):
+  // cuando el usuario clica otra categoría con el panel ya abierto,
+  // el contenido vuelve al principio en lugar de mantener la posición anterior.
+  // category?.id es null cuando el panel está cerrado — el efecto no hace nada.
+  React.useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = 0;
+    }
+  }, [category?.id]);
+
   if (!category) return null;
 
   const relevanceInfo = getRelevanceInfo({
@@ -133,18 +154,26 @@ export function CategoryDetail({ category, ineData, income, onClose, drivers, pr
     : [];
 
   return (
-    <div className="flex flex-col h-full" data-slot="category-detail">
-      {/* ── Cabecera del panel ── */}
-      <div className="flex items-start justify-between gap-3 pb-4 border-b border-border">
-        <div className="space-y-0.5 min-w-0">
-          <h2 className="text-base font-bold text-foreground leading-tight truncate">
+    <div className="flex flex-col overflow-hidden flex-1 min-h-0" data-slot="category-detail">
+      {/* ── Cabecera del panel ──
+          Jerarquía (mejora 2 M36):
+            - Nombre de categoría: label semántico, menor importancia visual.
+            - Importe: dato protagonista, tamaño y peso máximos.
+            - Porcentaje: contexto discreto junto al importe.
+      */}
+      {/* shrink-0: la cabecera nunca se encoge en el modelo flex del panel */}
+      <div className="shrink-0 flex items-start justify-between gap-3 pb-4 border-b border-border">
+        <div className="space-y-1 min-w-0">
+          {/* Label semántico: uppercase pequeño, color muted — lectura secundaria */}
+          <h2 className="text-xs font-medium uppercase tracking-meta text-muted-foreground leading-none truncate">
             {category.label}
           </h2>
-          <div className="flex items-center gap-2 flex-wrap">
+          {/* Importe protagonista + porcentaje discreto */}
+          <div className="flex items-baseline gap-2 flex-wrap">
             <MoneyValue
               amount={category.amount}
               size="table"
-              className="text-lg font-bold"
+              className="text-2xl font-bold text-foreground"
             />
             <span className="text-sm text-muted-foreground tabular-nums">
               ({category.percentage.toFixed(1)}%)
@@ -161,54 +190,71 @@ export function CategoryDetail({ category, ineData, income, onClose, drivers, pr
         </button>
       </div>
 
-      {/* ── Cuerpo scrollable ── */}
-      <div className="flex-1 overflow-y-auto space-y-5 pt-4">
+      {/* ── Cuerpo scrollable ──
+          ref conectado para reset de scroll (mejora 4).
+          Separadores hairline entre secciones (mejora 3):
+          se aplica border-t border-border/50 pt-5 a cada sección
+          excepto la primera para crear ritmo visual sin ruido.
+      */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0 pt-4">
+        <div className="space-y-0">
 
-        {/* Etiqueta de relevance + puntos */}
-        <div className="space-y-1.5">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-meta">
-            Relevancia para la salud financiera
-          </p>
-          <div className="flex items-center gap-2">
-            <RelevanceDots filled={filled} total={total} label={label} />
-            <span className="text-sm font-medium text-foreground">{label}</span>
+          {/* Sección 1 (primera — sin separador): Relevancia */}
+          <div className="space-y-1.5 pb-5">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-meta">
+              Relevancia para la salud financiera
+            </p>
+            <div className="flex items-center gap-2">
+              <RelevanceDots filled={filled} total={total} label={label} />
+              <span className="text-sm font-medium text-foreground">{label}</span>
+            </div>
           </div>
+
+          {/* Sección 2: Respaldo institucional — separador arriba */}
+          {sourceSentence && (
+            <div className="border-t border-border/50 pt-5 pb-5 space-y-1.5">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-meta">
+                Respaldo institucional
+              </p>
+              <p className="text-sm text-foreground leading-relaxed">
+                {sourceSentence}
+              </p>
+            </div>
+          )}
+
+          {/* Sección 3: Cómo afecta tu perfil (Fase 2b) — separador arriba */}
+          {profileBullets && profileBullets.length > 0 && (
+            <div className="border-t border-border/50 pt-5 pb-5">
+              <ProfileDriversBullets bullets={profileBullets} />
+            </div>
+          )}
+
+          {/* Sección 4: Comparación INE — separador arriba */}
+          {ineData && (
+            <div className="border-t border-border/50 pt-5 pb-5">
+              <IneComparison ineData={ineData} block={category.block} />
+            </div>
+          )}
+
+          {/* Sección 5: Nota sobre flexibilidad — solo en CONTEXTUAL, separador arriba */}
+          {isContextual && (
+            <div className="border-t border-border/50 pt-5 pb-5">
+              <div
+                className="rounded-md border border-border bg-muted/20 px-3 py-3 space-y-1"
+                role="note"
+                aria-label="Nota sobre flexibilidad de la categoría"
+              >
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-meta">
+                  Nota sobre flexibilidad
+                </p>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {CONTEXTUAL_FLEXIBILITY_MESSAGE}
+                </p>
+              </div>
+            </div>
+          )}
+
         </div>
-
-        {/* Procedencia semántica */}
-        {sourceSentence && (
-          <div className="space-y-1.5">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-meta">
-              Respaldo institucional
-            </p>
-            <p className="text-sm text-foreground leading-relaxed">
-              {sourceSentence}
-            </p>
-          </div>
-        )}
-
-        {/* Bullets cualitativos "Cómo afecta tu perfil" (Fase 2b) */}
-        <ProfileDriversBullets bullets={profileBullets} />
-
-        {/* Comparación INE */}
-        <IneComparison ineData={ineData} block={category.block} />
-
-        {/* Mensaje de flexibilidad — solo en CONTEXTUAL */}
-        {isContextual && (
-          <div
-            className="rounded-md border border-border bg-muted/20 px-3 py-3 space-y-1"
-            role="note"
-            aria-label="Nota sobre flexibilidad de la categoría"
-          >
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-meta">
-              Nota sobre flexibilidad
-            </p>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              {CONTEXTUAL_FLEXIBILITY_MESSAGE}
-            </p>
-          </div>
-        )}
-
       </div>
     </div>
   );
