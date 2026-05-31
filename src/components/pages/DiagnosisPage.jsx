@@ -366,7 +366,7 @@ function DiagnosisContent() {
             </p>
           </div>
 
-          {/* Score de salud */}
+          {/* Score de salud — card protagonista, elevación sutil (M36) */}
           {diagnosis.healthScore && (
             <HealthGauge
               score={diagnosis.healthScore.score}
@@ -374,6 +374,7 @@ function DiagnosisContent() {
               label="Salud financiera de tu situación real"
               penalties={diagnosis.healthScore.penalties ?? []}
               categoryLabels={categoryLabels}
+              className="card-elevated"
             />
           )}
 
@@ -497,20 +498,20 @@ function DiagnosisContent() {
 
                 return (
                   <section key={blockKey} aria-labelledby={`block-${blockKey}-heading`}>
-                    {/* Cabecera de bloque */}
-                    <div className="flex items-baseline justify-between border-b-2 border-foreground/10 pb-2 mb-3">
-                      <div className="flex items-baseline gap-3">
-                        <h2
-                          id={`block-${blockKey}-heading`}
-                          className="text-lg font-bold text-foreground"
-                        >
-                          {diagnosis.blocks[blockKey].label}
-                        </h2>
-                      </div>
+                    {/* Banner navy de bloque — reemplaza la cabecera anterior.
+                        rounded-t-lg en el banner + DataTable sin margen superior
+                        → visualmente se leen como una unidad. */}
+                    <div className="flex items-center justify-between rounded-t-lg bg-primary px-4 py-2.5">
+                      <h2
+                        id={`block-${blockKey}-heading`}
+                        className="text-xs font-semibold uppercase tracking-meta text-primary-foreground"
+                      >
+                        {diagnosis.blocks[blockKey].label}
+                      </h2>
                       <MoneyValue
                         amount={diagnosis.blocks[blockKey].realAmount}
                         size="table"
-                        className="text-muted-foreground"
+                        className="font-semibold text-primary-foreground"
                       />
                     </div>
 

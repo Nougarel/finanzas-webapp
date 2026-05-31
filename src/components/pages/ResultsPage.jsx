@@ -321,7 +321,7 @@ function ResultsContent() {
 
           {/* Salud financiera — colapsado por defecto (M36: secundario, bajo demanda) */}
           {result.healthScore && (
-            <details className="group rounded-lg border border-border bg-card">
+            <details className="group rounded-lg border border-border bg-card card-elevated">
               <summary
                 className={[
                   "flex cursor-pointer items-center justify-between",
@@ -482,18 +482,22 @@ function ResultsContent() {
 
                   return (
                     <section key={blockKey} aria-labelledby={`block-${blockKey}-heading`}>
-                      {/* Cabecera de bloque */}
-                      <div className="flex items-baseline justify-between border-b-2 border-foreground/10 pb-2 mb-3">
-                        <div className="flex items-baseline gap-3">
+                      {/* Banner navy de bloque — reemplaza la cabecera anterior.
+                          rounded-t-lg en el banner + DataTable sin margen superior
+                          → visualmente se leen como una unidad. */}
+                      <div className="flex items-center justify-between rounded-t-lg bg-primary px-4 py-2.5">
+                        <div className="flex items-center gap-2">
                           <h2
                             id={`block-${blockKey}-heading`}
-                            className="text-lg font-bold text-foreground"
+                            className="text-xs font-semibold uppercase tracking-meta text-primary-foreground"
                           >
                             {block.label}
                           </h2>
-                          <span className="text-sm text-muted-foreground">{formatPct(block.percentage)}</span>
+                          <span className="text-xs text-primary-foreground/70 tabular-nums">
+                            {formatPct(block.percentage)}
+                          </span>
                         </div>
-                        <MoneyValue amount={block.amount} size="table" className="text-xl font-bold" />
+                        <MoneyValue amount={block.amount} size="table" className="font-semibold text-primary-foreground" />
                       </div>
 
                       {/* Alerta de bloque */}
