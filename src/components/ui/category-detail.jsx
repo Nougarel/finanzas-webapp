@@ -196,7 +196,7 @@ export function CategoryDetail({ category, ineData, income, onClose, drivers, pr
           se aplica border-t border-border/50 pt-5 a cada sección
           excepto la primera para crear ritmo visual sin ruido.
       */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0 pt-4">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0 pt-4 panel-scroll-area">
         <div className="space-y-0">
 
           {/* Sección 1 (primera — sin separador): Relevancia */}
