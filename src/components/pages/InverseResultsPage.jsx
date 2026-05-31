@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import { MoneyValue } from "@/components/ui/money-value";
 import { PageShell } from "@/components/ui/page-shell";
 import { DetailPanelLayout } from "@/components/ui/detail-panel-layout";
 import { CategoryDetail } from "@/components/ui/category-detail";
+import { DashboardPanel } from "@/components/ui/dashboard-panel";
 import { CATEGORIES_UI, CATEGORIES_META } from "@/lib/models/categories";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useStudyContextOptional } from "@/lib/research/useStudyContext";
@@ -137,6 +138,59 @@ export default function InverseResultsPage() {
   useEffect(() => {
     runCalculation(false);
   }, [runCalculation]);
+
+  // ── Dataset para DashboardPanel (mode="inverse") ──────────────────────────────
+  // Construye la estructura unificada desde healthyDistribution del resultado
+  // inverso. El ingreso de referencia es requiredIncome (el calculado, no real).
+  // Los bloques se calculan sumando las categorías por bloque desde CATEGORIES_UI.
+  // El DTI hipotético se deriva como monthlyDebtPayment / requiredIncome * 100.
+  // Debe estar antes de los early returns para cumplir las reglas de hooks.
+  const dashboardDataset = useMemo(() => {
+    if (!result) return null;
+    const { requiredIncome, monthlyDebtPayment, healthyDistribution } = result;
+
+    // Mapa bloque → { label, totalAmount }
+    const BLOCK_LABELS_MAP = { needs: "Necesidades", wants: "Deseos", savings: "Ahorro" };
+    const blockTotals = { needs: 0, wants: 0, savings: 0 };
+
+    // Mapa plano de categorías con label y bloque desde CATEGORIES_UI
+    const categories = {};
+    for (const cat of CATEGORIES_UI) {
+      const h = healthyDistribution[cat.id];
+      if (!h) continue;
+      categories[cat.id] = {
+        id: cat.id,
+        label: cat.label,
+        block: cat.block,
+        percentage: h.percentage,
+        amount: h.amount,
+      };
+      if (blockTotals[cat.block] !== undefined) {
+        blockTotals[cat.block] += h.amount;
+      }
+    }
+
+    // Calcular porcentaje de bloque sobre requiredIncome
+    const needsPct   = requiredIncome > 0 ? (blockTotals.needs   / requiredIncome) * 100 : 0;
+    const wantsPct   = requiredIncome > 0 ? (blockTotals.wants   / requiredIncome) * 100 : 0;
+    const savingsPct = requiredIncome > 0 ? (blockTotals.savings / requiredIncome) * 100 : 0;
+
+    // DTI hipotético: cuota fija mensual / ingreso requerido
+    const dtiHypothetical = requiredIncome > 0 ? (monthlyDebtPayment / requiredIncome) * 100 : 0;
+
+    return {
+      income: requiredIncome,
+      blocks: {
+        needs:   { label: BLOCK_LABELS_MAP.needs,   percentage: parseFloat(needsPct.toFixed(2)),   amount: parseFloat(blockTotals.needs.toFixed(2))   },
+        wants:   { label: BLOCK_LABELS_MAP.wants,   percentage: parseFloat(wantsPct.toFixed(2)),   amount: parseFloat(blockTotals.wants.toFixed(2))   },
+        savings: { label: BLOCK_LABELS_MAP.savings, percentage: parseFloat(savingsPct.toFixed(2)), amount: parseFloat(blockTotals.savings.toFixed(2)) },
+      },
+      categories,
+      transversal: {
+        dti: { total: parseFloat(dtiHypothetical.toFixed(2)) },
+      },
+    };
+  }, [result]);
 
   const goBack = () => router.push("/inverse-calculator");
 
@@ -308,8 +362,10 @@ export default function InverseResultsPage() {
 
   return (
     <main className="flex min-h-screen flex-col">
-      <PageShell variant="table">
-        <div className="space-y-8">
+      <PageShell variant="dashboard">
+        {/* Col 1: contenido principal (7/12 en xl+, ancho completo en inferiores) */}
+        <div className="col-span-12 xl:col-span-7">
+          <div className="space-y-8">
 
           {/* Encabezado */}
           <div className="space-y-1">
@@ -518,7 +574,32 @@ export default function InverseResultsPage() {
             )}
           </div>
 
-        </div>
+          </div>{/* fin space-y-8 de col 1 */}
+        </div>{/* fin col 1 */}
+
+        {/* Col 2: DashboardPanel en mode="inverse" (solo xl+, oculto en viewports menores).
+            Modo reducido: MacroPiechart + DTI hipotético + tasa de ahorro ideal.
+            Sin BlockBudgetBars en modo inverse (DashboardPanel lo omite según §6 del DESIGN.md).
+            Fuente: healthyDistribution del ingreso calculado. */}
+        <aside
+          className="hidden xl:block xl:col-span-5"
+          aria-label="Dashboard resumen ingreso mínimo calculado"
+        >
+          <div
+            className="sticky overflow-y-auto panel-scroll-area"
+            style={{
+              top: "calc(var(--site-header-height, 53px) + 1.5rem)",
+              maxHeight: "calc(100vh - var(--site-header-height, 53px) - 3rem)",
+            }}
+          >
+            <DashboardPanel
+              dataset={dashboardDataset}
+              mode="inverse"
+              secondaryCta={{ href: "/inverse-calculator", label: "Calcular de nuevo" }}
+            />
+          </div>
+        </aside>
+
       </PageShell>
     </main>
   );
