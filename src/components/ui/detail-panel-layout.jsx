@@ -161,8 +161,8 @@ export function DetailPanelLayout({
             aterriza en el botón X real de CategoryDetail.
 
             Para el foco inicial usamos el ref al botón sr-only.
-          *)
           */}
+          {/* Botón de cierre sr-only: receptor de foco inicial al abrir el drawer */}
           <button
             ref={closeBtnRef}
             type="button"
