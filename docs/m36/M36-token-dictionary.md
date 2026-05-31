@@ -288,19 +288,19 @@ Drivers: HOUSEHOLD_SIZE (si hay dependientes), HOUSING_STATUS (solo hipoteca), A
 
 **Composición de tu hogar.** (HOUSEHOLD_SIZE)
 
-> Tener {N} dependientes a cargo es la razón económica principal para contratar un seguro de vida: si te ocurriese algo, tu hogar perdería tus ingresos pero seguiría teniendo gastos. El cálculo eleva el margen para reservar prima suficiente y garantizar una cobertura realista para los que dependen de ti.
+> Tener {N} dependientes a cargo es la razón económica principal para un seguro de vida: si te ocurriese algo, tu hogar perdería tus ingresos pero mantendría sus gastos. El cálculo eleva el margen para reservar prima suficiente.
 
 **Tu situación de vivienda.** (HOUSING_STATUS, solo hipoteca)
 
-> Tu vivienda con hipoteca añade peso a esta categoría. Es habitual contratar un seguro de vida vinculado a la hipoteca (muchos bancos lo exigen como condición de financiación), porque cubre el saldo pendiente del préstamo si te ocurre algo y evita que tu familia se quede sin vivienda. El cálculo reserva margen para esa prima específica.
+> Tu vivienda con hipoteca: es habitual contratar un seguro de vida vinculado (muchos bancos lo exigen) que cubre el saldo pendiente si te ocurre algo y evita que tu familia se quede sin vivienda. El cálculo reserva margen para esa prima.
 
 **Tu edad.** (AGE, solo más de 50)
 
-> A partir de los 50 años las primas de seguro de vida suben significativamente: las aseguradoras incorporan el riesgo actuarial creciente en sus tarifas, y mantener una cobertura comparable a edades anteriores cuesta más. El cálculo ajusta el margen al alza para reflejar esa realidad del mercado asegurador.
+> A tu edad (más de 50) las primas de seguro de vida suben significativamente: las aseguradoras incorporan el riesgo actuarial creciente en sus tarifas. El cálculo ajusta el margen al alza para reflejar esa realidad del mercado.
 
 **Tu tramo de ingreso.** (INCOME_TIER)
 
-> En tu tramo de ingreso, el seguro de vida adapta la cobertura. A mayores ingresos tu hogar dependería de una cifra mayor si te faltaras, así que el capital asegurado crece (y con él la prima), aunque proporcionalmente al presupuesto total el peso suele mantenerse moderado. A ingresos más bajos la cobertura básica es la prioridad y el margen baja.
+> En tu tramo de ingreso, el seguro adapta la cobertura: a ingresos altos crece el capital asegurado (y con él la prima) aunque el peso relativo se mantenga moderado; a ingresos bajos la cobertura básica es la prioridad y el margen baja.
 
 ---
 
@@ -310,22 +310,22 @@ Drivers: EMERGENCY_PHASE, EMPLOYMENT (solo en fases sin fondo o construyendo), P
 
 **Tu fase del fondo.** (EMERGENCY_PHASE, variantes por valor)
 
-- *sin fondo*: La construcción de un fondo de emergencia es ahora una prioridad absoluta. Sin colchón ante imprevistos (pérdida de empleo, gasto médico inesperado, avería grave), cualquier sacudida puede empujarte a la deuda. El cálculo dedica un porcentaje sustancial del presupuesto a esta categoría hasta que alcances un nivel funcional.
-- *construyéndolo*: Estás construyendo activamente tu fondo de emergencia. El cálculo mantiene un peso elevado en esta categoría para que avances rápido hacia un colchón sólido, idealmente alcanzable en pocos meses según tu ingreso y gastos.
-- *parcial*: Tu fondo de emergencia está parcialmente formado. La prioridad baja respecto a quien empieza desde cero, pero conviene seguir aportando para llegar al rango recomendado. El cálculo asigna un margen moderado de mantenimiento incremental.
-- *completo*: Tu fondo de emergencia está completo. Llegados a este punto solo necesitas mantenerlo y compensar la inflación; el cálculo reserva un margen mínimo y libera el resto para otros bloques (inversión, vivienda, ahorro a otros plazos).
+- *sin fondo*: No tienes fondo de emergencia: construirlo es ahora prioridad absoluta. Sin colchón ante imprevistos (pérdida de empleo, gasto médico, avería grave), cualquier sacudida puede empujarte a la deuda. El cálculo dedica un porcentaje sustancial del presupuesto hasta que alcances un nivel funcional.
+- *construyéndolo*: Estás construyendo activamente tu fondo. El cálculo mantiene un peso elevado para que avances rápido hacia un colchón sólido, idealmente alcanzable en pocos meses según tu ingreso y gastos.
+- *parcial*: Tu fondo está parcialmente formado. La prioridad baja respecto a quien empieza desde cero, pero conviene seguir aportando hasta el rango recomendado. El cálculo asigna un margen moderado de mantenimiento incremental.
+- *completo*: Tu fondo está completo. Solo necesitas mantenerlo y compensar la inflación; el cálculo reserva un margen mínimo y libera el resto para otros bloques (inversión, vivienda, ahorros).
 
 **Tu estabilidad laboral.** (EMPLOYMENT, solo en fases sin fondo o construyendo)
 
-> Tu estabilidad laboral ({indefinido/temporal/autónomo}) condiciona los meses de gasto que conviene tener guardados. Una jornada indefinida permite un colchón más ajustado; el trabajo temporal o autónomo requiere reservas más amplias por la mayor variabilidad de ingresos y menor protección ante el desempleo. El cálculo ajusta el objetivo del fondo en consecuencia.
+> Tu estabilidad laboral ({indefinido/temporal/autónomo}) condiciona los meses de gasto que conviene guardar. Una jornada indefinida permite un colchón más ajustado; el trabajo temporal o autónomo requiere reservas más amplias por la mayor variabilidad de ingresos y menor protección. El cálculo ajusta el objetivo del fondo.
 
 **Ingresos de tu pareja.** (PARTNER_INCOME, solo en fase parcial cuando tu pareja aporta ingresos propios)
 
-> Tu pareja aporta ingresos propios al hogar, lo que reduce ligeramente el ritmo necesario para terminar de construir el fondo. Un hogar de doble ingreso tiene mayor resiliencia ante una pérdida laboral (uno de los dos sigue aportando), así que el colchón compartido no necesita acumularse con la misma urgencia. El cálculo refleja ese matiz.
+> Tu pareja aporta ingresos propios al hogar. El doble ingreso da más resiliencia ante una pérdida laboral (uno de los dos sigue aportando), así que el colchón compartido no necesita acumularse con tanta urgencia. El cálculo refleja ese matiz.
 
 **Referencia institucional.**
 
-> El Banco de España recomienda mantener entre 3 y 6 meses de gastos esenciales como fondo de emergencia, con rangos más amplios para situaciones laborales menos estables. El cálculo de esta categoría apunta hacia ese rango según tu fase actual y tu perfil profesional, considerando que es uno de los pilares de la salud financiera personal.
+> El Banco de España recomienda mantener entre 3 y 6 meses de gastos esenciales como fondo de emergencia, con rangos más amplios para situaciones laborales menos estables. El cálculo apunta a ese rango según tu fase y perfil.
 
 ---
 
@@ -335,7 +335,7 @@ Driver: HOUSEHOLD_SIZE (si hay dependientes). Sin Referencia institucional.
 
 **Composición de tu hogar.** (HOUSEHOLD_SIZE)
 
-> Tu hogar con {N} dependientes amplía la importancia del ahorro a corto plazo. Las familias afrontan más imprevistos no catastróficos pero recurrentes (electrodomésticos averiados, reparaciones del coche, vacaciones más caras, gastos escolares puntuales) que un hogar individual. El cálculo añade un margen para que tengas liquidez disponible sin tener que tocar el fondo de emergencia ni recurrir a deuda.
+> Tu hogar con {N} dependientes amplía la importancia del ahorro a corto plazo. Las familias afrontan más imprevistos no catastróficos pero recurrentes (electrodomésticos averiados, reparaciones del coche, vacaciones, gastos escolares puntuales). El cálculo añade un margen para tener liquidez sin tocar el fondo de emergencia ni recurrir a deuda.
 
 ---
 
@@ -345,7 +345,7 @@ Driver: HOUSING_GOAL (si tienes objetivo de compra de vivienda). Sin Referencia 
 
 **Tu objetivo de vivienda.** (HOUSING_GOAL)
 
-> Tienes como objetivo comprar vivienda en los próximos años. Es una decisión que multiplica el peso del ahorro a largo plazo: la entrada típica para una hipoteca en España ronda el 20-30% del precio del inmueble, sumados impuestos de transmisión, notaría, registro y posibles reformas. El cálculo destina un margen significativo a este bloque para que avances de forma realista hacia esa meta sin sacrificar tu salud financiera presente.
+> Tu objetivo es comprar vivienda en los próximos años. Es una decisión que multiplica el peso del ahorro a largo plazo: la entrada típica en España ronda el 20-30% del precio, sumados impuestos de transmisión, notaría, registro y posibles reformas. El cálculo destina un margen significativo para que avances hacia esa meta sin sacrificar tu salud financiera presente.
 
 ---
 
@@ -355,21 +355,21 @@ Drivers: AGE, PENSION_REGIME (solo si no es Seguridad Social), EMPLOYMENT (solo 
 
 **Tu edad.** (AGE, variantes por valor)
 
-- *menos de 35 años*: A tu edad la inversión y la jubilación tienen el horizonte temporal más amplio posible, que es la mayor ventaja para construir capital. El interés compuesto trabaja a tu favor durante décadas, así que aportaciones modestas pero constantes ahora valen muchísimo más que aportaciones grandes empezadas tarde. El cálculo arranca con un peso moderado pero firme.
-- *entre 35 y 50*: En tu rango de edad la inversión pesa más en el cálculo. Sigues con un horizonte temporal favorable, pero el tiempo restante hasta la jubilación se acorta, y conviene acelerar las aportaciones para compensar etapas anteriores en las que quizá ahorraste menos. El cálculo eleva el margen reflejando esa urgencia creciente.
-- *más de 50 años*: A partir de los 50 las aportaciones a la jubilación cobran máxima prioridad. El horizonte temporal restante es menor, las decisiones que tomes ahora tendrán impacto directo en tu calidad de vida tras retirarte, y conviene aprovechar las deducciones fiscales del último tramo profesional. El cálculo destina la asignación más alta de las tres etapas.
+- *menos de 35 años*: A tu edad (menos de 35) la jubilación tiene el horizonte temporal más amplio posible, la mayor ventaja para construir capital. El interés compuesto trabaja a tu favor durante décadas: aportaciones modestas pero constantes ahora valen mucho más que aportaciones grandes empezadas tarde. El cálculo arranca con un peso moderado pero firme.
+- *entre 35 y 50*: En tu rango de edad (35 a 50) la inversión pesa más. Sigues con horizonte temporal favorable pero el tiempo restante hasta la jubilación se acorta, y conviene acelerar las aportaciones para compensar etapas previas. El cálculo eleva el margen reflejando esa urgencia creciente.
+- *más de 50 años*: A tu edad (más de 50) las aportaciones a la jubilación cobran máxima prioridad. El horizonte se acorta, las decisiones de ahora impactan directamente en tu calidad de vida tras retirarte, y conviene aprovechar las deducciones fiscales del último tramo profesional. El cálculo destina la asignación más alta de las tres etapas.
 
 **Tu régimen de cotización.** (PENSION_REGIME, solo si no cotizas en la Seguridad Social)
 
-> Cotizas en un régimen distinto al de la Seguridad Social ({mutualidad profesional/sin régimen de cotización}). Las pensiones futuras serán más bajas o directamente inexistentes en comparación con el régimen general, así que la responsabilidad de cubrir tu jubilación recae más sobre el ahorro privado. El cálculo eleva el margen de inversión para compensar esa menor cobertura institucional.
+> Cotizas en un régimen distinto a la Seguridad Social ({mutualidad profesional/sin régimen de cotización}). Las pensiones futuras serán más bajas o inexistentes frente al régimen general, así que cubrir tu jubilación recae más sobre el ahorro privado. El cálculo eleva el margen de inversión para compensar.
 
 **Tu estabilidad laboral.** (EMPLOYMENT, solo en Seguridad Social y trabajo no indefinido)
 
-> Tu actividad como {asalariado temporal/autónomo} dentro de la Seguridad Social acumula menos años de cotización efectiva en promedio (los contratos temporales tienen interrupciones; los autónomos suelen cotizar por bases mínimas). La pensión pública resultante será probablemente menor que la de un trabajador indefinido equivalente, así que el cálculo añade un margen extra a la inversión privada para reducir esa brecha.
+> Tu actividad como {asalariado temporal/autónomo} dentro de la Seguridad Social acumula menos años de cotización efectiva en promedio (los contratos temporales tienen interrupciones; los autónomos suelen cotizar por bases mínimas). La pensión pública resultante será probablemente menor que la de un trabajador indefinido, así que el cálculo añade margen extra a la inversión privada.
 
 **Referencia institucional.**
 
-> La OCDE y consultoras financieras como Wade Pfau o Fidelity coinciden en recomendar dedicar entre el 10% y el 15% del ingreso a la jubilación para mantener un nivel de vida razonable tras retirarse. El cálculo orienta tu inversión hacia ese rango ajustando por tu edad, régimen y estabilidad, considerando que es uno de los pilares estructurales de la salud financiera a largo plazo.
+> La OCDE y consultoras como Wade Pfau o Fidelity coinciden en dedicar entre el 10% y el 15% del ingreso a la jubilación para mantener un nivel de vida razonable tras retirarse. El cálculo orienta tu inversión hacia ese rango ajustando por edad, régimen y estabilidad.
 
 ---
 
@@ -379,7 +379,7 @@ Driver: DEBT (solo si tienes deuda de consumo). Sin Referencia institucional.
 
 **Tu nivel de deuda de consumo.** (DEBT)
 
-> Tienes deuda de consumo {baja/media/alta} (tarjetas, préstamos personales, financiación de bienes duraderos). El cálculo reserva un margen para amortizaciones extra: pagar más de lo pactado cada mes reduce los intereses totales del préstamo, acorta el plazo y libera tu presupuesto antes. A mayor nivel de deuda, mayor es el margen recomendado para acelerar la salida.
+> Tu deuda de consumo {baja/media/alta} (tarjetas, préstamos personales, financiación de bienes duraderos): el cálculo reserva un margen para amortizaciones extra. Pagar más de lo pactado reduce los intereses totales, acorta el plazo y libera tu presupuesto antes. A mayor deuda, mayor el margen recomendado.
 
 ---
 
