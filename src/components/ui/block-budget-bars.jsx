@@ -13,7 +13,7 @@
  *
  * No se usa recharts. Layout puro con Tailwind + divs.
  *
- * En modo "inverse" no se renderiza (mismo comportamiento que BlockPiechartsRow).
+ * En modo "inverse" no se renderiza.
  *
  * @param {Object} props
  * @param {Object} props.dataByBlock
@@ -26,26 +26,14 @@
  *   En modo "inverse" el componente devuelve null. Default: "recommended".
  */
 
-import { CATEGORY_COLORS } from "@/lib/m37/categoryColors";
+import { BLOCK_COLORS } from "@/lib/m37/categoryColors";
 
 // ─── Configuración de bloques ─────────────────────────────────────────────────
 
 const BLOCK_CONFIG = {
-  needs: {
-    label: "Necesidades",
-    // Coincide con --chart-1 de globals.css
-    color: "oklch(0.58 0.18 38)",
-  },
-  wants: {
-    label: "Deseos",
-    // Coincide con --chart-2 de globals.css
-    color: "oklch(0.52 0.16 300)",
-  },
-  savings: {
-    label: "Ahorro",
-    // Coincide con --chart-3 de globals.css
-    color: "oklch(0.58 0.15 155)",
-  },
+  needs:   { label: "Necesidades", color: BLOCK_COLORS.needs },
+  wants:   { label: "Deseos",      color: BLOCK_COLORS.wants },
+  savings: { label: "Ahorro",      color: BLOCK_COLORS.savings },
 };
 
 const BLOCK_ORDER = ["needs", "wants", "savings"];
@@ -55,8 +43,10 @@ const BLOCK_ORDER = ["needs", "wants", "savings"];
 /**
  * Fila individual de categoría con barra proporcional al bloque.
  * El % mostrado es relativo al bloque, no al ingreso total.
+ * El color de la barra es el del bloque (todas las categorías de un bloque
+ * comparten color — la distinción es el label, no el color).
  */
-function CategoryRow({ cat, blockTotal }) {
+function CategoryRow({ cat, blockTotal, blockColor }) {
   const pctOfBlock =
     blockTotal > 0 ? Math.round((cat.value / blockTotal) * 100) : 0;
 
@@ -67,8 +57,6 @@ function CategoryRow({ cat, blockTotal }) {
     currency: "EUR",
     maximumFractionDigits: 0,
   }).format(cat.value);
-
-  const categoryColor = CATEGORY_COLORS[cat.id] ?? CATEGORY_COLORS._fallback;
 
   return (
     <div className="flex items-center gap-2">
@@ -97,12 +85,12 @@ function CategoryRow({ cat, blockTotal }) {
             className="absolute inset-0 rounded-full"
             style={{ backgroundColor: "oklch(0.92 0 0)" }}
           />
-          {/* Relleno de la barra */}
+          {/* Relleno de la barra — color del bloque (categorías distintas por label) */}
           <div
             className="absolute inset-y-0 left-0 rounded-full"
             style={{
               width: barWidth,
-              backgroundColor: categoryColor,
+              backgroundColor: blockColor,
               transition: "width 400ms ease-out",
             }}
           />
@@ -178,7 +166,7 @@ function BlockSection({ blockKey, categories, blockPctOfTotal }) {
       {/* Filas de categorías */}
       <div className="flex flex-col gap-y-1.5">
         {sorted.map((cat) => (
-          <CategoryRow key={cat.id} cat={cat} blockTotal={blockTotal} />
+          <CategoryRow key={cat.id} cat={cat} blockTotal={blockTotal} blockColor={config.color} />
         ))}
       </div>
     </div>
@@ -188,7 +176,7 @@ function BlockSection({ blockKey, categories, blockPctOfTotal }) {
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 export function BlockBudgetBars({ dataByBlock, mode = "recommended" }) {
-  // En modo inverse no se renderiza (igual que BlockPiechartsRow)
+  // En modo inverse no se renderiza
   if (mode === "inverse") return null;
   if (!dataByBlock) return null;
 

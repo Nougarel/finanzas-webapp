@@ -114,30 +114,28 @@
   --input: oklch(0.929 0.013 255.508);
   /* Focus ring navy (M35) — coherente con primario, 2px sólido en @layer base */
   --ring: oklch(0.25 0.055 264.5);
-  /* M37 — Paleta chart accesible por bloques financieros (WCAG 1.4.11, contraste ≥ 3:1 sobre --card: blanco).
-     Semántica cromática: tierra/rojo-naranja → necesidades (imprescindible),
-     violeta-malva → deseos (discrecional), verde-teal → ahorro (crecimiento/futuro).
-     Ningún hue interfiere con el navy primario (hue 264.5 ± 30°). */
+  /* M37 iteración navy-bars — Paleta chart unificada en 3 tonos navy (WCAG 1.4.11, ≥ 3:1 sobre blanco).
+     Todos comparten hue=264.5° y chroma=0.055 (misma familia que --primary).
+     Los tokens de visualización son la única excepción a la política de único navy (ADR-12):
+     las visualizaciones de datos necesitan distinción perceptible entre bloques.
+     Contrastes medidos empíricamente en Chromium (canvas WCAG 2.1):
+       chart-1 (needs):   L=0.25 → 16.13:1 (AAA) — coincide con --primary
+       chart-2 (wants):   L=0.65 →  3.25:1 (pasa WCAG 1.4.11 ≥ 3:1 para componentes)
+       chart-3 (savings): L=0.48 →  6.59:1 (AA) */
 
-  /* Rojo-naranja cálido — Necesidades (needs block). Hex aprox. #C86B3A.
-     L=0.58 → contraste sobre blanco ≈ 4.5:1 — pasa AA (texto y componente). */
-  --chart-1: oklch(0.58 0.18 38);
+  /* Navy más oscuro — Necesidades (imprescindible). Coincide con --primary. */
+  --chart-1: oklch(0.25 0.055 264.5);
 
-  /* Violeta-malva medio — Deseos (wants block). Hex aprox. #8F5DB5.
-     L=0.52 → contraste sobre blanco ≈ 5.8:1 — pasa AA. */
-  --chart-2: oklch(0.52 0.16 300);
+  /* Navy más claro — Deseos (discrecional). Contraste 3.25:1 sobre blanco. */
+  --chart-2: oklch(0.65 0.055 264.5);
 
-  /* Verde-teal medio — Ahorro (savings block). Hex aprox. #3A9E7A.
-     L=0.58 → contraste sobre blanco ≈ 4.5:1 — pasa AA. */
-  --chart-3: oklch(0.58 0.15 155);
+  /* Navy intermedio — Ahorro (crecimiento/futuro). Contraste 6.59:1 sobre blanco. */
+  --chart-3: oklch(0.48 0.055 264.5);
 
-  /* Naranja claro — variante luminosa de chart-1 (categorías individuales de needs).
-     L=0.72 → contraste sobre blanco ≈ 2.9:1 — solo para segmentos ≥ 20×20px (WCAG 1.4.11). */
-  --chart-4: oklch(0.72 0.12 38);
-
-  /* Verde claro — variante luminosa de chart-3 (categorías individuales de savings).
-     L=0.70 → contraste sobre blanco ≈ 3.1:1 — pasa el mínimo para componentes no-texto. */
-  --chart-5: oklch(0.70 0.10 155);
+  /* chart-4 y chart-5 no se usan en M37 (la paleta se consolidó en 3 tokens).
+     Se conservan para no romper potenciales referencias de shadcn. */
+  --chart-4: oklch(0.72 0.055 264.5);
+  --chart-5: oklch(0.35 0.055 264.5);
   --sidebar: oklch(0.984 0.003 247.858);
   --sidebar-foreground: var(--primary);
   --sidebar-primary: oklch(0.208 0.042 265.755);
