@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from "react";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -64,6 +64,11 @@ export default function InverseResultsPage() {
       return s ? JSON.parse(s) : null;
     } catch { return null; }
   });
+
+  // Refs para alineación dinámica col 2 con el banner navy (Fix M37).
+  const bannerRef = useRef(null);
+  const col2Ref   = useRef(null);
+  const [col2PaddingTop, setCol2PaddingTop] = useState(0);
 
   // Modo testing guiado (M18 Fase 4): notificar cálculo completado al
   // sistema research si el contexto /study está activo.
@@ -193,6 +198,30 @@ export default function InverseResultsPage() {
   }, [result]);
 
   const goBack = () => router.push("/inverse-calculator");
+
+  // Alineación dinámica col 2 (Fix M37).
+  const recalcCol2Alignment = useCallback(() => {
+    if (!bannerRef.current || !col2Ref.current) return;
+    if (!window.matchMedia("(min-width: 1280px)").matches) {
+      Promise.resolve().then(() => setCol2PaddingTop(0));
+      return;
+    }
+    const bannerTop = bannerRef.current.getBoundingClientRect().top;
+    const col2Top   = col2Ref.current.getBoundingClientRect().top;
+    const offset    = Math.max(0, Math.round(bannerTop - col2Top));
+    // Microtask para evitar setState directo dentro del layout effect (react-hooks/set-state-in-effect).
+    // La medición DOM ya está completa antes del microtask.
+    Promise.resolve().then(() => setCol2PaddingTop(offset));
+  }, []);
+
+  useLayoutEffect(() => {
+    recalcCol2Alignment();
+  }, [result, recalcCol2Alignment]);
+
+  useEffect(() => {
+    window.addEventListener("resize", recalcCol2Alignment);
+    return () => window.removeEventListener("resize", recalcCol2Alignment);
+  }, [recalcCol2Alignment]);
 
   if (!mounted) {
     return (
@@ -378,7 +407,8 @@ export default function InverseResultsPage() {
           </div>
 
           {/* Hero: ingreso requerido — bloque invertido (navy) */}
-          <div className="rounded-2xl bg-primary px-6 py-8 space-y-3 transition-colors duration-200">
+          {/* bannerRef: referencia para calcular la alineación dinámica de col 2 */}
+          <div ref={bannerRef} className="rounded-2xl bg-primary px-6 py-8 space-y-3 transition-colors duration-200">
             {/* Label blanco puro — el /70 anterior daba sensación gris-azulada */}
             <p className="text-xs font-normal uppercase tracking-meta text-primary-foreground">
               Ingreso mínimo necesario
@@ -579,16 +609,17 @@ export default function InverseResultsPage() {
 
         {/* Col 2: DashboardPanel en mode="inverse" (solo xl+, oculto en viewports menores).
             Sin sticky ni scroll interno — col 2 scrollea con la página (M37 F3).
-            pt-[128px]: alinea el panel con el banner navy en col 1.
-            Sin alertas de sistema antes del banner → solo h1 + subtítulo + gap = ~128px.
+            paddingTop dinámico: calculado por useLayoutEffect para alinear con el banner
+            navy de col 1, independientemente de los elementos variables por encima del banner.
             Modo reducido: MacroPiechart + DTI hipotético + tasa de ahorro ideal.
             Sin BlockBudgetBars en modo inverse (DashboardPanel lo omite según §6 del DESIGN.md).
             Fuente: healthyDistribution del ingreso calculado. */}
         <aside
+          ref={col2Ref}
           className="hidden xl:block xl:col-span-5"
           aria-label="Dashboard resumen ingreso mínimo calculado"
         >
-          <div className="xl:pt-[128px]">
+          <div style={{ paddingTop: col2PaddingTop > 0 ? col2PaddingTop : undefined }}>
             <DashboardPanel
               dataset={dashboardDataset}
               mode="inverse"

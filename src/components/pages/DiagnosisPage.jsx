@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense, useRef, useMemo } from "react";
+import { useState, useEffect, useLayoutEffect, useCallback, Suspense, useRef, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { Check, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -199,6 +199,11 @@ function DiagnosisContent() {
   // Estado efímero del panel de detalle (ADR-11 — no en URL)
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
 
+  // Refs para alineación dinámica col 2 con el banner navy (Fix M37).
+  const bannerRef = useRef(null);
+  const col2Ref   = useRef(null);
+  const [col2PaddingTop, setCol2PaddingTop] = useState(0);
+
   // Modo testing guiado (M18 Fase 4): notificar diagnóstico completado al
   // sistema research si el contexto /study está activo.
   const study = useStudyContextOptional();
@@ -274,6 +279,31 @@ function DiagnosisContent() {
       },
     };
   }, [diagnosis, income]);
+
+  // ── Alineación dinámica col 2 (Fix M37) ──────────────────────────────────────
+
+  const recalcCol2Alignment = useCallback(() => {
+    if (!bannerRef.current || !col2Ref.current) return;
+    if (!window.matchMedia("(min-width: 1280px)").matches) {
+      Promise.resolve().then(() => setCol2PaddingTop(0));
+      return;
+    }
+    const bannerTop = bannerRef.current.getBoundingClientRect().top;
+    const col2Top   = col2Ref.current.getBoundingClientRect().top;
+    const offset    = Math.max(0, Math.round(bannerTop - col2Top));
+    // Microtask para evitar setState directo dentro del layout effect (react-hooks/set-state-in-effect).
+    // La medición DOM ya está completa antes del microtask.
+    Promise.resolve().then(() => setCol2PaddingTop(offset));
+  }, []);
+
+  useLayoutEffect(() => {
+    recalcCol2Alignment();
+  }, [diagnosis, recalcCol2Alignment]);
+
+  useEffect(() => {
+    window.addEventListener("resize", recalcCol2Alignment);
+    return () => window.removeEventListener("resize", recalcCol2Alignment);
+  }, [recalcCol2Alignment]);
 
   // ── Guards de estado ─────────────────────────────────────────────────────────
 
@@ -397,7 +427,8 @@ function DiagnosisContent() {
           </div>
 
           {/* Ingreso de referencia — hero invertido (navy) */}
-          <div className="rounded-2xl bg-primary px-6 py-8 space-y-3 transition-colors duration-200">
+          {/* bannerRef: referencia para calcular la alineación dinámica de col 2 */}
+          <div ref={bannerRef} className="rounded-2xl bg-primary px-6 py-8 space-y-3 transition-colors duration-200">
             {/* Label blanco puro — el /70 anterior daba sensación gris-azulada */}
             <p className="text-xs font-normal uppercase tracking-meta text-primary-foreground">
               Ingreso neto de referencia
@@ -623,16 +654,15 @@ function DiagnosisContent() {
 
         {/* Col 2: DashboardPanel en mode="real" (solo xl+, oculto en viewports menores).
             Sin sticky ni scroll interno — col 2 scrollea con la página (M37 F3).
-            pt-[210px]: alinea el panel con el banner navy del ingreso en col 1.
-            Valor fijo para perfil con alertas (igual que /results pero sin chip del modelo: -28px).
-            Fuente de datos: realDistribution — muestra lo que el usuario GASTA,
-            no la distribución ideal. Los indicadores se calculan sobre el ingreso real
-            de referencia como denominador. */}
+            paddingTop dinámico: calculado por useLayoutEffect para alinear con el banner
+            navy de col 1, independientemente del número de alertas u otros elementos
+            variables por encima del banner. */}
         <aside
+          ref={col2Ref}
           className="hidden xl:block xl:col-span-5"
           aria-label="Dashboard resumen de situación real"
         >
-          <div className="xl:pt-[210px]">
+          <div style={{ paddingTop: col2PaddingTop > 0 ? col2PaddingTop : undefined }}>
             <DashboardPanel
               dataset={dashboardDataset}
               mode="real"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense, useRef, useMemo } from "react";
+import { useState, useEffect, useLayoutEffect, useCallback, Suspense, useRef, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -147,6 +147,14 @@ function ResultsContent() {
   const incomeParam = searchParams.get("income");
   const income = parseFloat(incomeParam);
 
+  // Refs para alineación dinámica col 2 con el banner navy (Fix M37).
+  // bannerRef → div navy de ingreso en col 1.
+  // col2Ref   → aside de col 2.
+  // col2PaddingTop → estado que contiene el paddingTop calculado.
+  const bannerRef = useRef(null);
+  const col2Ref   = useRef(null);
+  const [col2PaddingTop, setCol2PaddingTop] = useState(0);
+
   // Modo testing guiado (M18 Fase 4): si el contexto /study está activo,
   // notificamos el cálculo completado para marcar el flujo como probado.
   const study = useStudyContextOptional();
@@ -211,6 +219,33 @@ function ResultsContent() {
       },
     };
   }, [result, income]);
+
+  // Alineación dinámica col 2 — useLayoutEffect para evitar flash visual.
+  // Se recalcula cuando result cambia (alertas pueden aparecer/desaparecer)
+  // y en resize (breakpoint puede cruzar xl).
+  const recalcCol2Alignment = useCallback(() => {
+    if (!bannerRef.current || !col2Ref.current) return;
+    // Solo aplica en xl+ (≥1280px). Por debajo, paddingTop = 0.
+    if (!window.matchMedia("(min-width: 1280px)").matches) {
+      Promise.resolve().then(() => setCol2PaddingTop(0));
+      return;
+    }
+    const bannerTop = bannerRef.current.getBoundingClientRect().top;
+    const col2Top   = col2Ref.current.getBoundingClientRect().top;
+    const offset    = Math.max(0, Math.round(bannerTop - col2Top));
+    // Microtask para evitar setState directo dentro del layout effect (react-hooks/set-state-in-effect).
+    // La medición DOM ya está completa antes del microtask.
+    Promise.resolve().then(() => setCol2PaddingTop(offset));
+  }, []);
+
+  useLayoutEffect(() => {
+    recalcCol2Alignment();
+  }, [result, recalcCol2Alignment]);
+
+  useEffect(() => {
+    window.addEventListener("resize", recalcCol2Alignment);
+    return () => window.removeEventListener("resize", recalcCol2Alignment);
+  }, [recalcCol2Alignment]);
 
   if (!mounted) {
     return (
@@ -315,7 +350,8 @@ function ResultsContent() {
           </div>
 
           {/* Ingreso mensual — hero invertido (navy) */}
-          <div className="rounded-2xl bg-primary px-6 py-8 space-y-3 transition-colors duration-200">
+          {/* bannerRef: referencia para calcular la alineación dinámica de col 2 */}
+          <div ref={bannerRef} className="rounded-2xl bg-primary px-6 py-8 space-y-3 transition-colors duration-200">
             {/* Label en blanco puro (sin opacity attenuation) — el /70 anterior
                 se percibía azul-grisáceo sobre el navy en lugar de blanco. */}
             <p className="text-xs font-normal uppercase tracking-meta text-primary-foreground">
@@ -679,15 +715,16 @@ function ResultsContent() {
 
         {/* Col 2: DashboardPanel (solo xl+, oculto en viewports menores).
             Sin sticky ni scroll interno — col 2 scrollea con la página (M37 F3).
-            pt-[238px]: alinea el panel con el banner navy del ingreso en col 1.
-            Valor fijo basado en el perfil rico (alertas + h1 + subtítulo + chip).
-            En perfiles sin alertas el panel quedará ~110px más arriba del banner — trade-off
-            aceptado por el diseñador sobre implementar medición dinámica con useRef. */}
+            paddingTop dinámico: useLayoutEffect mide la distancia entre el top del banner
+            navy (col 1) y el top del aside (col 2) y aplica ese valor como paddingTop.
+            Esto garantiza alineación exacta con el banner independientemente del número
+            de alertas, del chip del modelo o de cualquier otro elemento variable en col 1. */}
         <aside
+          ref={col2Ref}
           className="hidden xl:block xl:col-span-5"
           aria-label="Dashboard resumen financiero"
         >
-          <div className="xl:pt-[238px]">
+          <div style={{ paddingTop: col2PaddingTop > 0 ? col2PaddingTop : undefined }}>
             <DashboardPanel
               dataset={dashboardDataset}
               mode="recommended"
