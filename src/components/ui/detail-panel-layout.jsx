@@ -123,13 +123,13 @@ export function DetailPanelLayout({
       <div>{children}</div>
 
       {/* ── Drawer flotante — solo desktop (lg+) ───────────────────────────────
-          position: fixed, anclado a la derecha del viewport (sin margen derecho:
-          flush con el borde — las esquinas derechas son cuadradas, solo las
-          izquierdas tienen radio, patrón de drawer lateral estándar).
+          position: fixed, anclado a la derecha del viewport CON MARGEN.
+          Tarjeta flotante: margen en top, right y bottom; esquinas redondeadas
+          en las cuatro. z-50 → por encima del header global para que el panel
+          ocupe el alto COMPLETO del viewport (no solo el espacio bajo el header).
           Se superpone al contenido sin empujarlo (overlay, no push).
-          top = altura del SiteHeader + 12px gap; bottom = 12px gap.
-          El panel ocupa todo el viewport disponible (altura completa).
-          Ancho 500px; sombra multi-layer asimétrica; borde-left navy.
+          Ancho 500px; sombra multi-layer asimétrica; borde izquierdo navy
+          de acento que separa el panel del main.
           Animación: slide-in-from-right 220ms ease-out al abrir.
       */}
       {isOpen && (
@@ -139,23 +139,24 @@ export function DetailPanelLayout({
           className={cn(
             // Solo visible en desktop
             "hidden lg:flex flex-col",
-            // Posicionamiento fixed: flush con el borde derecho del viewport,
-            // 12px de gap arriba (tras el header) y abajo
-            "fixed right-0 z-30",
-            // Altura completa entre header y borde inferior del viewport
-            "top-[calc(var(--site-header-height)+12px)]",
-            "bottom-3",
+            // Posicionamiento fixed con margen en los 3 lados (tarjeta flotante).
+            // z-50: por encima del header global (z-40) para ocupar TODA la
+            // altura del viewport — el panel cubre la parte derecha del header,
+            // que es área vacía sin contenido.
+            "fixed right-4 z-50",
+            // Altura COMPLETA del viewport: 12px de gap arriba y abajo,
+            // ignorando la altura del SiteHeader (el panel pasa por encima).
+            "top-3 bottom-3",
             // Ancho 500px
             "w-[500px]",
             // Superficie: blanco ligeramente cálido-neutral (var definida en globals.css)
             // separada del slate-50 del main por temperatura de color
             "bg-[var(--panel-surface)]",
-            // Esquinas: solo top-left y bottom-left redondeadas (patrón de drawer lateral)
-            // La derecha es flush con el viewport — radio aquí no tiene sentido visual
-            "rounded-l-xl",
-            // Borde: acento izquierdo navy 20% de opacidad — corte físico visible.
-            // El resto de bordes se omite: el acento izquierdo ya separa el panel
-            // del main; top/bottom quedan en el aire del viewport sin borde necesario.
+            // Esquinas redondeadas en las cuatro (tarjeta flotante con margen
+            // en los cuatro bordes; el patrón de las referencias del usuario)
+            "rounded-xl",
+            // Borde-izquierdo de acento navy 20% — corte físico visible que
+            // separa el panel del main sin oscurecer nada.
             "border-l-2 border-l-[rgba(20,33,61,0.20)]",
             // Sombra multi-layer asimétrica (M36):
             //   - capa key: offset -8px en X, radio 28px, navy 10% → luz desde la derecha
