@@ -10,6 +10,8 @@ import { DataTable } from "@/components/ui/data-table";
 import { MoneyValue } from "@/components/ui/money-value";
 import { PageShell } from "@/components/ui/page-shell";
 import { HealthGauge } from "@/components/ui/health-gauge";
+import { DetailPanelLayout } from "@/components/ui/detail-panel-layout";
+import { CategoryDetail } from "@/components/ui/category-detail";
 import { CATEGORIES_UI } from "@/lib/models/categories";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useStudyContextOptional } from "@/lib/research/useStudyContext";
@@ -193,6 +195,8 @@ function DiagnosisContent() {
     );
   });
   const [calcError, setCalcError] = useState(null);
+  // Estado efímero del panel de detalle (ADR-11 — no en URL)
+  const [selectedCategoryId, setSelectedCategoryId] = useState(null);
 
   // Modo testing guiado (M18 Fase 4): notificar diagnóstico completado al
   // sistema research si el contexto /study está activo.
@@ -349,7 +353,8 @@ function DiagnosisContent() {
 
           {/* Ingreso de referencia — hero invertido (navy) */}
           <div className="rounded-2xl bg-primary px-6 py-8 space-y-3 transition-colors duration-200">
-            <p className="text-xs font-medium uppercase tracking-meta text-primary-foreground/70">
+            {/* Label blanco puro — el /70 anterior daba sensación gris-azulada */}
+            <p className="text-xs font-normal uppercase tracking-meta text-primary-foreground">
               Ingreso neto de referencia
             </p>
             <MoneyValue
@@ -362,7 +367,7 @@ function DiagnosisContent() {
             </p>
           </div>
 
-          {/* Score de salud */}
+          {/* Score de salud — card protagonista, elevación sutil (M36) */}
           {diagnosis.healthScore && (
             <HealthGauge
               score={diagnosis.healthScore.score}
@@ -370,6 +375,7 @@ function DiagnosisContent() {
               label="Salud financiera de tu situación real"
               penalties={diagnosis.healthScore.penalties ?? []}
               categoryLabels={categoryLabels}
+              className="card-elevated"
             />
           )}
 
@@ -428,80 +434,118 @@ function DiagnosisContent() {
             })}
           </div>
 
-          {/* Comparativa por categoría, agrupada por bloque */}
-          <div className="space-y-8">
+          {/* Comparativa por categoría, agrupada por bloque — con panel de detalle M36 */}
+          <DetailPanelLayout
+            selectedCategoryId={selectedCategoryId}
+            onClose={() => setSelectedCategoryId(null)}
+            panelContent={
+              selectedCategoryId && diagnosis.healthyDistribution?.[selectedCategoryId]
+                ? (
+                  <CategoryDetail
+                    category={diagnosis.healthyDistribution[selectedCategoryId]}
+                    ineData={null}
+                    income={income}
+                    onClose={() => setSelectedCategoryId(null)}
+                    drivers={diagnosis.explanation?.[selectedCategoryId]?.drivers ?? []}
+                    profile={profile}
+                  />
+                )
+                : null
+            }
+          >
+            <div className="space-y-8">
 
-            {/* Guía de lectura J4 — cómo interpretar la tabla */}
-            <p className="text-sm font-light text-muted-foreground leading-relaxed">
-              La tabla compara lo que gastas realmente en cada categoría frente a la distribución
-              saludable calculada para tu perfil e ingreso. El campo{" "}
-              <span className="font-medium text-foreground">Estado</span> indica si tu gasto está{" "}
-              <span className="font-medium text-[color:var(--success-foreground)]">Alineado</span>{" "}
-              con el rango saludable,{" "}
-              <span className="font-medium text-[color:var(--warning-foreground)]">Por encima</span>{" "}
-              (riesgo de desajuste) o{" "}
-              <span className="font-medium text-[color:var(--info-foreground)]">Por debajo</span>{" "}
-              (margen de mejora). El{" "}
-              <span className="font-medium text-foreground">score de salud financiera</span> resume
-              el conjunto: cuantas más categorías estén alineadas, mayor será la puntuación.
-            </p>
+              {/* Guía de lectura J4 — cómo interpretar la tabla */}
+              <p className="text-sm font-light text-muted-foreground leading-relaxed">
+                La tabla compara lo que gastas realmente en cada categoría frente a la distribución
+                saludable calculada para tu perfil e ingreso. El campo{" "}
+                <span className="font-medium text-foreground">Estado</span> indica si tu gasto está{" "}
+                <span className="font-medium text-[color:var(--success-foreground)]">Alineado</span>{" "}
+                con el rango saludable,{" "}
+                <span className="font-medium text-[color:var(--warning-foreground)]">Por encima</span>{" "}
+                (riesgo de desajuste) o{" "}
+                <span className="font-medium text-[color:var(--info-foreground)]">Por debajo</span>{" "}
+                (margen de mejora). El{" "}
+                <span className="font-medium text-foreground">score de salud financiera</span> resume
+                el conjunto: cuantas más categorías estén alineadas, mayor será la puntuación.
+              </p>
 
-            {BLOCK_ORDER.map((blockKey) => {
-              const cats = CATEGORIES_UI.filter((c) => c.block === blockKey);
-              const blockAlert = diagnosis.alerts?.[`_${blockKey}_block`];
+              {/* Hint clicable — desaparece cuando el panel está abierto */}
+              {!selectedCategoryId && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                  <span aria-hidden="true">›</span>
+                  Toca cualquier categoría para ver el respaldo institucional de su cálculo.
+                </p>
+              )}
 
-              // Construir filas para DataTable
-              const tableData = cats.map((cat) => {
-                const c = diagnosis.comparison[cat.id];
-                return {
-                  id: cat.id,
-                  label: cat.label,
-                  realAmount: c.realAmount,
-                  healthyAmount: c.healthyAmount,
-                  healthyPercentage: c.healthyPercentage,
-                  diffAmount: c.diffAmount,
-                  status: c.status,
-                  catAlert: diagnosis.alerts?.[cat.id] ?? null,
-                };
-              });
+              {BLOCK_ORDER.map((blockKey) => {
+                const cats = CATEGORIES_UI.filter((c) => c.block === blockKey);
+                const blockAlert = diagnosis.alerts?.[`_${blockKey}_block`];
 
-              return (
-                <section key={blockKey} aria-labelledby={`block-${blockKey}-heading`}>
-                  {/* Cabecera de bloque */}
-                  <div className="flex items-baseline justify-between border-b-2 border-foreground/10 pb-2 mb-3">
-                    <div className="flex items-baseline gap-3">
+                // Construir filas para DataTable
+                const tableData = cats.map((cat) => {
+                  const c = diagnosis.comparison[cat.id];
+                  return {
+                    id: cat.id,
+                    label: cat.label,
+                    realAmount: c.realAmount,
+                    healthyAmount: c.healthyAmount,
+                    healthyPercentage: c.healthyPercentage,
+                    diffAmount: c.diffAmount,
+                    status: c.status,
+                    catAlert: diagnosis.alerts?.[cat.id] ?? null,
+                  };
+                });
+
+                return (
+                  <section key={blockKey} aria-labelledby={`block-${blockKey}-heading`}>
+                    {/* Banner navy de bloque — reemplaza la cabecera anterior.
+                        rounded-t-lg en el banner + DataTable sin margen superior
+                        → visualmente se leen como una unidad. */}
+                    <div className="flex items-center justify-between rounded-t-lg bg-primary px-4 py-2.5">
                       <h2
                         id={`block-${blockKey}-heading`}
-                        className="text-lg font-bold text-foreground"
+                        className="text-xs font-bold uppercase tracking-meta text-primary-foreground"
                       >
                         {diagnosis.blocks[blockKey].label}
                       </h2>
+                      <MoneyValue
+                        amount={diagnosis.blocks[blockKey].realAmount}
+                        size="table"
+                        className="font-semibold text-primary-foreground"
+                      />
                     </div>
-                    <MoneyValue
-                      amount={diagnosis.blocks[blockKey].realAmount}
-                      size="table"
-                      className="text-muted-foreground"
+
+                    {/* Alerta de bloque */}
+                    {blockAlert && (
+                      <div className="mb-3">
+                        <Alert variant={alertVariantFromLevel(blockAlert.level)}>
+                          {diagnosis.blocks[blockKey].label}: {blockAlert.message}
+                        </Alert>
+                      </div>
+                    )}
+
+                    <DataTable
+                      columns={comparisonColumns}
+                      data={tableData}
+                      caption={`Comparativa de ${diagnosis.blocks[blockKey].label}`}
+                      rowKey="id"
+                      flushTop
+                      onRowClick={(row) => {
+                        // Clic en fila activa = no-op (el drawer permanece abierto).
+                        // Clic en fila distinta = cambia el contenido del drawer.
+                        if (row.id !== selectedCategoryId) {
+                          setSelectedCategoryId(row.id);
+                        }
+                      }}
+                      activeRowKey={selectedCategoryId}
                     />
-                  </div>
+                  </section>
+                );
+              })}
 
-                  {/* Alerta de bloque */}
-                  {blockAlert && (
-                    <div className="mb-3">
-                      <Alert variant={alertVariantFromLevel(blockAlert.level)}>
-                        {diagnosis.blocks[blockKey].label}: {blockAlert.message}
-                      </Alert>
-                    </div>
-                  )}
-
-                  <DataTable
-                    columns={comparisonColumns}
-                    data={tableData}
-                    caption={`Comparativa de ${diagnosis.blocks[blockKey].label}`}
-                  />
-                </section>
-              );
-            })}
-          </div>
+            </div>
+          </DetailPanelLayout>
 
           {/* Botones de acción */}
           <div className="flex flex-wrap gap-3 justify-center pt-2">

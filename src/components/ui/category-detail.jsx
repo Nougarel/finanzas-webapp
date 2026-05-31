@@ -1,0 +1,292 @@
+"use client";
+
+/**
+ * CategoryDetail — Panel de detalle de categoría (M36 Fase 1 + Fase 2b).
+ *
+ * Fase 1 (capa 1): procedencia semántica, indicador de relevance, comparación INE.
+ * Fase 2b (capa 2): bullets cualitativos "Cómo afecta tu perfil" generados desde
+ *   los drivers emitidos por el motor y las plantillas del diccionario M36.
+ *
+ * Mejoras M36 Fase 2 aplicadas en este archivo:
+ *   - Mejora 2: jerarquía de cabecera — importe protagonista, nombre como label.
+ *   - Mejora 3: separadores hairline entre secciones del cuerpo.
+ *   - Mejora 4: reset de scroll al cambiar de categoría (useEffect + useRef).
+ *
+ * Props:
+ *   category   {object}       — entrada de result.categories[catId]
+ *   ineData    {object|null}  — entrada de result.ineComparison[catId], puede ser null
+ *   income     {number}       — ingreso mensual para formatear importes
+ *   onClose    {function}     — callback para cerrar el panel
+ *   drivers    {string[]}     — tokens de drivers de result.explanation[catId].drivers
+ *   profile    {object|null}  — perfil del usuario (de localStorage)
+ */
+
+import * as React from "react";
+import { XIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { MoneyValue } from "@/components/ui/money-value";
+import {
+  getRelevanceInfo,
+  CONTEXTUAL_FLEXIBILITY_MESSAGE,
+} from "@/lib/m36/relevance";
+import { getDriverBullets } from "@/lib/m36/explanations";
+
+// ── Indicador de puntos de relevance ────────────────────────────────────────
+
+function RelevanceDots({ filled, total, label }) {
+  return (
+    <span
+      className="flex items-center gap-0.5"
+      role="img"
+      aria-label={`Relevancia: ${filled} de ${total} — ${label}`}
+    >
+      {Array.from({ length: total }).map((_, i) => (
+        <span
+          key={i}
+          className={cn(
+            "inline-block h-2 w-2 rounded-full",
+            i < filled ? "bg-primary" : "bg-muted-foreground/30"
+          )}
+        />
+      ))}
+    </span>
+  );
+}
+
+// ── Comparación INE ─────────────────────────────────────────────────────────
+
+function IneComparison({ ineData, block }) {
+  if (!ineData) return null;
+
+  const { ineReference, assigned, vsIne } = ineData;
+
+  // vsIne positivo → por encima de la media; negativo → por debajo
+  const diffLabel =
+    vsIne > 0
+      ? `${Math.abs(vsIne).toFixed(1)} p.p. por encima de la media`
+      : vsIne < 0
+      ? `${Math.abs(vsIne).toFixed(1)} p.p. por debajo de la media`
+      : "en la media española";
+
+  return (
+    <div className="rounded-md bg-muted/40 px-3 py-2.5 space-y-0.5">
+      <p className="text-xs font-medium text-muted-foreground uppercase tracking-meta">
+        Comparación con la media española
+      </p>
+      <div className="flex justify-between text-sm mt-1">
+        <span className="text-muted-foreground">
+          {block === "wants" ? "Media (INE, gasto observado)" : "Media española (INE)"}
+        </span>
+        <span className="font-medium tabular-nums">{ineReference}%</span>
+      </div>
+      <div className="flex justify-between text-sm">
+        <span className="text-muted-foreground">Tu distribución</span>
+        <span className="font-medium tabular-nums">{assigned.toFixed(1)}%</span>
+      </div>
+      <p className="text-xs text-muted-foreground pt-0.5">{diffLabel}</p>
+    </div>
+  );
+}
+
+// ── Sección de bullets de perfil (Fase 2b) ──────────────────────────────────
+
+/**
+ * Renderiza la lista de bullets "Cómo afecta tu perfil".
+ * Solo se muestra cuando hay bullets que mostrar (drivers no vacíos en categorías
+ * de necesidades/ahorro). Los bullets del bloque deseos llegan vacíos → null.
+ */
+function ProfileDriversBullets({ bullets }) {
+  if (!bullets || bullets.length === 0) return null;
+
+  return (
+    <div className="space-y-1.5">
+      <p className="text-xs font-medium text-muted-foreground uppercase tracking-meta">
+        Cómo afecta tu perfil
+      </p>
+      <dl className="space-y-3.5">
+        {bullets.map((bullet, idx) => (
+          <div key={idx} className="space-y-0.5">
+            <dt className="text-sm font-semibold text-foreground leading-snug">
+              {bullet.label}
+            </dt>
+            <dd className="text-sm text-muted-foreground leading-relaxed">
+              {bullet.text}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
+// ── Componente principal ─────────────────────────────────────────────────────
+
+export function CategoryDetail({ category, ineData, income, onClose, drivers, profile }) {
+  // Ref al contenedor scrollable interno — usado para el reset de scroll (mejora 4).
+  // Declarado antes del early return para no violar la regla de hooks.
+  const scrollRef = React.useRef(null);
+
+  // Reset de scroll al cambiar de categoría (mejora 4 M36):
+  // cuando el usuario clica otra categoría con el panel ya abierto,
+  // el contenido vuelve al principio en lugar de mantener la posición anterior.
+  // category?.id es null cuando el panel está cerrado — el efecto no hace nada.
+  React.useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = 0;
+    }
+  }, [category?.id]);
+
+  if (!category) return null;
+
+  const relevanceInfo = getRelevanceInfo({
+    referenceReliability: category.referenceReliability,
+    referenceSource: category.referenceSource,
+  });
+
+  const { label, filled, total, sources, isContextual } = relevanceInfo;
+
+  // Frase de procedencia compuesta desde las fuentes traducidas
+  const sourceSentence = buildSourceSentence(sources);
+
+  // Bullets de Fase 2b — solo si hay drivers y perfil disponibles
+  const profileBullets = (drivers && profile)
+    ? getDriverBullets(category.id, drivers, profile)
+    : [];
+
+  return (
+    <div className="flex flex-col overflow-hidden flex-1 min-h-0" data-slot="category-detail">
+      {/* ── Cabecera del panel ──
+          Jerarquía (mejora 2 M36):
+            - Nombre de categoría: label semántico, menor importancia visual.
+            - Importe: dato protagonista, tamaño y peso máximos.
+            - Porcentaje: contexto discreto junto al importe.
+      */}
+      {/* shrink-0: la cabecera nunca se encoge en el modelo flex del panel */}
+      <div className="shrink-0 flex items-start justify-between gap-3 pb-4 border-b border-border">
+        <div className="space-y-1 min-w-0">
+          {/* Label semántico: uppercase pequeño, color muted — lectura secundaria */}
+          <h2 className="text-xs font-medium uppercase tracking-meta text-muted-foreground leading-none truncate">
+            {category.label}
+          </h2>
+          {/* Importe protagonista + porcentaje discreto */}
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <MoneyValue
+              amount={category.amount}
+              size="table"
+              className="text-2xl font-bold text-foreground"
+            />
+            <span className="text-sm text-muted-foreground tabular-nums">
+              ({category.percentage.toFixed(1)}%)
+            </span>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          aria-label="Cerrar panel de detalle"
+        >
+          <XIcon className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </div>
+
+      {/* ── Cuerpo scrollable ──
+          ref conectado para reset de scroll (mejora 4).
+          Separadores hairline entre secciones (mejora 3):
+          se aplica border-t border-border/50 pt-5 a cada sección
+          excepto la primera para crear ritmo visual sin ruido.
+      */}
+      {/* pr-3 separa el texto de la scrollbar — la barra queda cerca del
+          borde derecho del aside (sensación "del panel") y el contenido tiene
+          12px de aire respecto a ella.
+          tabIndex=0: el contenedor con overflow-y-auto debe ser focalizable
+          por teclado para que un usuario sin ratón pueda hacer scroll dentro
+          del panel (WCAG 2.1 — scrollable-region-focusable). */}
+      <div
+        ref={scrollRef}
+        tabIndex={0}
+        className="flex-1 overflow-y-auto min-h-0 pt-4 pr-3 panel-scroll-area focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring"
+      >
+        <div className="space-y-0">
+
+          {/* Sección 1 (primera — sin separador): Relevancia */}
+          <div className="space-y-1.5 pb-5">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-meta">
+              Relevancia para la salud financiera
+            </p>
+            <div className="flex items-center gap-2">
+              <RelevanceDots filled={filled} total={total} label={label} />
+              <span className="text-sm font-medium text-foreground">{label}</span>
+            </div>
+          </div>
+
+          {/* Sección 2: Respaldo institucional — separador arriba */}
+          {sourceSentence && (
+            <div className="border-t border-border/50 pt-5 pb-5 space-y-1.5">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-meta">
+                Respaldo institucional
+              </p>
+              <p className="text-sm text-foreground leading-relaxed">
+                {sourceSentence}
+              </p>
+            </div>
+          )}
+
+          {/* Sección 3: Cómo afecta tu perfil (Fase 2b) — separador arriba */}
+          {profileBullets && profileBullets.length > 0 && (
+            <div className="border-t border-border/50 pt-5 pb-5">
+              <ProfileDriversBullets bullets={profileBullets} />
+            </div>
+          )}
+
+          {/* Sección 4: Comparación INE — separador arriba */}
+          {ineData && (
+            <div className="border-t border-border/50 pt-5 pb-5">
+              <IneComparison ineData={ineData} block={category.block} />
+            </div>
+          )}
+
+          {/* Sección 5: Nota sobre flexibilidad — solo en CONTEXTUAL, separador arriba */}
+          {isContextual && (
+            <div className="border-t border-border/50 pt-5 pb-5">
+              <div
+                className="rounded-md border border-border bg-muted/20 px-3 py-3 space-y-1"
+                role="note"
+                aria-label="Nota sobre flexibilidad de la categoría"
+              >
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-meta">
+                  Nota sobre flexibilidad
+                </p>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {CONTEXTUAL_FLEXIBILITY_MESSAGE}
+                </p>
+              </div>
+            </div>
+          )}
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Utilidad interna: construir frase de procedencia ────────────────────────
+
+/**
+ * Convierte un array de frases de fuentes a una oración legible.
+ * Ej: ["el Banco de España", "Eurostat"]
+ *   → "Este umbral está respaldado por el Banco de España y la oficina estadística de la Unión Europea (Eurostat)."
+ */
+function buildSourceSentence(sources) {
+  if (!sources || sources.length === 0) return null;
+
+  const unique = [...new Set(sources)];
+
+  if (unique.length === 1) {
+    return `Esta referencia está respaldada por ${unique[0]}.`;
+  }
+
+  const last = unique[unique.length - 1];
+  const rest = unique.slice(0, -1);
+  return `Esta referencia está respaldada por ${rest.join(", ")} y ${last}.`;
+}

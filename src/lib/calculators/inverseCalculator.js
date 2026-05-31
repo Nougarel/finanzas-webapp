@@ -102,7 +102,8 @@ function runLP(profile, income, specifiedAmounts) {
     }
   }
 
-  const { targets, factibleMaxOverrides, insufficientBudget } = calculateTargets(profile, income);
+  const { targets, factibleMaxOverrides, insufficientBudget, explanation } =
+    calculateTargets(profile, income);
 
   const lpWeightOverrides = profile.housingPurchaseGoal === true
     ? { long_term_savings: 35 }
@@ -115,7 +116,7 @@ function runLP(profile, income, specifiedAmounts) {
     factibleMaxOverrides,
   });
 
-  return { lpResult, targets, insufficientBudget };
+  return { lpResult, targets, insufficientBudget, explanation };
 }
 
 /**
@@ -328,7 +329,8 @@ export function calculateInverse(profile, specifiedAmounts = {}, options = {}) {
   let incomeForDistribution = Math.ceil(high);
 
   // 4. LP final con el ingreso convergido
-  let { lpResult, targets, insufficientBudget } = runLP(profileForInverse, incomeForDistribution, specifiedAmounts);
+  let { lpResult, targets, insufficientBudget, explanation } =
+    runLP(profileForInverse, incomeForDistribution, specifiedAmounts);
 
   // 5. Safety check: necesidades no fijadas deben recibir ≥ 95% de su target
   const MAX_RETRIES = 5;
@@ -336,7 +338,8 @@ export function calculateInverse(profile, specifiedAmounts = {}, options = {}) {
   while (retries < MAX_RETRIES) {
     if (!lpResult.feasible) {
       incomeForDistribution += 100;
-      ({ lpResult, targets, insufficientBudget } = runLP(profileForInverse, incomeForDistribution, specifiedAmounts));
+      ({ lpResult, targets, insufficientBudget, explanation } =
+        runLP(profileForInverse, incomeForDistribution, specifiedAmounts));
       retries++;
       continue;
     }
@@ -359,7 +362,8 @@ export function calculateInverse(profile, specifiedAmounts = {}, options = {}) {
     if (allOk) break;
 
     incomeForDistribution += 100;
-    ({ lpResult, targets, insufficientBudget } = runLP(profileForInverse, incomeForDistribution, specifiedAmounts));
+    ({ lpResult, targets, insufficientBudget, explanation } =
+      runLP(profileForInverse, incomeForDistribution, specifiedAmounts));
     retries++;
   }
 
@@ -524,5 +528,7 @@ export function calculateInverse(profile, specifiedAmounts = {}, options = {}) {
     comparison,
     warnings,
     insufficientBudget: insufficientBudget === true,
+    // Drivers cualitativos del LP final (mismo contrato que las otras dos APIs).
+    explanation,
   };
 }

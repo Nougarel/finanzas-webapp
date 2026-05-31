@@ -317,8 +317,10 @@ export function calculateDistribution(profile, income) {
   const effectiveIncome = Math.max(rawEffective, 200);
   const incomeRatio     = effectiveIncome / income;
 
-  // 1. Calcular targets por categoría según perfil e ingreso efectivo
-  const { targets: categoryTargets, factibleMaxOverrides, insufficientBudget } =
+  // 1. Calcular targets por categoría según perfil e ingreso efectivo.
+  //    `explanation` recoge los drivers cualitativos que cada calc*Target
+  //    disparó al construir su target — viaja tal cual al cliente.
+  const { targets: categoryTargets, factibleMaxOverrides, insufficientBudget, explanation } =
     calculateTargets(profile, effectiveIncome);
 
   // 2. Obtener configuraciones de needs y savings para el solver
@@ -417,13 +419,16 @@ export function calculateDistribution(profile, income) {
   const phase = derivePhase(profile);
 
   // 14. Diagnóstico por categoría: comparación asignado vs target personalizado.
-  //     Valores en frame del LP (% sobre ingreso efectivo). Para perfiles sin
-  //     deuda incomeRatio=1 y coincide con el display; para perfiles con deuda
-  //     el target y el assigned están en el mismo frame, así que la desviación
-  //     es directamente interpretable en puntos porcentuales.
+  //     Se construye en dos capas:
+  //       - internalDiagnosis: incluye target y deviation crudos (frame del LP).
+  //         Lo usa calculateHealthScore aquí dentro; NO sale al cliente.
+  //       - categoryDiagnosis (público): solo lo cualitativo + assigned. Sin
+  //         target ni deviation numéricos — esos son el "vector de
+  //         reconstrucción por resta" que M36 retira del payload.
   const targetMap = Object.fromEntries(categoryTargets.map(t => [t.categoryId, t.target]));
   const ON_TARGET_THRESHOLD = 1.5; // puntos porcentuales
 
+  const internalDiagnosis = {};
   const categoryDiagnosis = {};
 
   // Needs + Savings — diagnóstico individual con target personalizado
@@ -437,11 +442,20 @@ export function calculateDistribution(profile, income) {
     else if (deviation > 0)                              status = 'above_target';
     else                                                 status = 'below_target';
 
-    categoryDiagnosis[cat.id] = {
+    // Versión interna (para el score) — con target/deviation numéricos.
+    internalDiagnosis[cat.id] = {
       categoryId: cat.id,
       assigned:   parseFloat(assigned.toFixed(2)),
       target:     parseFloat(target.toFixed(2)),
       deviation:  parseFloat(deviation.toFixed(2)),
+      status,
+    };
+
+    // Versión pública — solo lo cualitativo y el assigned (que ya es público
+    // vía categories[id].percentage).
+    categoryDiagnosis[cat.id] = {
+      categoryId: cat.id,
+      assigned:   parseFloat(assigned.toFixed(2)),
       status,
     };
   }
@@ -453,21 +467,25 @@ export function calculateDistribution(profile, income) {
   else if (totalWants < 10)  wantsStatus = 'low';
   else                       wantsStatus = 'balanced';
 
-  categoryDiagnosis._wants_total = {
+  // _wants_total: el `target: null` y la `reference: 30` son públicos y no
+  // sensibles (30% es la regla 50/30/20 reconocida, no un parámetro privado
+  // del LP). Lo mantenemos idéntico en ambas capas.
+  const wantsBlockDiag = {
     categoryId: '_wants_total',
     assigned:   parseFloat(totalWants.toFixed(2)),
     target:     null,
     reference:  30,
     status:     wantsStatus,
   };
+  internalDiagnosis._wants_total = wantsBlockDiag;
+  categoryDiagnosis._wants_total = wantsBlockDiag;
 
-  // Targets crudos (frame del LP, antes de cualquier reescalado) para uso libre del frontend.
-  const rawTargets = Object.fromEntries(
-    Object.entries(targetMap).map(([id, t]) => [id, parseFloat(t.toFixed(2))])
-  );
-
-  // 15. Score de salud financiera (0-100) basado en desviaciones + alertas
-  const healthScore = calculateHealthScore(categoryDiagnosis, alerts);
+  // 15. Score de salud financiera (0-100) basado en desviaciones + alertas.
+  //     Nota M36: ya no se exporta `rawTargets` al cliente y `categoryDiagnosis`
+  //     no incluye target/deviation crudos (son el "vector de reconstrucción
+  //     por resta"). El cálculo del score se hace sobre `internalDiagnosis`,
+  //     que vive solo en este ámbito.
+  const healthScore = calculateHealthScore(internalDiagnosis, alerts);
 
   // 16. Comparación con la media española (INE) — para categorías con ineReference
   const ineComparison = {};
@@ -496,9 +514,9 @@ export function calculateDistribution(profile, income) {
     transversal,
     totalCheck,
     categoryDiagnosis,
-    rawTargets,
     healthScore,
     ineComparison,
+    explanation,
   };
 }
 
@@ -620,5 +638,8 @@ export function diagnoseDistribution(profile, income, realAmounts) {
     comparison,
     alerts: realAlerts,
     healthScore,
+    // Drivers cualitativos heredados de la distribución saludable. El panel
+    // de detalle del diagnóstico los usa con la misma lógica que ResultsPage.
+    explanation: healthy.explanation,
   };
 }

@@ -540,3 +540,14 @@ export const CATEGORIES_UI = CATEGORIES_CATALOG.map(({ id, label, block, descrip
   block,
   description,
 }));
+
+// ─── Metadatos M36 para el panel de detalle ──────────────────────────────────
+// Incluye los campos de procedencia institucional que CategoryDetail necesita
+// para construir la frase de respaldo y el indicador de relevance.
+// Solo para páginas donde el API no devuelve las categorías completas (ej. inversa).
+export const CATEGORIES_META = Object.fromEntries(
+  CATEGORIES_CATALOG.map(({ id, label, block, description, referenceSource, referenceReliability }) => [
+    id,
+    { id, label, block, description, referenceSource: referenceSource ?? null, referenceReliability: referenceReliability ?? null },
+  ])
+);

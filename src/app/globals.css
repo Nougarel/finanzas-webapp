@@ -64,13 +64,30 @@
 
 :root {
   --radius: 0.625rem;
+  /* Altura del SiteHeader — usada por DetailPanelLayout para posicionar el drawer fixed.
+     Derivada de py-3 (12px × 2) + contenido (≈28px) + border-b (1px) = 53px.
+     Si se cambia el padding del header, actualizar este valor. */
+  --site-header-height: 53px;
   /* Fondo base off-white (M35 pulido G1) — slate-50 para que las cards blancas resalten */
   --background: oklch(0.984 0.003 247.858);
-  --foreground: oklch(0.129 0.042 264.695);
+  /* M36 — política de un único navy:
+     foreground (textos, títulos) y primary (banners, CTAs, logo) referencian
+     EL MISMO valor para garantizar que no se perciba ninguna diferencia
+     cromática entre títulos del cuerpo y banners. Cualquier cambio futuro de
+     --primary se propaga automáticamente a todos los _foreground sincronizados.
+     Contraste sobre white ≈ 12:1 (AAA — sobrado para AA). */
+  --foreground: var(--primary);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
+  --card-foreground: var(--primary);
+  /* Superficie del panel de detalle (M36): blanco puro como --card.
+     El tint navy se probó pero se percibía azulado en lugar de neutro;
+     se descarta. La diferenciación visual del drawer respecto al main
+     (slate-50) viene del delta de luminosidad blanco↔slate (≈0.016),
+     más la sombra multi-layer asimétrica, el borde izquierdo navy 20%
+     y las esquinas redondeadas. */
+  --panel-surface: oklch(1 0 0);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.129 0.042 264.695);
+  --popover-foreground: var(--primary);
   /* Primario navy #14213D (M35) */
   --primary: oklch(0.25 0.055 264.5);
   --primary-foreground: oklch(98.415% 0.00352 248.585);
@@ -103,7 +120,7 @@
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
   --sidebar: oklch(0.984 0.003 247.858);
-  --sidebar-foreground: oklch(0.129 0.042 264.695);
+  --sidebar-foreground: var(--primary);
   --sidebar-primary: oklch(0.208 0.042 265.755);
   --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
   --sidebar-accent: oklch(0.968 0.007 247.896);
@@ -161,4 +178,43 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* ── Token de elevación para cards protagonistas (M36) ──────────────────────
+   Doble capa de sombra muy sutil: la primera (1px) da el "grosor de papel"
+   y la segunda (12px) da la elevación suave. Ambas en navy con opacidad mínima
+   para que no compitan con el contenido ni saturar páginas con muchas cards.
+   Solo se aplica a las cards protagonistas vía .card-elevated. */
+@layer utilities {
+  .card-elevated {
+    box-shadow:
+      0 1px 2px rgba(20, 33, 61, 0.04),
+      0 4px 12px rgba(20, 33, 61, 0.03);
+  }
+}
+
+/* ── Scrollbar personalizada del panel de detalle (M36) ──────────────────────
+   Solo afecta al contenedor interior del panel (.panel-scroll-area).
+   No contamina la scrollbar de la página principal ni otras áreas.
+   Implementado con pseudo-elementos webkit (Chrome, Edge, Safari).
+   Firefox usa la propiedad estándar scrollbar-* (más limitada).
+   Ancho 5px, thumb navy 25%, track transparente, radio 2px. */
+.panel-scroll-area::-webkit-scrollbar {
+  width: 5px;
+}
+.panel-scroll-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+.panel-scroll-area::-webkit-scrollbar-thumb {
+  background-color: rgba(20, 33, 61, 0.25);
+  border-radius: 2px;
+  border: none;
+}
+.panel-scroll-area::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(20, 33, 61, 0.40);
+}
+/* Firefox — propiedad estándar, sin thumb:hover ni track independiente */
+.panel-scroll-area {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(20, 33, 61, 0.25) transparent;
 }

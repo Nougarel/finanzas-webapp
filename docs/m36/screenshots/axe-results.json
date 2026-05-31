@@ -1,0 +1,9 @@
+[
+  {
+    "id": "scrollable-region-focusable",
+    "impact": "serious",
+    "description": "Ensure elements that have scrollable content are accessible by keyboard",
+    "nodes": 1,
+    "example": "<div class=\"flex-1 overflow-y-auto min-h-0 pt-4 pr-3 panel-scroll-area\">"
+  }
+]

@@ -93,6 +93,7 @@ export function HealthGauge({
   levelLabel,
   penalties  = [],
   categoryLabels = {},
+  className  = "",
 }) {
   const cfg        = getLevelConfig(level);
   const displayLabel = levelLabel ?? cfg.label;
@@ -131,7 +132,7 @@ export function HealthGauge({
   const labelFor = (k) => categoryLabels[k] ?? k;
 
   return (
-    <div className="rounded-lg border bg-card p-5 space-y-4">
+    <div className={`rounded-lg border bg-card p-5 space-y-4${className ? ` ${className}` : ""}`}>
       {/* Etiqueta superior */}
       <p className="text-xs font-medium uppercase tracking-meta text-muted-foreground">
         {label}

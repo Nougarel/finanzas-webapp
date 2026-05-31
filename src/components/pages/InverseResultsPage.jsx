@@ -8,7 +8,9 @@ import { Alert } from "@/components/ui/alert";
 import { DataTable } from "@/components/ui/data-table";
 import { MoneyValue } from "@/components/ui/money-value";
 import { PageShell } from "@/components/ui/page-shell";
-import { CATEGORIES_UI } from "@/lib/models/categories";
+import { DetailPanelLayout } from "@/components/ui/detail-panel-layout";
+import { CategoryDetail } from "@/components/ui/category-detail";
+import { CATEGORIES_UI, CATEGORIES_META } from "@/lib/models/categories";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useStudyContextOptional } from "@/lib/research/useStudyContext";
 import { useStudyAwareRouter } from "@/lib/research/useStudyAwareRouter";
@@ -51,6 +53,16 @@ export default function InverseResultsPage() {
   const [result,    setResult]    = useState(null);
   const [calcError, setCalcError] = useState(null);
   const [coherenceOutliers, setCoherenceOutliers] = useState(null);
+  // Estado efímero del panel de detalle (ADR-11 — no en URL)
+  const [selectedCategoryId, setSelectedCategoryId] = useState(null);
+  // Perfil del usuario para los bullets de drivers (M36)
+  const [profile] = useState(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const s = localStorage.getItem(STORAGE_KEYS.profileIdeal);
+      return s ? JSON.parse(s) : null;
+    } catch { return null; }
+  });
 
   // Modo testing guiado (M18 Fase 4): notificar cálculo completado al
   // sistema research si el contexto /study está activo.
@@ -227,6 +239,7 @@ export default function InverseResultsPage() {
     ? Object.entries(comparison).map(([catId, row]) => {
         const cat = CATEGORIES_UI.find(c => c.id === catId);
         return {
+          id: catId,
           label: cat?.label ?? catId,
           specifiedAmount: row.specifiedAmount,
           healthyAmount: row.healthyAmount,
@@ -310,7 +323,8 @@ export default function InverseResultsPage() {
 
           {/* Hero: ingreso requerido — bloque invertido (navy) */}
           <div className="rounded-2xl bg-primary px-6 py-8 space-y-3 transition-colors duration-200">
-            <p className="text-xs font-medium uppercase tracking-meta text-primary-foreground/70">
+            {/* Label blanco puro — el /70 anterior daba sensación gris-azulada */}
+            <p className="text-xs font-normal uppercase tracking-meta text-primary-foreground">
               Ingreso mínimo necesario
             </p>
             <MoneyValue
@@ -341,81 +355,151 @@ export default function InverseResultsPage() {
             </div>
           )}
 
-          {/* Comparativa: especificado vs. saludable */}
-          {comparisonData.length > 0 && (
-            <section aria-labelledby="comparison-heading">
-              <div className="mb-4 space-y-1">
-                <h2 id="comparison-heading" className="font-display font-black tracking-display text-xl text-foreground">
-                  Comparativa
-                </h2>
-                <p className="text-sm text-muted-foreground font-light">
-                  Tus importes frente a la distribución saludable con el ingreso calculado
-                </p>
-              </div>
-              {/* Guía de lectura (J4) */}
-              <p className="text-sm font-light text-muted-foreground mb-4 leading-relaxed">
-                La columna <span className="font-medium text-foreground">Especificado</span> recoge
-                los importes que fijaste. <span className="font-medium text-foreground">Ref. INE</span>{" "}
-                es lo que correspondería en una distribución saludable para el ingreso calculado.
-                Una diferencia positiva <span className="text-[color:var(--warning-foreground)] font-medium">(↑)</span>{" "}
-                indica que estás gastando más de lo recomendado en esa categoría;
-                negativa <span className="text-[color:var(--success-foreground)] font-medium">(↓)</span>, menos.
-              </p>
-              <DataTable
-                columns={comparisonColumns}
-                data={comparisonData}
-                caption="Comparativa de importes especificados frente a distribución saludable"
-              />
-            </section>
-          )}
-
-          {/* Distribución saludable completa */}
-          <section aria-labelledby="distribution-heading">
-            <div className="mb-4 space-y-1">
-              <h2 id="distribution-heading" className="font-display font-black tracking-display text-xl text-foreground">
-                Distribución saludable completa
-              </h2>
-              {/* Guía de lectura (J4) */}
-              <p className="text-sm font-light text-muted-foreground leading-relaxed">
-                Esta es la distribución óptima para el ingreso calculado. Las categorías marcadas
-                como <span className="font-medium text-primary">fijado</span> respetan exactamente
-                los importes que indicaste; el resto se calcula automáticamente para mantener la
-                salud financiera del conjunto.
-              </p>
-            </div>
-            <div className="space-y-6">
-              {BLOCK_ORDER.map(block => {
-                const blockData = catsByBlock[block]
-                  .map(cat => {
-                    const h = healthyDistribution[cat.id];
-                    if (!h) return null;
-                    return {
-                      label: cat.label,
-                      percentage: h.percentage,
-                      amount: h.amount,
-                      isSpecified: cat.id in (specifiedAmounts ?? {}),
+          {/* Panel de detalle M36: comparativa + distribución saludable, filas clicables */}
+          <DetailPanelLayout
+            selectedCategoryId={selectedCategoryId}
+            onClose={() => setSelectedCategoryId(null)}
+            panelContent={
+              selectedCategoryId && CATEGORIES_META[selectedCategoryId]
+                ? (() => {
+                    // Construir objeto `category` para CategoryDetail combinando
+                    // metadatos del catálogo con los importes de healthyDistribution.
+                    const meta = CATEGORIES_META[selectedCategoryId];
+                    const h    = healthyDistribution[selectedCategoryId] ?? { percentage: 0, amount: 0 };
+                    const categoryObj = {
+                      id:                   meta.id,
+                      label:                meta.label,
+                      block:                meta.block,
+                      description:          meta.description,
+                      referenceSource:      meta.referenceSource,
+                      referenceReliability: meta.referenceReliability,
+                      percentage:           h.percentage,
+                      amount:               h.amount,
                     };
-                  })
-                  .filter(Boolean);
+                    return (
+                      <CategoryDetail
+                        category={categoryObj}
+                        ineData={null}
+                        income={requiredIncome}
+                        onClose={() => setSelectedCategoryId(null)}
+                        drivers={result.explanation?.[selectedCategoryId]?.drivers ?? []}
+                        profile={profile}
+                      />
+                    );
+                  })()
+                : null
+            }
+          >
+            <div className="space-y-8">
 
-                // Máximo de % en el bloque para normalizar la escala de las barras
-                const maxBlockPct = Math.max(...blockData.map((r) => r.percentage), 0);
+              {/* Hint clicable — desaparece cuando el panel está abierto */}
+              {!selectedCategoryId && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                  <span aria-hidden="true">›</span>
+                  Toca cualquier categoría para ver el respaldo institucional de su cálculo.
+                </p>
+              )}
 
-                return (
-                  <div key={block}>
-                    <h3 className="text-base font-medium text-foreground mb-2">
-                      {BLOCK_LABELS[block]}
-                    </h3>
-                    <DataTable
-                      columns={buildDistributionColumns(maxBlockPct)}
-                      data={blockData}
-                      caption={`Distribución saludable — ${BLOCK_LABELS[block]}`}
-                    />
+              {/* Comparativa: especificado vs. saludable */}
+              {comparisonData.length > 0 && (
+                <section aria-labelledby="comparison-heading">
+                  <div className="mb-4 space-y-1">
+                    <h2 id="comparison-heading" className="font-display font-black tracking-display text-xl text-foreground">
+                      Comparativa
+                    </h2>
+                    <p className="text-sm text-muted-foreground font-light">
+                      Tus importes frente a la distribución saludable con el ingreso calculado
+                    </p>
                   </div>
-                );
-              })}
+                  {/* Guía de lectura (J4) */}
+                  <p className="text-sm font-light text-muted-foreground mb-4 leading-relaxed">
+                    La columna <span className="font-medium text-foreground">Especificado</span> recoge
+                    los importes que fijaste. <span className="font-medium text-foreground">Ref. INE</span>{" "}
+                    es lo que correspondería en una distribución saludable para el ingreso calculado.
+                    Una diferencia positiva <span className="text-[color:var(--warning-foreground)] font-medium">(↑)</span>{" "}
+                    indica que estás gastando más de lo recomendado en esa categoría;
+                    negativa <span className="text-[color:var(--success-foreground)] font-medium">(↓)</span>, menos.
+                  </p>
+                  <DataTable
+                    columns={comparisonColumns}
+                    data={comparisonData}
+                    caption="Comparativa de importes especificados frente a distribución saludable"
+                    rowKey="id"
+                    onRowClick={(row) => {
+                      // Clic en fila activa = no-op (el drawer permanece abierto).
+                      // Clic en fila distinta = cambia el contenido del drawer.
+                      if (row.id !== selectedCategoryId) {
+                        setSelectedCategoryId(row.id);
+                      }
+                    }}
+                    activeRowKey={selectedCategoryId}
+                  />
+                </section>
+              )}
+
+              {/* Distribución saludable completa */}
+              <section aria-labelledby="distribution-heading">
+                <div className="mb-4 space-y-1">
+                  <h2 id="distribution-heading" className="font-display font-black tracking-display text-xl text-foreground">
+                    Distribución saludable completa
+                  </h2>
+                  {/* Guía de lectura (J4) */}
+                  <p className="text-sm font-light text-muted-foreground leading-relaxed">
+                    Esta es la distribución óptima para el ingreso calculado. Las categorías marcadas
+                    como <span className="font-medium text-primary">fijado</span> respetan exactamente
+                    los importes que indicaste; el resto se calcula automáticamente para mantener la
+                    salud financiera del conjunto.
+                  </p>
+                </div>
+                <div className="space-y-6">
+                  {BLOCK_ORDER.map(block => {
+                    const blockData = catsByBlock[block]
+                      .map(cat => {
+                        const h = healthyDistribution[cat.id];
+                        if (!h) return null;
+                        return {
+                          id: cat.id,
+                          label: cat.label,
+                          percentage: h.percentage,
+                          amount: h.amount,
+                          isSpecified: cat.id in (specifiedAmounts ?? {}),
+                        };
+                      })
+                      .filter(Boolean);
+
+                    // Máximo de % en el bloque para normalizar la escala de las barras
+                    const maxBlockPct = Math.max(...blockData.map((r) => r.percentage), 0);
+
+                    return (
+                      <div key={block}>
+                        {/* Banner navy de bloque — rounded-t-lg pegado a la DataTable
+                            para que se lean como una unidad visual. */}
+                        <h3 className="flex items-center justify-between rounded-t-lg bg-primary px-4 py-2.5 text-xs font-bold uppercase tracking-meta text-primary-foreground">
+                          {BLOCK_LABELS[block]}
+                        </h3>
+                        <DataTable
+                          columns={buildDistributionColumns(maxBlockPct)}
+                          data={blockData}
+                          caption={`Distribución saludable — ${BLOCK_LABELS[block]}`}
+                          rowKey="id"
+                          flushTop
+                          onRowClick={(row) => {
+                            // Clic en fila activa = no-op (el drawer permanece abierto).
+                            // Clic en fila distinta = cambia el contenido del drawer.
+                            if (row.id !== selectedCategoryId) {
+                              setSelectedCategoryId(row.id);
+                            }
+                          }}
+                          activeRowKey={selectedCategoryId}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+
             </div>
-          </section>
+          </DetailPanelLayout>
 
           {/* Acciones */}
           <div className="flex gap-3 justify-center pt-2">
