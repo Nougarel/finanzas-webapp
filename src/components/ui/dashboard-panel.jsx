@@ -4,7 +4,7 @@
  * dashboard-panel.jsx — Panel lateral de resumen del DashboardPanel (col 2).
  *
  * Componente envolvente que F3 insertará en col 2 de las 3 páginas de resultados.
- * Compone MacroPiechart + BlockPiechart + IndicatorCards + DashboardSecondaryCta
+ * Compone MacroPiechart + BlockPiechartsRow + IndicatorCards + DashboardSecondaryCta
  * según el modo y la estructura de datos.
  *
  * Modos:
@@ -42,7 +42,7 @@
 
 import { useMemo } from "react";
 import { MacroPiechart } from "./macro-piechart";
-import { BlockPiechart } from "./block-piechart";
+import { BlockPiechartsRow } from "./block-piecharts-row";
 import { IndicatorCard } from "./indicator-card";
 import { DashboardSecondaryCta } from "./dashboard-secondary-cta";
 import {
@@ -96,7 +96,7 @@ function buildMacroData(blocks) {
 }
 
 /**
- * Construye dataByBlock para el BlockPiechart desde el mapa de categorías.
+ * Construye dataByBlock para el BlockPiechartsRow desde el mapa de categorías.
  */
 function buildBlockData(categories) {
   const groupByBlock = { needs: [], wants: [], savings: [] };
@@ -208,23 +208,24 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
   const dtiLabel = mode === "inverse" ? "DTI HIPOTÉTICO" : "DTI";
   const dtiDescription =
     mode === "inverse"
-      ? "Relación deuda/ingreso con el ingreso calculado. < 30% saludable (BdE)."
-      : "Relación deuda/ingreso. < 30% saludable (Banco de España).";
+      ? "Deuda/ingreso con el ingreso calculado. < 30% saludable (BdE)"
+      : "Deuda/ingreso. < 30% saludable (BdE)";
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       {/* ── MacroPiechart ────────────────────────────────────────────────── */}
       <div className="bg-card border border-border rounded-lg p-4 card-elevated">
         <p
-          className="font-sans font-medium uppercase text-muted-foreground mb-3"
+          className="font-sans font-medium uppercase text-muted-foreground mb-2"
           style={{ fontSize: 11, letterSpacing: "0.05em" }}
         >
           Distribución por bloque
         </p>
         {showSkeleton ? (
           <div className="flex items-center gap-6">
+            {/* C3: skeleton como anillo, no disco sólido */}
             <div
-              className="rounded-full bg-muted animate-pulse flex-shrink-0"
+              className="rounded-full border-[28px] border-muted animate-pulse flex-shrink-0"
               style={{ width: 180, height: 180 }}
             />
             <div className="flex flex-col gap-3 flex-1">
@@ -234,50 +235,65 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
             </div>
           </div>
         ) : (
-          <MacroPiechart
-            data={macroData}
-            centerValue={centerValue}
-            centerLabel={centerLabel}
-            size={180}
-            thickness={28}
-          />
+          <>
+            {/* C4: MacroPiechart responsive — lg: 140px/22px, xl: 180px/28px */}
+            {/* Instancia lg (oculta en xl+) */}
+            <div className="block xl:hidden">
+              <MacroPiechart
+                data={macroData}
+                centerValue={centerValue}
+                centerLabel={centerLabel}
+                size={140}
+                thickness={22}
+              />
+            </div>
+            {/* Instancia xl (oculta en lg) */}
+            <div className="hidden xl:block">
+              <MacroPiechart
+                data={macroData}
+                centerValue={centerValue}
+                centerLabel={centerLabel}
+                size={180}
+                thickness={28}
+              />
+            </div>
+          </>
         )}
       </div>
 
-      {/* ── BlockPiechart (oculto en lg y md) ───────────────────────────── */}
-      <div className="bg-card border border-border rounded-lg p-4 card-elevated hidden xl:block">
-        <p
-          className="font-sans font-medium uppercase text-muted-foreground mb-3"
-          style={{ fontSize: 11, letterSpacing: "0.05em" }}
-        >
-          Detalle por bloque
-        </p>
-        {showSkeleton ? (
-          <div className="flex flex-col gap-3">
-            <div className="flex gap-2">
+      {/* ── BlockPiechartsRow (oculto en lg y md) ───────────────────────── */}
+      {/* B2: sustituye BlockPiechart con tabs por 3 micro-piecharts en fila.
+          En modo inverse no se renderiza (igual que antes). */}
+      {mode !== "inverse" && (
+        <div className="bg-card border border-border rounded-lg px-4 py-5 card-elevated hidden xl:block">
+          <p
+            className="font-sans font-medium uppercase text-muted-foreground mb-2"
+            style={{ fontSize: 11, letterSpacing: "0.05em" }}
+          >
+            Detalle por bloque
+          </p>
+          {showSkeleton ? (
+            /* C3: skeleton como 3 mini-anillos en fila */
+            <div className="flex flex-row gap-3 justify-between items-center">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-6 flex-1 bg-muted rounded animate-pulse" />
+                <div key={i} className="flex flex-col items-center gap-2 flex-1">
+                  <div className="h-2.5 w-16 bg-muted rounded animate-pulse" />
+                  <div
+                    className="rounded-full border-[16px] border-muted animate-pulse"
+                    style={{ width: 88, height: 88 }}
+                  />
+                </div>
               ))}
             </div>
-            <div
-              className="rounded-full bg-muted animate-pulse mx-auto"
-              style={{ width: 140, height: 140 }}
+          ) : (
+            <BlockPiechartsRow
+              dataByBlock={blockData}
+              size={108}
+              thickness={18}
             />
-            <div className="grid grid-cols-2 gap-2">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="h-3 bg-muted rounded animate-pulse" />
-              ))}
-            </div>
-          </div>
-        ) : (
-          <BlockPiechart
-            dataByBlock={blockData}
-            defaultBlock="needs"
-            size={140}
-            thickness={22}
-          />
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* ── IndicatorCards ───────────────────────────────────────────────── */}
       <div className="flex flex-col gap-3">
@@ -295,7 +311,7 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
           label="TASA DE AHORRO"
           value={showSkeleton ? "—" : savingsIndicator?.formatted ?? "—"}
           status={showSkeleton ? "info" : (savingsIndicator?.status ?? "info")}
-          description="Porcentaje del ingreso destinado al ahorro. Objetivo: ≥ 20% (Banco de España)."
+          description="Porcentaje del ingreso al ahorro. ≥ 20% recomendado (BdE)"
           skeleton={showSkeleton}
         />
 
@@ -305,7 +321,7 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
             label="RATIO NECESIDADES"
             value={showSkeleton ? "—" : needsIndicator?.formatted ?? "—"}
             status={showSkeleton ? "info" : (needsIndicator?.status ?? "info")}
-            description="Porcentaje del ingreso en gastos esenciales. Saludable: ≤ 50% (Eurostat/OMS)."
+            description="Ingreso en gastos esenciales. Saludable: ≤ 50% (Eurostat)"
             skeleton={showSkeleton}
           />
         )}
@@ -316,7 +332,7 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
             label="COBERTURA EMERGENCIA"
             value={showSkeleton ? "—" : emergencyIndicator?.formatted ?? "—"}
             status={showSkeleton ? "info" : (emergencyIndicator?.status ?? "info")}
-            description="Meses de gastos fijos cubiertos por el fondo de emergencia. Objetivo: ≥ 6 m (BdE)."
+            description="Gastos cubiertos por emergencia. ≥ 6 m (BdE)"
             skeleton={showSkeleton}
           />
         )}
