@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense, useRef } from "react";
+import { useState, useEffect, Suspense, useRef, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import { PageShell } from "@/components/ui/page-shell";
 import { HealthGauge } from "@/components/ui/health-gauge";
 import { DetailPanelLayout } from "@/components/ui/detail-panel-layout";
 import { CategoryDetail } from "@/components/ui/category-detail";
+import { DashboardPanel } from "@/components/ui/dashboard-panel";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useStudyContextOptional } from "@/lib/research/useStudyContext";
 import { useStudyAwareRouter } from "@/lib/research/useStudyAwareRouter";
@@ -23,14 +24,6 @@ const BLOCK_ORDER = ["needs", "wants", "savings"];
 // - mild   → warning (ámbar)
 function alertVariantFromLevel(level) {
   return level === "severe" ? "error" : "warning";
-}
-
-// Clase de color para el DTI usando tokens semánticos del design system.
-// Devuelve clases de texto con CSS variables — sin hardcodes amber/green/red.
-function dtiColorClass(total) {
-  if (total < 35) return "text-[color:var(--success-foreground)]";
-  if (total < 40) return "text-[color:var(--warning-foreground)]";
-  return "text-destructive";
 }
 
 // Referencia INE: media nacional para una categoría.
@@ -188,6 +181,37 @@ function ResultsContent() {
       .finally(() => setLoading(false));
   }, [profile, income]);
 
+  // ── Dataset para DashboardPanel ──────────────────────────────────────────────
+  // Construye la estructura unificada que espera DashboardPanel a partir de
+  // la respuesta de la API. Debe estar antes de los early returns para cumplir
+  // las reglas de hooks (no condicional). Cuando result es null devuelve null
+  // y el panel renderiza en modo skeleton.
+  const dashboardDataset = useMemo(() => {
+    if (!result) return null;
+    const categories = {};
+    for (const [catId, cat] of Object.entries(result.categories)) {
+      categories[catId] = {
+        id: catId,
+        label: cat.label,
+        block: cat.block,
+        percentage: cat.percentage,
+        amount: cat.amount,
+      };
+    }
+    return {
+      income,
+      blocks: {
+        needs:   { label: result.blocks.needs.label,   percentage: result.blocks.needs.percentage,   amount: result.blocks.needs.amount   },
+        wants:   { label: result.blocks.wants.label,   percentage: result.blocks.wants.percentage,   amount: result.blocks.wants.amount   },
+        savings: { label: result.blocks.savings.label, percentage: result.blocks.savings.percentage, amount: result.blocks.savings.amount },
+      },
+      categories,
+      transversal: {
+        dti: { total: result.transversal?.dti?.total ?? 0 },
+      },
+    };
+  }, [result, income]);
+
   if (!mounted) {
     return (
       <main className="flex min-h-screen items-center justify-center">
@@ -253,8 +277,10 @@ function ResultsContent() {
 
   return (
     <main className="flex min-h-screen flex-col">
-      <PageShell variant="table">
-        <div className="space-y-8">
+      <PageShell variant="dashboard">
+        {/* Col 1: contenido principal (7/12 en xl+, ancho completo en inferiores) */}
+        <div className="col-span-12 xl:col-span-7">
+          <div className="space-y-8">
 
           {/* Alertas críticas de sistema — siempre en lo más alto */}
           {(budgetAlert || debtAlert) && (
@@ -578,97 +604,52 @@ function ResultsContent() {
             </div>
           )}
 
-          {/* Indicadores de referencia */}
-          <section aria-labelledby="indicators-heading">
+          {/* Seguros — se mantiene en col 1 (decisión #5 del DESIGN.md).
+              El DTI pasa a col 2 (DashboardPanel). Solo queda seguros aquí
+              porque su valor interpretativo requiere el desglose por componente. */}
+          <section aria-labelledby="insurance-heading">
             <h2
-              id="indicators-heading"
+              id="insurance-heading"
               className="text-sm font-semibold text-muted-foreground uppercase tracking-meta mb-3"
             >
-              Indicadores de referencia
+              Seguros estimados
             </h2>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">Ratio de deuda (DTI)</CardTitle>
-                  <CardDescription className="text-xs">
-                    Hipoteca, cuotas de vehículo y deudas de consumo sobre el ingreso total
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className={`text-2xl font-bold tabular-nums ${dtiColorClass(result.transversal.dti.total)}`}>
-                    {formatPct(result.transversal.dti.total)}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Gasto total en seguros</CardTitle>
+                <CardDescription className="text-xs">
+                  Estimación sobre los importes asignados (vida + salud + vehículo)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold tabular-nums">{formatPct(result.transversal.insurance.total)}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  <MoneyValue amount={result.transversal.insurance.amount} size="inline" className="text-xs" />{" "}
+                  / mes
+                </p>
+                {/* Desglose por componente */}
+                <div className="mt-3 space-y-1 border-t pt-2">
+                  <p className="text-xs text-muted-foreground italic pb-1">
+                    Estimación orientativa del gasto mensual en seguros. Los importes de seguro de vehículo y salud se calculan a partir del gasto total en su categoría.
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    <MoneyValue amount={result.transversal.dti.amount} size="inline" className="text-xs" />{" "}
-                    / mes ·{" "}
-                    {result.transversal.dti.total < result.transversal.dti.mild
-                      ? "dentro del rango saludable"
-                      : result.transversal.dti.total < result.transversal.dti.severe
-                      ? "en zona de atención"
-                      : "en zona crítica"}
-                  </p>
-                  {/* Desglose por componente */}
-                  {(result.transversal.dti.breakdown.external.amount > 0 ||
-                    result.transversal.dti.breakdown.housing.amount > 0 ||
-                    result.transversal.dti.breakdown.vehicle.amount > 0) && (
-                    <div className="mt-3 space-y-1 border-t pt-2">
-                      {[
-                        { label: "Deudas de consumo", key: "external" },
-                        { label: "Hipoteca",           key: "housing"  },
-                        { label: "Vehículo (cuota)",   key: "vehicle"  },
-                      ]
-                        .filter(({ key }) => result.transversal.dti.breakdown[key].amount > 0)
-                        .map(({ label, key }) => {
-                          const item = result.transversal.dti.breakdown[key];
-                          return (
-                            <div key={key} className="flex justify-between text-xs text-muted-foreground">
-                              <span>{label}</span>
-                              <MoneyValue amount={item.amount} size="inline" className="text-xs" />
-                            </div>
-                          );
-                        })}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">Gasto total en seguros</CardTitle>
-                  <CardDescription className="text-xs">
-                    Estimación sobre los importes asignados (vida + salud + vehículo)
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-2xl font-bold tabular-nums">{formatPct(result.transversal.insurance.total)}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    <MoneyValue amount={result.transversal.insurance.amount} size="inline" className="text-xs" />{" "}
-                    / mes
-                  </p>
-                  {/* Desglose por componente */}
-                  <div className="mt-3 space-y-1 border-t pt-2">
-                    <p className="text-xs text-muted-foreground italic pb-1">
-                      Estimación orientativa del gasto mensual en seguros. Los importes de seguro de vehículo y salud se calculan a partir del gasto total en su categoría.
-                    </p>
-                    {[
-                      { label: "Seguro de vida", key: "life" },
-                      { label: "Seguro médico",  key: "health" },
-                      { label: "Seguro vehículo", key: "transport" },
-                    ]
-                      .filter(({ key }) => result.transversal.insurance.breakdown[key].amount > 0)
-                      .map(({ label, key }) => {
-                        const item = result.transversal.insurance.breakdown[key];
-                        return (
-                          <div key={key} className="flex justify-between text-xs text-muted-foreground">
-                            <span>{label}</span>
-                            <MoneyValue amount={item.amount} size="inline" className="text-xs" />
-                          </div>
-                        );
-                      })}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                  {[
+                    { label: "Seguro de vida", key: "life" },
+                    { label: "Seguro médico",  key: "health" },
+                    { label: "Seguro vehículo", key: "transport" },
+                  ]
+                    .filter(({ key }) => result.transversal.insurance.breakdown[key].amount > 0)
+                    .map(({ label, key }) => {
+                      const item = result.transversal.insurance.breakdown[key];
+                      return (
+                        <div key={key} className="flex justify-between text-xs text-muted-foreground">
+                          <span>{label}</span>
+                          <MoneyValue amount={item.amount} size="inline" className="text-xs" />
+                        </div>
+                      );
+                    })}
+                </div>
+              </CardContent>
+            </Card>
           </section>
 
           {/* Botones de acción */}
@@ -693,7 +674,31 @@ function ResultsContent() {
             </Button>
           </div>
 
-        </div>
+          </div>{/* fin space-y-8 de col 1 */}
+        </div>{/* fin col 1 */}
+
+        {/* Col 2: DashboardPanel (solo xl+, oculto en viewports menores).
+            Sticky con scroll interno — el panel cabe en pantallas de ≥800px de alto.
+            En viewports más bajos, overflow-y-auto activa el scroll interno del panel. */}
+        <aside
+          className="hidden xl:block xl:col-span-5"
+          aria-label="Dashboard resumen financiero"
+        >
+          <div
+            className="sticky overflow-y-auto panel-scroll-area"
+            style={{
+              top: "calc(var(--site-header-height, 53px) + 1.5rem)",
+              maxHeight: "calc(100vh - var(--site-header-height, 53px) - 3rem)",
+            }}
+          >
+            <DashboardPanel
+              dataset={dashboardDataset}
+              mode="recommended"
+              secondaryCta={{ href: `/diagnosis-form?income=${income}`, label: "Compara tu situación real" }}
+            />
+          </div>
+        </aside>
+
       </PageShell>
     </main>
   );
