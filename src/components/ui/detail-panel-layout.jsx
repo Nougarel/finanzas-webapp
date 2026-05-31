@@ -189,7 +189,19 @@ export function DetailPanelLayout({
             aria-live="polite"
             aria-atomic="true"
           >
-            {panelContent}
+            {/*
+              key={selectedCategoryId} fuerza el re-mount del contenido cuando
+              el usuario cambia de categoría con el panel ya abierto, activando
+              la animación de entrada (fade-in-0 duration-150).
+              El panel en sí (slide-in 220ms) no se re-monta — solo el interior.
+              animate-in + fade-in-0 vienen de tw-animate-css (ya en el proyecto).
+            */}
+            <div
+              key={selectedCategoryId}
+              className="flex flex-col overflow-hidden flex-1 min-h-0 animate-in fade-in-0 duration-150"
+            >
+              {panelContent}
+            </div>
           </div>
         </aside>
       )}
