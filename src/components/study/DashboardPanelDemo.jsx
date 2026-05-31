@@ -13,8 +13,13 @@
  *   - Ahorro: 48% (1.440 €) — incluyendo fondo de emergencia, inversión, etc.
  *
  * Solo para uso en rutas de debug/study — no importar desde páginas de producción.
+ *
+ * Toggle de variante (post-F2.5 — M37 §12.4):
+ *   Estado inicial: "bars" (recomendación del diseñador).
+ *   El estado es global al demo — los 3 modos comparten el mismo categoryView.
  */
 
+import { useState } from "react";
 import { DashboardPanel } from "@/components/ui/dashboard-panel";
 
 // ─── Dataset mock ─────────────────────────────────────────────────────────────
@@ -73,6 +78,9 @@ const MOCK_DATASET = {
 // ─── Componente ───────────────────────────────────────────────────────────────
 
 export default function DashboardPanelDemo() {
+  // Estado inicial: "bars" según recomendación del diseñador (§12.4)
+  const [categoryView, setCategoryView] = useState("bars");
+
   return (
     <div className="min-h-screen bg-background">
       {/* Cabecera de contexto */}
@@ -83,6 +91,55 @@ export default function DashboardPanelDemo() {
       </div>
 
       <div className="mx-auto max-w-7xl px-6 py-8">
+
+        {/* ── Toggle de variante de categorías ─────────────────────────────── */}
+        <div className="flex items-center gap-3 mb-8">
+          <span
+            className="font-sans font-medium text-muted-foreground uppercase"
+            style={{ fontSize: 11, letterSpacing: "0.05em" }}
+          >
+            Variante — Detalle por bloque:
+          </span>
+          <div
+            role="group"
+            aria-label="Selecciona la variante de visualización de categorías"
+            className="flex rounded-md border border-border overflow-hidden"
+          >
+            <button
+              type="button"
+              role="radio"
+              aria-checked={categoryView === "piecharts"}
+              onClick={() => setCategoryView("piecharts")}
+              className={[
+                "px-4 py-1.5 text-sm font-medium transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-ring",
+                categoryView === "piecharts"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-card text-muted-foreground hover:text-foreground hover:bg-muted/50",
+              ].join(" ")}
+            >
+              Micro-piecharts
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={categoryView === "bars"}
+              onClick={() => setCategoryView("bars")}
+              className={[
+                "px-4 py-1.5 text-sm font-medium transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-ring border-l border-border",
+                categoryView === "bars"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-card text-muted-foreground hover:text-foreground hover:bg-muted/50",
+              ].join(" ")}
+            >
+              Barras por bloque
+            </button>
+          </div>
+          <span className="text-xs text-muted-foreground font-sans">
+            Solo afecta al bloque Detalle por bloque. MacroPiechart e indicadores
+            son iguales en ambas variantes.
+          </span>
+        </div>
+
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
 
           {/* Modo recommended */}
@@ -96,6 +153,7 @@ export default function DashboardPanelDemo() {
             <DashboardPanel
               dataset={MOCK_DATASET}
               mode="recommended"
+              categoryView={categoryView}
               secondaryCta={{
                 href: "/diagnosis-form",
                 label: "Compara tu situación real",
@@ -114,6 +172,7 @@ export default function DashboardPanelDemo() {
             <DashboardPanel
               dataset={MOCK_DATASET}
               mode="real"
+              categoryView={categoryView}
               secondaryCta={{
                 href: "/calculator",
                 label: "Ver distribución ideal",
@@ -132,6 +191,7 @@ export default function DashboardPanelDemo() {
             <DashboardPanel
               dataset={MOCK_DATASET}
               mode="inverse"
+              categoryView={categoryView}
               secondaryCta={{
                 href: "/inverse-calculator",
                 label: "Calcular de nuevo",
