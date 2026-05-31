@@ -175,6 +175,19 @@
   }
 }
 
+/* ── Token de elevación para cards protagonistas (M36) ──────────────────────
+   Doble capa de sombra muy sutil: la primera (1px) da el "grosor de papel"
+   y la segunda (12px) da la elevación suave. Ambas en navy con opacidad mínima
+   para que no compitan con el contenido ni saturar páginas con muchas cards.
+   Solo se aplica a las cards protagonistas vía .card-elevated. */
+@layer utilities {
+  .card-elevated {
+    box-shadow:
+      0 1px 2px rgba(20, 33, 61, 0.04),
+      0 4px 12px rgba(20, 33, 61, 0.03);
+  }
+}
+
 /* ── Scrollbar personalizada del panel de detalle (M36) ──────────────────────
    Solo afecta al contenedor interior del panel (.panel-scroll-area).
    No contamina la scrollbar de la página principal ni otras áreas.
