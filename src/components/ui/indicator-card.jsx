@@ -59,7 +59,7 @@ const BADGE_CONFIG = {
 
 function IndicatorCardSkeleton() {
   return (
-    <div className="bg-card border border-border rounded-lg p-4 flex flex-col gap-2">
+    <div className="bg-card border border-border rounded-lg px-4 py-3 flex flex-col gap-2">
       {/* Label */}
       <div className="h-2.5 w-16 bg-muted rounded animate-pulse" />
       {/* Valor */}
@@ -85,7 +85,7 @@ export function IndicatorCard({
   const badge = BADGE_CONFIG[status] ?? BADGE_CONFIG.na;
 
   return (
-    <div className="bg-card border border-border rounded-lg p-4 flex flex-col gap-1.5">
+    <div className="bg-card border border-border rounded-lg px-4 py-3 flex flex-col gap-1.5 hover:bg-muted/30 transition-colors duration-200">
       {/* Label superior — caps tracking-meta */}
       <span
         className="font-sans font-medium uppercase text-muted-foreground"
@@ -96,20 +96,21 @@ export function IndicatorCard({
 
       {/* Fila valor + badge */}
       <div className="flex items-baseline justify-between gap-2">
-        <span className="font-display font-bold text-foreground text-3xl tabular-nums leading-none">
+        {/* Valor: text-2xl en panel compacto — ahorra espacio vertical manteniendo legibilidad */}
+        <span className="font-display font-bold text-foreground text-2xl tabular-nums leading-none">
           {value}
           {unit && (
-            <span className="text-lg font-normal text-muted-foreground ml-1">{unit}</span>
+            <span className="text-base font-normal text-muted-foreground ml-1">{unit}</span>
           )}
         </span>
 
-        {/* Badge de estado */}
+        {/* Badge de estado — C1: fontSize subido a 11px */}
         <span
           className={cn(
             "px-2 py-0.5 rounded-full font-semibold flex-shrink-0",
             badge.className
           )}
-          style={{ fontSize: 10 }}
+          style={{ fontSize: 11 }}
         >
           {badge.label}
         </span>
