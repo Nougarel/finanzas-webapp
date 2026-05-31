@@ -4,16 +4,18 @@
  * DetailPanelLayout — Layout de split-view + drawer fixed en desktop + bottom sheet en móvil.
  *
  * Desktop (lg+):
- *   El contenido principal ocupa todo el ancho disponible. El drawer es un panel
- *   `position: fixed` anclado a la derecha del viewport, con top igual a la altura
- *   del SiteHeader global y bottom en el borde inferior del viewport.
- *   Ancho fijo de 420px; sombra izquierda para separarlo visualmente del contenido.
- *   El contenido principal recibe una opacity reducida (0.6) cuando el drawer está
- *   abierto para marcar foco, pero sigue siendo clicable (pointer-events activos).
+ *   El drawer es un panel `position: fixed` anclado a la derecha del viewport.
+ *   Modelo de altura adaptativa (M36 Fase 2 — mejora 1):
+ *     - top = altura del SiteHeader + 12px de gap
+ *     - height: auto → el panel se ajusta a su contenido
+ *     - max-height = 100vh − var(--site-header-height) − 24px (12px arriba + 12px abajo)
+ *     - min-height: 300px → evita que el panel parezca "minúsculo" en categorías muy cortas
+ *   Cuando el contenido supera max-height, el div interior overflow-y-auto lo maneja.
+ *   No se anima el height entre categorías — el salto es intencional (Natural, como Notion/Linear).
+ *   Ancho 500px; sombra envolvente; esquinas redondeadas.
  *
  * Móvil (<lg):
- *   Bottom sheet a media altura usando Dialog de Radix. Comportamiento y estilos
- *   idénticos al diseño anterior — este bloque no se ha tocado.
+ *   Bottom sheet a media altura usando Dialog de Radix. No se toca en esta mejora.
  *
  * Cierre:
  *   Solo mediante el botón X del drawer o la tecla Escape. El click fuera del
@@ -22,6 +24,7 @@
  *
  * Accesibilidad:
  *   - role="complementary" + aria-label en el drawer desktop
+ *   - aria-live="polite" + aria-atomic="true" en el contenedor de contenido (mejora 5)
  *   - Escape gestionado manualmente con useEffect + keydown
  *   - Al abrir: foco al botón de cierre del drawer
  *   - Al cerrar: foco vuelve a la fila que disparó la apertura
@@ -132,9 +135,16 @@ export function DetailPanelLayout({
             "hidden lg:flex flex-col",
             // Posicionamiento fixed con margen del viewport (tarjeta flotante)
             "fixed right-3 z-30",
-            // top = altura del header + gap; bottom = gap inferior
-            "top-[calc(var(--site-header-height)+12px)] bottom-3",
-            // Ancho 500px (más espacio que los 420 anteriores, menos scroll interno)
+            // Altura adaptativa (mejora 1 M36):
+            //   top = header + 12px gap arriba
+            //   h-auto → el panel se ajusta a su contenido natural
+            //   max-h = viewport − header − 24px (12px arriba + 12px abajo)
+            //   min-h = 300px → evita panel "minúsculo" en categorías muy cortas
+            "top-[calc(var(--site-header-height)+12px)]",
+            "h-auto",
+            "max-h-[calc(100vh-var(--site-header-height)-24px)]",
+            "min-h-[300px]",
+            // Ancho 500px
             "w-[500px]",
             // Tarjeta: bordes redondeados en las 4 esquinas, borde sutil, fondo card
             "rounded-xl border border-border bg-card",
@@ -148,8 +158,18 @@ export function DetailPanelLayout({
             "animate-in slide-in-from-right duration-[220ms] ease-out"
           )}
         >
-          {/* Área scrollable que contiene el contenido del panel */}
-          <div className="flex-1 overflow-y-auto min-h-0">
+          {/*
+            Área scrollable que contiene el contenido del panel.
+            aria-live="polite" + aria-atomic="true" (mejora 5 M36):
+            cuando el usuario selecciona otra categoría con el panel
+            ya abierto, los lectores de pantalla anuncian el nuevo
+            contenido sin interrumpir lo que estén leyendo.
+          */}
+          <div
+            className="flex-1 overflow-y-auto min-h-0"
+            aria-live="polite"
+            aria-atomic="true"
+          >
             {panelContent}
           </div>
         </aside>
