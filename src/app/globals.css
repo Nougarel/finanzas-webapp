@@ -73,12 +73,14 @@
   --foreground: oklch(0.129 0.042 264.695);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.129 0.042 264.695);
-  /* Superficie del panel de detalle (M36): blanco ligeramente cálido-neutral
-     para separarse del slate-50 del main (--background) por temperatura de
-     color. El delta es imperceptible en aislamiento pero crea separación
-     clara en coexistencia. Contraste AA no afectado (texto sigue sobre
-     fondo claro suficiente: WCAG 4.5:1 garantizado). */
-  --panel-surface: oklch(0.992 0.004 247);
+  /* Superficie del panel de detalle (M36): tint navy ligeramente más
+     perceptible que antes (0.992 → 0.982) para que el ojo perciba "esta
+     superficie es otro material" sin que se vea azulada.
+     Delta de luminosidad vs --background (0.984): ≈ 0.002 en L absoluto,
+     pero la croma 0.008 refuerza la temperatura y hace el tint perceptible.
+     Contraste AA garantizado: el texto foreground (oklch 0.129) sobre esta
+     superficie supera 12:1, muy por encima del 4.5:1 requerido por WCAG. */
+  --panel-surface: oklch(0.982 0.008 250);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.129 0.042 264.695);
   /* Primario navy #14213D (M35) */
@@ -171,4 +173,30 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* ── Scrollbar personalizada del panel de detalle (M36) ──────────────────────
+   Solo afecta al contenedor interior del panel (.panel-scroll-area).
+   No contamina la scrollbar de la página principal ni otras áreas.
+   Implementado con pseudo-elementos webkit (Chrome, Edge, Safari).
+   Firefox usa la propiedad estándar scrollbar-* (más limitada).
+   Ancho 5px, thumb navy 25%, track transparente, radio 2px. */
+.panel-scroll-area::-webkit-scrollbar {
+  width: 5px;
+}
+.panel-scroll-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+.panel-scroll-area::-webkit-scrollbar-thumb {
+  background-color: rgba(20, 33, 61, 0.25);
+  border-radius: 2px;
+  border: none;
+}
+.panel-scroll-area::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(20, 33, 61, 0.40);
+}
+/* Firefox — propiedad estándar, sin thumb:hover ni track independiente */
+.panel-scroll-area {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(20, 33, 61, 0.25) transparent;
 }
