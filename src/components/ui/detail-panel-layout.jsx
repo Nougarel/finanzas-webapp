@@ -73,20 +73,11 @@ export function DetailPanelLayout({
     return () => mql.removeEventListener("change", update);
   }, []);
 
-  // Ref al botón de cierre del drawer desktop — para mover el foco al abrir
-  const closeBtnRef = React.useRef(null);
-
-  // Al abrir el drawer desktop, mueve el foco al botón de cierre.
-  // Al cerrar, devuelve el foco a la fila activa de la tabla.
+  // El drawer es complementario (NO modal): no roba foco al abrir. El usuario
+  // tabula hasta él cuando quiere. Al cerrar, si tenemos referencia a la fila
+  // activa, devolvemos el foco allí (mejora navegación por teclado).
   React.useEffect(() => {
-    if (isOpen) {
-      // Pequeño delay para que el DOM esté pintado antes del foco
-      const timer = setTimeout(() => {
-        closeBtnRef.current?.focus();
-      }, 50);
-      return () => clearTimeout(timer);
-    } else {
-      // Devolver foco a la fila de la tabla que disparó el panel
+    if (!isOpen) {
       activeRowRef?.current?.focus();
     }
   }, [isOpen, activeRowRef]);
@@ -110,48 +101,46 @@ export function DetailPanelLayout({
   return (
     <>
       {/* ── Contenido principal ────────────────────────────────────────────────
-          En desktop: ocupa todo el ancho. Cuando el drawer está abierto recibe
-          un margen derecho para que el contenido no quede debajo del drawer, y
-          la opacidad baja a 0.6 para marcar el foco visual sin bloquear clics.
-          pointer-events permanece activo: el usuario puede clicar otra fila.
+          En desktop NO comprime el ancho cuando el drawer está abierto: el
+          drawer es una tarjeta flotante que se superpone, no un panel que
+          empuja. La tabla mantiene su composición normal centrada en
+          max-w-5xl. El drawer cubre la parte derecha de la tabla mientras
+          está abierto — es el trade-off aceptado para evitar layout shift
+          y el aire muerto a la izquierda del centrado.
+          NO se aplica opacity al contenido: reducir la opacidad del texto
+          degrada el contraste de los muted-foreground por debajo del 4.5:1
+          (axe AA falla). La señal visual de "foco en el drawer" la da el
+          drawer mismo (presencia, sombra, esquinas redondeadas) y el borde
+          izquierdo navy en la fila activa de la tabla.
       */}
-      {/* En desktop con el drawer abierto reservamos 420px + gap al lado derecho.
-          NO se aplica opacity al contenido: reducir la opacidad del texto degrada
-          el contraste de los muted-foreground por debajo del 4.5:1 (axe AA falla).
-          La señal visual de "foco en el drawer" la da el drawer mismo (presencia,
-          sombra) y el borde-izquierdo navy en la fila activa de la tabla. */}
-      <div className={cn(isOpen && "lg:pr-[436px]")}>
-        {children}
-      </div>
+      <div>{children}</div>
 
-      {/* ── Drawer fixed — solo desktop (lg+) ──────────────────────────────────
-          position: fixed, anclado a la derecha del viewport.
-          top = altura del SiteHeader (--site-header-height).
-          bottom = 0 (hasta el borde del viewport).
-          Ancho fijo 420px — no se reduce en viewports estrechos; el umbral lg
-          garantiza que solo aparece en ≥1024px.
-          Sombra izquierda (shadow-xl) para separarlo del contenido.
-          Animación: slide-in-from-right 220ms ease-out al abrir;
-                     slide-out-to-right simétrico al cerrar (data-[state]).
+      {/* ── Drawer flotante — solo desktop (lg+) ───────────────────────────────
+          position: fixed, anclado a la derecha del viewport CON MARGEN.
+          Tarjeta flotante con esquinas redondeadas — no flush con el borde.
+          Se superpone al contenido sin empujarlo (no hay pr en el main).
+          top = altura del SiteHeader + gap; right/bottom = gap del viewport.
+          Ancho 500px; sombra envolvente.
+          Animación: slide-in-from-right 220ms ease-out al abrir.
       */}
       {isOpen && (
         <aside
           role="complementary"
-          aria-label={`Detalle de categoría`}
+          aria-label="Detalle de categoría"
           className={cn(
             // Solo visible en desktop
             "hidden lg:flex flex-col",
-            // Posicionamiento fixed anclado al viewport
-            "fixed right-0 z-30",
-            // top = altura real del header global (CSS variable definida en globals.css)
-            // bottom = 0 para llegar hasta el borde inferior del viewport
-            "top-[var(--site-header-height)] bottom-0",
-            // Ancho fijo 420px
-            "w-[420px]",
-            // Estilo visual
-            "border-l border-border bg-card",
-            "shadow-[-4px_0_24px_0_rgba(0,0,0,0.08)]",
-            // Scroll interno — el contenido de CategoryDetail puede ser largo
+            // Posicionamiento fixed con margen del viewport (tarjeta flotante)
+            "fixed right-3 z-30",
+            // top = altura del header + gap; bottom = gap inferior
+            "top-[calc(var(--site-header-height)+12px)] bottom-3",
+            // Ancho 500px (más espacio que los 420 anteriores, menos scroll interno)
+            "w-[500px]",
+            // Tarjeta: bordes redondeados en las 4 esquinas, borde sutil, fondo card
+            "rounded-xl border border-border bg-card",
+            // Sombra envolvente más generosa (no solo a la izquierda)
+            "shadow-[0_10px_40px_-10px_rgba(0,0,0,0.18),0_4px_16px_-4px_rgba(0,0,0,0.08)]",
+            // Scroll interno
             "overflow-hidden",
             // Padding interior
             "p-5",
@@ -159,33 +148,6 @@ export function DetailPanelLayout({
             "animate-in slide-in-from-right duration-[220ms] ease-out"
           )}
         >
-          {/*
-            El botón de cierre vive dentro del aside únicamente como receptor de foco
-            inicial al abrir. CategoryDetail ya renderiza su propio botón X que llama
-            a onClose — este ref apunta a ese botón a través de un wrapper que lo busca.
-            Solución: usamos un div invisible con tabIndex=-1 como anchor de foco,
-            y CategoryDetail tiene su propio botón con ref pasado por contexto.
-
-            En la práctica: el padre (CategoryDetail) ya renderiza el botón X.
-            Necesitamos que el ref apunte a ese botón. Como CategoryDetail no expone
-            un ref, usamos un truco limpio: el primer elemento focusable del aside
-            recibe el foco tras 50ms. Usamos un botón sr-only invisible que llama
-            a onClose como primer elemento del aside, y así el primer Tab desde fuera
-            aterriza en el botón X real de CategoryDetail.
-
-            Para el foco inicial usamos el ref al botón sr-only.
-          */}
-          {/* Botón de cierre sr-only: receptor de foco inicial al abrir el drawer */}
-          <button
-            ref={closeBtnRef}
-            type="button"
-            onClick={onClose}
-            className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:right-2 focus:z-10 focus:rounded focus:bg-card focus:p-1 focus:text-sm"
-            aria-label="Cerrar panel de detalle"
-          >
-            Cerrar
-          </button>
-
           {/* Área scrollable que contiene el contenido del panel */}
           <div className="flex-1 overflow-y-auto min-h-0">
             {panelContent}
