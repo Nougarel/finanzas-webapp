@@ -638,6 +638,10 @@ export function diagnoseDistribution(profile, income, realAmounts) {
     comparison,
     alerts: realAlerts,
     healthScore,
+    // Indicadores transversales heredados de la distribución saludable.
+    // El DTI depende del perfil (deudas fijas), no del gasto real introducido,
+    // por lo que es correcto usar el calculado para la distribución ideal.
+    transversal: healthy.transversal,
     // Drivers cualitativos heredados de la distribución saludable. El panel
     // de detalle del diagnóstico los usa con la misma lógica que ResultsPage.
     explanation: healthy.explanation,

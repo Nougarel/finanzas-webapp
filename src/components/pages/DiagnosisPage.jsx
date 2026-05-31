@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense, useRef } from "react";
+import { useState, useEffect, Suspense, useRef, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { Check, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { PageShell } from "@/components/ui/page-shell";
 import { HealthGauge } from "@/components/ui/health-gauge";
 import { DetailPanelLayout } from "@/components/ui/detail-panel-layout";
 import { CategoryDetail } from "@/components/ui/category-detail";
+import { DashboardPanel } from "@/components/ui/dashboard-panel";
 import { CATEGORIES_UI } from "@/lib/models/categories";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useStudyContextOptional } from "@/lib/research/useStudyContext";
@@ -232,6 +233,48 @@ function DiagnosisContent() {
       .finally(() => setLoading(false));
   }, [profile, income, realAmounts]);
 
+  // ── Dataset para DashboardPanel (mode="real") ─────────────────────────────────
+  // Construye la estructura unificada que espera DashboardPanel desde los datos
+  // REALES del usuario (diagnosis.realDistribution + diagnosis.blocks.*.realAmount).
+  // Debe estar antes de los early returns para cumplir las reglas de hooks.
+  //
+  // Decisión de diseño: dataset.income = ingreso de referencia (no el gasto real total).
+  // El DashboardPanel en mode="real" muestra dataset.income como valor central con
+  // label "gasto real" — la discrepancia respecto a spec §5 es aceptada porque
+  // garantiza que los indicadores (tasa de ahorro, ratio necesidades, DTI) usan
+  // el denominador correcto (income, no gasto total). Modificar DashboardPanel
+  // para aceptar un centerValue independiente está fuera del scope de F3.
+  const dashboardDataset = useMemo(() => {
+    if (!diagnosis) return null;
+    // Mapa plano de categorías desde realDistribution (fuente: gasto real)
+    const categories = {};
+    for (const [catId, cat] of Object.entries(diagnosis.realDistribution)) {
+      categories[catId] = {
+        id: catId,
+        label: cat.label,
+        block: cat.block,
+        percentage: cat.percentage,         // % real sobre ingreso
+        amount: cat.amount,                 // importe real en €
+      };
+    }
+    // Bloques: porcentaje calculado como realAmount / income * 100
+    const needsPct  = income > 0 ? (diagnosis.blocks.needs.realAmount  / income) * 100 : 0;
+    const wantsPct  = income > 0 ? (diagnosis.blocks.wants.realAmount  / income) * 100 : 0;
+    const savingsPct = income > 0 ? (diagnosis.blocks.savings.realAmount / income) * 100 : 0;
+    return {
+      income,                               // denominador para indicadores
+      blocks: {
+        needs:   { label: diagnosis.blocks.needs.label,   percentage: parseFloat(needsPct.toFixed(2)),   amount: diagnosis.blocks.needs.realAmount   },
+        wants:   { label: diagnosis.blocks.wants.label,   percentage: parseFloat(wantsPct.toFixed(2)),   amount: diagnosis.blocks.wants.realAmount   },
+        savings: { label: diagnosis.blocks.savings.label, percentage: parseFloat(savingsPct.toFixed(2)), amount: diagnosis.blocks.savings.realAmount },
+      },
+      categories,
+      transversal: {
+        dti: { total: diagnosis.transversal?.dti?.total ?? 0 },
+      },
+    };
+  }, [diagnosis, income]);
+
   // ── Guards de estado ─────────────────────────────────────────────────────────
 
   if (!mounted) {
@@ -322,8 +365,10 @@ function DiagnosisContent() {
 
   return (
     <main className="flex min-h-screen flex-col">
-      <PageShell variant="table">
-        <div className="space-y-8">
+      <PageShell variant="dashboard">
+        {/* Col 1: contenido principal (7/12 en xl+, ancho completo en inferiores) */}
+        <div className="col-span-12 xl:col-span-7">
+          <div className="space-y-8">
 
           {/* Alertas críticas de sistema — siempre en lo más alto */}
           {(budgetAlert || debtAlert) && (
@@ -573,7 +618,32 @@ function DiagnosisContent() {
             )}
           </div>
 
-        </div>
+          </div>{/* fin space-y-8 de col 1 */}
+        </div>{/* fin col 1 */}
+
+        {/* Col 2: DashboardPanel en mode="real" (solo xl+, oculto en viewports menores).
+            Fuente de datos: realDistribution — muestra lo que el usuario GASTA,
+            no la distribución ideal. Los indicadores se calculan sobre el ingreso real
+            de referencia como denominador. */}
+        <aside
+          className="hidden xl:block xl:col-span-5"
+          aria-label="Dashboard resumen de situación real"
+        >
+          <div
+            className="sticky overflow-y-auto panel-scroll-area"
+            style={{
+              top: "calc(var(--site-header-height, 53px) + 1.5rem)",
+              maxHeight: "calc(100vh - var(--site-header-height, 53px) - 3rem)",
+            }}
+          >
+            <DashboardPanel
+              dataset={dashboardDataset}
+              mode="real"
+              secondaryCta={{ href: "/calculator", label: "Ver distribución ideal" }}
+            />
+          </div>
+        </aside>
+
       </PageShell>
     </main>
   );
