@@ -155,7 +155,6 @@ export function MacroPiechart({
             )}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
-            animationDuration={800}
           />
           <Tooltip
             content={<MacroTooltip />}
