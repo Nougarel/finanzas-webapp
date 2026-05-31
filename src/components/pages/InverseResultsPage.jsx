@@ -424,9 +424,13 @@ export default function InverseResultsPage() {
                     data={comparisonData}
                     caption="Comparativa de importes especificados frente a distribución saludable"
                     rowKey="id"
-                    onRowClick={(row) => setSelectedCategoryId(
-                      selectedCategoryId === row.id ? null : row.id
-                    )}
+                    onRowClick={(row) => {
+                      // Clic en fila activa = no-op (el drawer permanece abierto).
+                      // Clic en fila distinta = cambia el contenido del drawer.
+                      if (row.id !== selectedCategoryId) {
+                        setSelectedCategoryId(row.id);
+                      }
+                    }}
                     activeRowKey={selectedCategoryId}
                   />
                 </section>
@@ -475,9 +479,13 @@ export default function InverseResultsPage() {
                           data={blockData}
                           caption={`Distribución saludable — ${BLOCK_LABELS[block]}`}
                           rowKey="id"
-                          onRowClick={(row) => setSelectedCategoryId(
-                            selectedCategoryId === row.id ? null : row.id
-                          )}
+                          onRowClick={(row) => {
+                            // Clic en fila activa = no-op (el drawer permanece abierto).
+                            // Clic en fila distinta = cambia el contenido del drawer.
+                            if (row.id !== selectedCategoryId) {
+                              setSelectedCategoryId(row.id);
+                            }
+                          }}
                           activeRowKey={selectedCategoryId}
                         />
                       </div>

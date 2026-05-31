@@ -510,9 +510,13 @@ function ResultsContent() {
                         data={tableData}
                         caption={`Distribución de ${block.label}`}
                         rowKey="id"
-                        onRowClick={(row) => setSelectedCategoryId(
-                          selectedCategoryId === row.id ? null : row.id
-                        )}
+                        onRowClick={(row) => {
+                          // Clic en fila activa = no-op (el drawer permanece abierto).
+                          // Clic en fila distinta = cambia el contenido del drawer.
+                          if (row.id !== selectedCategoryId) {
+                            setSelectedCategoryId(row.id);
+                          }
+                        }}
                         activeRowKey={selectedCategoryId}
                       />
                     </section>

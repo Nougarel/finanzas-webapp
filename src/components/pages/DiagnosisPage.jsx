@@ -528,9 +528,13 @@ function DiagnosisContent() {
                       data={tableData}
                       caption={`Comparativa de ${diagnosis.blocks[blockKey].label}`}
                       rowKey="id"
-                      onRowClick={(row) => setSelectedCategoryId(
-                        selectedCategoryId === row.id ? null : row.id
-                      )}
+                      onRowClick={(row) => {
+                        // Clic en fila activa = no-op (el drawer permanece abierto).
+                        // Clic en fila distinta = cambia el contenido del drawer.
+                        if (row.id !== selectedCategoryId) {
+                          setSelectedCategoryId(row.id);
+                        }
+                      }}
                       activeRowKey={selectedCategoryId}
                     />
                   </section>
