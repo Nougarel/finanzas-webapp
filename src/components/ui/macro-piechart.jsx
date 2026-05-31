@@ -130,7 +130,9 @@ export function MacroPiechart({
     >
       {/* Gráfico donut */}
       <div style={{ width: size, height: size, flexShrink: 0, position: "relative" }}>
-        <PieChart width={size} height={size} style={{ outline: "none" }}>
+        {/* tabIndex={-1} saca el SVG del orden de tabulación (A2/A3).
+            El contenedor padre ya tiene role="img" + aria-label dinámico. */}
+        <PieChart width={size} height={size} tabIndex={-1}>
           <Pie
             data={data}
             dataKey="value"
@@ -141,19 +143,19 @@ export function MacroPiechart({
             startAngle={90}
             endAngle={-270}
             paddingAngle={2}
-            cornerRadius={3}
+            cornerRadius={2}
             activeIndex={activeIndex ?? undefined}
             activeShape={ActiveShape}
             shape={(props) => (
               <NormalShape
                 {...props}
                 fill={data[props.index]?.color ?? props.fill}
-                cornerRadius={3}
+                cornerRadius={2}
               />
             )}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
-            isAnimationActive={true}
+            isAnimationActive={false}
           />
           <Tooltip
             content={<MacroTooltip />}
@@ -180,9 +182,10 @@ export function MacroPiechart({
           >
             {displayValue}
           </div>
+          {/* C5: centerLabel en text-foreground a 12px para distinguir modo real de recommended */}
           <div
-            className="font-sans text-muted-foreground"
-            style={{ fontSize: 11, marginTop: 2 }}
+            className="font-sans text-foreground"
+            style={{ fontSize: 12, marginTop: 2 }}
           >
             {centerLabel}
           </div>

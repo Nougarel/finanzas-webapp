@@ -212,6 +212,14 @@
   }
 }
 
+/* ── Recharts: suprimir outline residual en SVG no focusable (A3) ───────────
+   Con tabIndex={-1} el SVG ya no recibe foco de teclado, pero algunos navegadores
+   muestran un outline en hover vía :focus (no :focus-visible). Esta regla lo elimina
+   únicamente para el SVG de recharts, sin afectar la política global de focus-visible. */
+.recharts-wrapper svg:focus {
+  outline: none;
+}
+
 /* ── Scrollbar personalizada del panel de detalle (M36) ──────────────────────
    Solo afecta al contenedor interior del panel (.panel-scroll-area).
    No contamina la scrollbar de la página principal ni otras áreas.
