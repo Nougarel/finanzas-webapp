@@ -64,6 +64,10 @@
 
 :root {
   --radius: 0.625rem;
+  /* Altura del SiteHeader — usada por DetailPanelLayout para posicionar el drawer fixed.
+     Derivada de py-3 (12px × 2) + contenido (≈28px) + border-b (1px) = 53px.
+     Si se cambia el padding del header, actualizar este valor. */
+  --site-header-height: 53px;
   /* Fondo base off-white (M35 pulido G1) — slate-50 para que las cards blancas resalten */
   --background: oklch(0.984 0.003 247.858);
   --foreground: oklch(0.129 0.042 264.695);
