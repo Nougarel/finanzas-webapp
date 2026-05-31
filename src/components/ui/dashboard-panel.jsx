@@ -208,7 +208,7 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
   return (
     <div className="flex flex-col gap-3">
       {/* ── MacroPiechart ────────────────────────────────────────────────── */}
-      <div className="bg-card border border-border rounded-lg px-6 py-4 card-elevated">
+      <div className="bg-card border border-border rounded-lg px-6 pt-6 pb-4 card-elevated">
         <p
           className="font-sans font-medium uppercase text-muted-foreground mb-2"
           style={{ fontSize: 11, letterSpacing: "0.05em" }}
