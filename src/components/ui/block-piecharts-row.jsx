@@ -28,26 +28,7 @@
 
 import { useState, useCallback } from "react";
 import { PieChart, Pie, Sector, Tooltip } from "recharts";
-
-// ─── Paletas de color por bloque (§3.3 DESIGN.md) ────────────────────────────
-
-const BLOCK_PALETTES = {
-  needs: {
-    chroma: 0.18,
-    hue: 38,
-    luminosities: [0.45, 0.52, 0.58, 0.62, 0.66, 0.72],
-  },
-  wants: {
-    chroma: 0.16,
-    hue: 300,
-    luminosities: [0.40, 0.46, 0.52, 0.56, 0.60, 0.64, 0.67, 0.70],
-  },
-  savings: {
-    chroma: 0.15,
-    hue: 155,
-    luminosities: [0.44, 0.50, 0.58, 0.63, 0.67, 0.70],
-  },
-};
+import { CATEGORY_COLORS } from "@/lib/m37/categoryColors";
 
 // Colores principales de cada bloque para el label (coinciden con --chart-1/2/3)
 const BLOCK_LABEL_COLORS = {
@@ -65,16 +46,11 @@ const BLOCK_LABELS = {
 const BLOCK_ORDER = ["needs", "wants", "savings"];
 
 /**
- * Genera la escala de colores oklch para un bloque dado.
+ * Devuelve el color fijo de una categoría desde CATEGORY_COLORS (§12.2 DESIGN.md).
+ * Sustituye la generación dinámica de escalas monocromáticas.
  */
-function generateColorScale(block, count) {
-  const palette = BLOCK_PALETTES[block];
-  if (!palette) return Array(count).fill("oklch(0.5 0.1 0)");
-  const { chroma, hue, luminosities } = palette;
-  return Array.from({ length: count }, (_, i) => {
-    const L = luminosities[i] ?? luminosities[luminosities.length - 1];
-    return `oklch(${L} ${chroma} ${hue})`;
-  });
+function getCategoryColor(categoryId) {
+  return CATEGORY_COLORS[categoryId] ?? CATEGORY_COLORS._fallback;
 }
 
 // ─── Tooltip personalizado ────────────────────────────────────────────────────
@@ -143,8 +119,7 @@ function MicroPiechart({ blockKey, data, size, thickness }) {
   const handleMouseEnter = useCallback((_, index) => setActiveSegment(index), []);
   const handleMouseLeave = useCallback(() => setActiveSegment(null), []);
 
-  const colors = generateColorScale(blockKey, data.length);
-  const coloredData = data.map((cat, i) => ({ ...cat, color: colors[i] }));
+  const coloredData = data.map((cat) => ({ ...cat, color: getCategoryColor(cat.id) }));
 
   const outerRadius = size / 2;
   const innerRadius = outerRadius - thickness;

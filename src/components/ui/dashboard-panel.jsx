@@ -38,11 +38,16 @@
  * @param {"recommended"|"real"|"inverse"} props.mode - Modo de operación.
  * @param {{ href: string, label: string }} props.secondaryCta - CTA secundario al pie.
  * @param {boolean} [props.skeleton]                - Renderiza skeletons de carga si true.
+ * @param {"piecharts"|"bars"} [props.categoryView] - Variante del bloque "Detalle por bloque".
+ *   "piecharts" → BlockPiechartsRow (micro-donuts). Default.
+ *   "bars"      → BlockBudgetBars (barras horizontales agrupadas por bloque).
+ *   En modo "inverse" ninguno se renderiza.
  */
 
 import { useMemo } from "react";
 import { MacroPiechart } from "./macro-piechart";
 import { BlockPiechartsRow } from "./block-piecharts-row";
+import { BlockBudgetBars } from "./block-budget-bars";
 import { IndicatorCard } from "./indicator-card";
 import { DashboardSecondaryCta } from "./dashboard-secondary-cta";
 import {
@@ -135,7 +140,7 @@ function formatEur(amount) {
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
-export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, skeleton = false }) {
+export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, skeleton = false, categoryView = "piecharts" }) {
   // Si faltan datos, renderiza skeletons
   const showSkeleton = skeleton || !dataset;
 
@@ -261,9 +266,8 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
         )}
       </div>
 
-      {/* ── BlockPiechartsRow (oculto en lg y md) ───────────────────────── */}
-      {/* B2: sustituye BlockPiechart con tabs por 3 micro-piecharts en fila.
-          En modo inverse no se renderiza (igual que antes). */}
+      {/* ── Detalle por bloque: piecharts o barras (oculto en lg y md) ───── */}
+      {/* En modo inverse no se renderiza. categoryView controla la variante. */}
       {mode !== "inverse" && (
         <div className="bg-card border border-border rounded-lg px-4 py-5 card-elevated hidden xl:block">
           <p
@@ -273,7 +277,7 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
             Detalle por bloque
           </p>
           {showSkeleton ? (
-            /* C3: skeleton como 3 mini-anillos en fila */
+            /* Skeleton: 3 mini-anillos en fila (solo referencia visual de piecharts) */
             <div className="flex flex-row gap-3 justify-between items-center">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="flex flex-col items-center gap-2 flex-1">
@@ -285,6 +289,8 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
                 </div>
               ))}
             </div>
+          ) : categoryView === "bars" ? (
+            <BlockBudgetBars dataByBlock={blockData} mode={mode} />
           ) : (
             <BlockPiechartsRow
               dataByBlock={blockData}
