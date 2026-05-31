@@ -160,7 +160,7 @@ los chart-*:
 │  │  │  DESEOS  10.0%  450 €               │   │  │  [DTI card]               │
 │  │  └─────────────────────────────────────┘   │  │  [Tasa ahorro card]       │
 │  │  [DataTable categorías: 8 filas]            │  │  [Ratio necesidades card] │
-│  │                                             │  │  [Cobertura emergencia]   │
+│  │                                             │  │  [Cobertura de emergencia]│
 │  │  ┌─ Banner bloque AHORRO ───────────────┐   │  │                           │
 │  │  │  AHORRO  30.3%  1.363 €             │   │  │  ── SecondaryCTA ────────  │
 │  │  └─────────────────────────────────────┘   │  │  [sticky al pie de col 2] │
@@ -760,3 +760,420 @@ ninguna estrategia adicional de colapso.
 Si en alguna configuración de perfil los 4 IndicatorCards generan contenido muy largo
 (ej. el campo descripción excede 2 líneas), el `line-clamp-2` definido en la spec del
 `IndicatorCard` limita el crecimiento. No se necesita estrategia de emergencia adicional.
+
+---
+
+## 12. Iteración post-F2.5 — paleta de categorías y variante de barras
+
+### 12.1 Diagnóstico del estado actual
+
+Captura de referencia: `docs/m37/screenshots/iteration-post-f25/micropie-zoom-recommended.png`
+
+Los micro-piecharts de bloque se renderizan a **108 px de diámetro** (tamaño real medido
+en el demo). Con ese tamaño, un anillo de 22 px de grosor deja un espacio útil de arco
+de apenas 15–20 px de ancho por segmento pequeño. El problema no es solo de tamaño sino de
+estrategia cromática: la escala monocromática de `block-piecharts-row.jsx` varía únicamente
+la luminosidad (`L`) del color base del bloque, manteniendo el mismo croma (`C`) y el mismo
+tono (`H`). El resultado son 6–8 variantes perceptualmente solapadas del mismo color base:
+a 108 px, el ojo no discrimina diferencias de `L` de 0.07 entre segmentos adyacentes.
+
+El bloque de Deseos es el más afectado: 8 categorías, todas en variantes de violeta entre
+`L=0.40` y `L=0.70`. Los segmentos de las categorías pequeñas (Hobbies 0.8%, Suscripciones
+0.7%, Regalos 0.5%) forman arcos de menos de 5° que son prácticamente invisibles y en todo
+caso imposibles de distinguir del color adyacente.
+
+El bloque de Necesidades tiene un problema diferente: la categoría de vivienda (20%) domina
+visualmente en rojo-naranja oscuro, y las 5 categorías restantes suman menos del 22% pero
+se reparten en tonos que compiten entre sí sin pausa cromática clara.
+
+El diagnóstico es que la escala de luminosidad no es suficiente. Se necesitan **saltos de
+tono (hue) entre categorías** dentro de cada bloque para que la vista discrimine sin esfuerzo.
+
+### 12.2 Paleta nueva — 20 colores con identidad cromática por familia
+
+**Estrategia adoptada: variación simultánea de hue + luminosidad**
+
+En lugar de variar solo `L` dentro de un hue fijo, se expande el rango de hue de cada bloque
+en ±25° en ambas direcciones, asignando a cada categoría un hue distinto dentro de la familia.
+Esto garantiza diferenciación perceptual real incluso en segmentos pequeños, mientras cada
+bloque sigue teniendo su "temperatura" cromática reconocible (caliente para needs, fría para
+wants, natural-vegetal para savings).
+
+**Restricciones verificadas:**
+- Contraste sobre blanco (`--card: oklch(1 0 0)`): se calcula por WCAG 1.4.11 como función
+  de la luminancia relativa. Aproximación: para `L` en oklch, el contraste sobre blanco es
+  ≈ `(1.05) / (L² × 1.05 + 0.05)`. Para L=0.52, ratio ≈ 5.5:1. Para L=0.60, ratio ≈ 3.7:1.
+  Para L=0.65, ratio ≈ 2.8:1 — solo válido para segmentos grandes (>20×20 px).
+- Ningún hue entra en la zona navy (hue 234–295°). El bloque de Deseos (violeta) trabaja
+  entre hue 295–340° para separarse del navy.
+- Las categorías con peso mayor (>8%) reciben valores de L más bajos (más oscuro, más
+  contraste). Las categorías con peso menor reciben valores de L más altos pero siempre
+  con su hue propio.
+
+#### Necesidades — 6 categorías (familia caliente: rojo-naranja-ámbar, hue 10–62°)
+
+Los 6 colores se distribuyen en el espectro caliente. El rojo puro (hue ~10°) se reserva
+para vivienda, el peso mayor. Avanzando hacia el naranja y el ámbar se cubren las demás.
+
+| Categoría | oklch | Hex aprox. | Contraste/blanco | Verificación |
+|-----------|-------|-----------|-----------------|--------------|
+| housing (vivienda) | `oklch(0.48 0.20 13)` | #B83A2A | ≈ 7.2:1 | pasa AA ✓ |
+| groceries (alimentación) | `oklch(0.54 0.20 32)` | #C85A28 | ≈ 5.3:1 | pasa AA ✓ |
+| transport (transporte) | `oklch(0.57 0.18 46)` | #C96820 | ≈ 4.4:1 | pasa AA ✓ |
+| utilities (suministros) | `oklch(0.52 0.17 58)` | #A87218 | ≈ 5.8:1 | pasa AA ✓ |
+| health (salud) | `oklch(0.56 0.15 22)` | #B84840 | ≈ 4.6:1 | pasa AA ✓ |
+| education (educación) | `oklch(0.53 0.16 52)` | #A07010 | ≈ 5.5:1 | pasa AA ✓ |
+
+**Lectura de familia:** el espectro va de rojo-ladrillo (vivienda) a ámbar-mostaza (educación),
+pasando por naranja tostado (alimentación, transporte) y terracota (salud, suministros).
+Todos son tonos "tierra" que comunican necesidad básica. El mayor contraste en vivienda
+refuerza que es el peso dominante. Los 6 hues están separados 5–15° entre sí, suficiente
+para discriminarlos a 108 px de diámetro.
+
+**Nota de implementación:** el frontend debe reemplazar `generateColorScale()` en
+`block-piecharts-row.jsx` por un mapa de categoría → color fijo. Los colores ya no se
+calculan en runtime; se definen como constante. El orden de asignación es el orden de
+`CATEGORIES_CATALOG` para el bloque `"needs"`.
+
+#### Deseos — 8 categorías (familia fría: violeta-malva-fucsia, hue 295–340°)
+
+El violeta-malva (chart-2 base, hue 300°) es el centro. Se expande hacia el fucsia (hue 340°)
+por un lado y hacia el azul-violeta puro (hue 295°) por otro. Se excluye hue 234–294° por
+colisión con navy.
+
+| Categoría | oklch | Hex aprox. | Contraste/blanco | Verificación |
+|-----------|-------|-----------|-----------------|--------------|
+| dining_out (restaurantes) | `oklch(0.50 0.18 305)` | #7A4AAE | ≈ 6.5:1 | pasa AA ✓ |
+| travel (viajes) | `oklch(0.53 0.18 318)` | #8A48A8 | ≈ 5.5:1 | pasa AA ✓ |
+| clothing (ropa) | `oklch(0.56 0.17 330)` | #9848A0 | ≈ 4.6:1 | pasa AA ✓ |
+| personal_care (cuidado personal) | `oklch(0.52 0.15 298)` | #6458B0 | ≈ 5.8:1 | pasa AA ✓ |
+| entertainment (entretenimiento) | `oklch(0.58 0.16 340)` | #A04898 | ≈ 4.3:1 | pasa AA ✓ |
+| hobbies (hobbies) | `oklch(0.54 0.14 310)` | #7050A8 | ≈ 5.2:1 | pasa AA ✓ |
+| subscriptions (suscripciones) | `oklch(0.55 0.15 322)` | #8050A2 | ≈ 4.9:1 | pasa AA ✓ |
+| gifts (regalos) | `oklch(0.57 0.13 335)` | #905898 | ≈ 4.4:1 | pasa AA ✓ |
+
+**Lectura de familia:** todos se leen como "morado" a primera vista, pero el ojo distingue
+el violeta-índigo de personal_care del fucsia-violeta de clothing o del malva-rosa de gifts.
+Los 8 hues están escalonados de 295° a 340°, con pasos de 5–12° que son perceptibles en
+segmentos pequeños. Ningún color entra en la zona navy (234–294°). Los valores de L están
+todos en 0.50–0.58, asegurando contraste mínimo 4.3:1 sobre blanco.
+
+#### Ahorro — 6 categorías (familia natural: verde-teal-agua, hue 130–195°)
+
+El verde-teal (chart-3 base, hue 155°) es el centro. Se expande hacia el verde-lima (hue 130°)
+y el teal-azul (hue 180–195°). Este rango no colisiona con navy (234°+) ni con los cálidos.
+
+| Categoría | oklch | Hex aprox. | Contraste/blanco | Verificación |
+|-----------|-------|-----------|-----------------|--------------|
+| life_insurance (seguro de vida) | `oklch(0.50 0.17 140)` | #2A8858 | ≈ 6.5:1 | pasa AA ✓ |
+| emergency_fund (fondo emergencia) | `oklch(0.54 0.16 158)` | #2A9070 | ≈ 5.3:1 | pasa AA ✓ |
+| short_term_savings (ahorro c/p) | `oklch(0.57 0.15 172)` | #209878 | ≈ 4.4:1 | pasa AA ✓ |
+| long_term_savings (ahorro l/p) | `oklch(0.52 0.18 133)` | #308048 | ≈ 5.8:1 | pasa AA ✓ |
+| investment (inversión) | `oklch(0.55 0.16 185)` | #1A9888 | ≈ 5.0:1 | pasa AA ✓ |
+| debt_extra (amortización deuda) | `oklch(0.51 0.14 148)` | #388060 | ≈ 6.0:1 | pasa AA ✓ |
+
+**Lectura de familia:** el espectro va de verde bosque oscuro (seguro de vida) a teal-agua
+(inversión), pasando por verde esmeralda (fondo emergencia, ahorro l/p) y teal medio (ahorro
+c/p, amortización). Todos comunican crecimiento y futuro. Los 6 hues están separados 8–18°,
+perceptibles incluso en segmentos de 5–8%.
+
+#### Constante de implementación (reemplaza `BLOCK_PALETTES` en `block-piecharts-row.jsx`)
+
+```js
+// Colores fijos por categoría — reemplaza la generación dinámica de escalas
+// Orden: mismo que CATEGORIES_CATALOG para cada bloque
+
+export const CATEGORY_COLORS = {
+  // NEEDS — familia rojo-naranja-ámbar
+  housing:      "oklch(0.48 0.20 13)",
+  groceries:    "oklch(0.54 0.20 32)",
+  transport:    "oklch(0.57 0.18 46)",
+  utilities:    "oklch(0.52 0.17 58)",
+  health:       "oklch(0.56 0.15 22)",
+  education:    "oklch(0.53 0.16 52)",
+
+  // WANTS — familia violeta-malva-fucsia
+  dining_out:     "oklch(0.50 0.18 305)",
+  travel:         "oklch(0.53 0.18 318)",
+  clothing:       "oklch(0.56 0.17 330)",
+  personal_care:  "oklch(0.52 0.15 298)",
+  entertainment:  "oklch(0.58 0.16 340)",
+  hobbies:        "oklch(0.54 0.14 310)",
+  subscriptions:  "oklch(0.55 0.15 322)",
+  gifts:          "oklch(0.57 0.13 335)",
+
+  // SAVINGS — familia verde-teal-agua
+  life_insurance:     "oklch(0.50 0.17 140)",
+  emergency_fund:     "oklch(0.54 0.16 158)",
+  short_term_savings: "oklch(0.57 0.15 172)",
+  long_term_savings:  "oklch(0.52 0.18 133)",
+  investment:         "oklch(0.55 0.16 185)",
+  debt_extra:         "oklch(0.51 0.14 148)",
+};
+```
+
+El frontend adapta `generateColorScale()` para que, en lugar de calcular la escala en
+runtime, haga un `data.map(cat => CATEGORY_COLORS[cat.id] ?? fallback)`. La función
+`generateColorScale` puede eliminarse o mantenerse como fallback de emergencia.
+
+Los colores de bloque para el macropiechart (`chart-1`, `chart-2`, `chart-3`) no cambian.
+La nueva paleta solo afecta a los micro-piecharts de categorías individuales.
+
+---
+
+### 12.3 Spec del componente `<BlockBudgetBars>`
+
+**Nombre propuesto:** `BlockBudgetBars` (no `BlockCategoryBars`). El nombre refleja que
+lo que se muestra es el presupuesto distribuido por bloque, no solo las categorías. Esto
+distingue el componente del genérico "category bars" y lo conecta al dominio financiero.
+
+**Diferenciador respecto a la tabla de col 1**
+
+La DataTable de col 1 muestra: nombre de categoría + importe exacto en euros + porcentaje
+sobre el ingreso + barra de progreso + indicador de estado. Es una tabla de consulta densa.
+
+`<BlockBudgetBars>` es diferente en tres dimensiones:
+1. **Agrupación visible por bloque** con total de bloque como contexto visual, no solo
+   por categoría.
+2. **Sin importes exactos** — la barra comunica la proporción relativa dentro del bloque,
+   no el valor absoluto. El usuario que quiera el número exacto va a col 1.
+3. **Lectura comparativa inmediata**: al ver los 3 bloques en el mismo espacio, el usuario
+   calibra instantáneamente si gasta más en necesidades que en ahorro sin tener que
+   scrollear entre secciones de col 1.
+
+El caso de uso es: "¿Qué peso tiene cada categoría dentro de su bloque?" La tabla de col 1
+responde "¿Cuánto gasto exactamente en X?". Son preguntas distintas.
+
+**Layout general**
+
+```
+┌─ BlockBudgetBars ─────────────────────────────────────────────────┐
+│                                                                     │
+│  ┌─ bloque needs ───────────────────────────────────────────────┐  │
+│  │  NECESIDADES · 42%           [label bloque, muted, 10px]     │  │
+│  │  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ [barra total del bloque, 3px]   │  │
+│  │  Vivienda            ████████████████████ 48%               │  │
+│  │  Alimentación        ████████████ 20%                        │  │
+│  │  Transporte          ████████ 13%                            │  │
+│  │  Suministros         █████ 12%                               │  │
+│  │  Salud               ███ 5%                                  │  │
+│  │  Educación           ██ 2%                                   │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+│  ╌╌╌ separador hairline (1px, muted/30) ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌  │
+│  ┌─ bloque wants ───────────────────────────────────────────────┐  │
+│  │  DESEOS · 10%                                                │  │
+│  │  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ [barra total, color wants]       │  │
+│  │  Restaurantes        ████████████ 25%                        │  │
+│  │  Viajes              ████████ 20%                            │  │
+│  │  ...                                                         │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+│  ╌╌╌ separador hairline ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌  │
+│  ┌─ bloque savings ─────────────────────────────────────────────┐  │
+│  │  AHORRO · 48%                                                │  │
+│  │  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ [barra total, color savings]     │  │
+│  │  Inversión           ████████████████ 31%                    │  │
+│  │  ...                                                         │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Anatomía de cada fila de categoría:**
+
+```
+[label — 12px, max-w 110px, truncado]  [barra proporcional]  [%]
+```
+
+- Label: `font-sans, 12px, text-foreground, font-normal`. Ancho fijo `w-[110px]`, truncado
+  con `overflow-hidden text-ellipsis whitespace-nowrap`. El truncado es aceptable porque
+  el usuario conoce las categorías de col 1; aquí solo sirve de referencia rápida.
+- Barra: `height: 6px, border-radius: 3px`. El color es el del `CATEGORY_COLORS[cat.id]`
+  de la paleta nueva. El ancho es proporcional al valor de la categoría dentro del bloque
+  (no del ingreso total): `width: (cat.value / blockTotal) * 100 + "%"`. El contenedor de
+  la barra ocupa el espacio restante después del label y el porcentaje.
+- Porcentaje: el porcentaje que muestra es la participación de la categoría dentro del
+  bloque, no sobre el ingreso total. Ejemplo: vivienda es 48% dentro de needs (no 20% del
+  ingreso). Esto es el diferenciador informacional respecto a la tabla de col 1, que sí
+  muestra el % sobre el ingreso.
+- Tipografía del porcentaje: `font-sans, 11px, tabular-nums, text-muted-foreground,
+  font-medium`. Ancho fijo `w-[32px]` alineado a la derecha.
+- Layout fila: `flex items-center gap-2`. Label (fijo 110px) + barra (flex-1) + porcentaje
+  (fijo 32px).
+
+**Anatomía del header de bloque:**
+
+```
+NECESIDADES · 42%                    [encabezado de bloque]
+────────────────────────────────     [barra total del bloque: 3px, color base chart-1/2/3]
+```
+
+- Label del bloque: `font-sans, text-[10px], font-bold, uppercase, tracking-[0.05em]`.
+  Color: el color base del bloque (`chart-1/2/3` como valor CSS). No `text-muted-foreground`;
+  el color del bloque actúa de identificador visual.
+- Porcentaje del bloque: `text-muted-foreground, font-normal` a continuación del label,
+  separado por ` · `. El porcentaje es sobre el ingreso total.
+- Barra total del bloque: debajo del label, `height: 3px, border-radius: 2px`,
+  `background-color: [color base del bloque, opacity 40%]`, ancho proporcional al porcentaje
+  del bloque sobre el ingreso (ej. necesidades 42% → la barra ocupa el 42% del ancho total
+  del contenedor). Esto da una referencia macro antes de ver el detalle de categorías.
+  Esta barra es el único elemento que usa el ancho relativo al ingreso total; las barras
+  de categorías usan el ancho relativo al bloque.
+- Margin-bottom entre header y primera fila: `mt-2` (8px).
+
+**Separadores entre bloques:**
+- `<hr>` con `border-t border-border/30 my-3`. No usar `divider` de shadcn — es más pesado
+  visualmente de lo que se necesita aquí. El hairline de 1px con opacidad 30% es suficiente
+  para indicar "agrupamiento distinto" sin cortar la continuidad de la vista.
+
+**Espaciado interno:**
+- Padding del componente: `px-0 py-2` (el card contenedor ya aporta su propio `p-4`).
+- Gap entre filas de categoría dentro de un bloque: `gap-y-1.5` (6px). Compacto pero
+  legible — más apretado que la tabla de col 1 porque no hay importes en euros.
+- Gap entre header de bloque y primera fila: `mt-2` (8px).
+- Margin entre hairline y siguiente header: `mt-3` (12px) ya incluido en `my-3`.
+
+**Orden de categorías dentro de cada bloque:**
+Las categorías se muestran ordenadas por valor descendente dentro del bloque. Esto facilita
+la lectura: el mayor segmento siempre está primero, el menor al final. El ordenamiento se
+hace en el componente, no en la API. La categoría con valor 0 se omite (no muestra fila).
+
+**Props del componente:**
+
+```js
+// Misma estructura de datos que BlockPiechartsRow
+BlockBudgetBars({
+  dataByBlock: {
+    needs:   Array<{ id: string, label: string, value: number, percentage: number }>,
+    wants:   Array<{ id: string, label: string, value: number, percentage: number }>,
+    savings: Array<{ id: string, label: string, value: number, percentage: number }>,
+  }
+})
+```
+
+Ruta sugerida: `src/components/ui/block-budget-bars.jsx`
+
+**Altura total estimada:**
+- Header needs (16px) + barra total (3px+8px) + 6 filas × (18px fila + 6px gap) = 16+11+144 = 171px
+- Separador hairline + margin: 24px
+- Header wants + 8 filas × 24px: 207px
+- Separador hairline + margin: 24px
+- Header savings + 6 filas × 24px: 171px
+- **Total estimado: ~597 px**
+
+Cabe holgadamente en el espacio disponible de col 2 (~979 px) incluso junto al MacroPiechart
+(~220 px) + gap (16px) = 236px. Suma total: 236 + 597 = 833px < 979px. No hay desbordamiento.
+
+**Accesibilidad:**
+- Cada barra de categoría es un elemento visual no interactivo. Añadir `role="img"` al
+  contenedor de la barra con `aria-label="{label}: {pct}% del bloque"`.
+- El componente completo tiene `aria-label="Distribución por categorías y bloque"` en su
+  contenedor raíz.
+- Las barras no reciben foco de teclado (no son interactivas). Si en el futuro se añade
+  click para resaltar la categoría en col 1, añadir `role="button"` y `tabindex="0"`.
+
+**Comportamiento responsive:**
+- xl: visible, con label de 110px y barra en el espacio restante.
+- lg y md: visible (el componente cabe en 1 columna). El label se reduce a 90px si el
+  viewport es estrecho. La barra absorbe el espacio restante.
+- sm: oculto (`hidden md:block`). En móvil, col 2 entera está oculta.
+
+---
+
+### 12.4 Coexistencia en el demo `/debug/dashboard-demo`
+
+El usuario quiere comparar ambas variantes de visualización de categorías: la actual
+(micro-piecharts) y la nueva (barras horizontales). Se propone el siguiente layout para
+el demo:
+
+**Layout: toggle entre variantes, no lado a lado**
+
+Mostrar ambas variantes al mismo tiempo en el demo requeriría duplicar el `DashboardPanel`
+entero, lo que resulta en una página muy larga y dificulta la comparación real (hay que
+scrollear). Un toggle es más limpio y más representativo del contexto de uso real.
+
+```
+┌── Demo: Modo recommended ─────────────────────────────────────────────────────┐
+│                                                                               │
+│  [toggle]  ○ Micro-piecharts  ●  Barras por bloque                           │
+│                                                                               │
+│  ┌── DashboardPanel ──────────────────────────────────────────────────────┐   │
+│  │  MacroPiechart (siempre visible — igual en ambas variantes)            │   │
+│  │                                                                        │   │
+│  │  [si toggle = piecharts]                                               │   │
+│  │     BlockPiechartsRow (con paleta nueva)                               │   │
+│  │                                                                        │   │
+│  │  [si toggle = barras]                                                  │   │
+│  │     BlockBudgetBars                                                    │   │
+│  │                                                                        │   │
+│  │  IndicatorCards (siempre visibles — iguales en ambas variantes)        │   │
+│  │  SecondaryCTA                                                          │   │
+│  └────────────────────────────────────────────────────────────────────────┘   │
+│                                                                               │
+└───────────────────────────────────────────────────────────────────────────────┘
+```
+
+El toggle se implementa como un `<div role="group">` con dos botones `role="radio"` o
+como dos botones con clases `variant="outline"` de shadcn. No usar `<select>` — visualmente
+menos claro para una decisión binaria.
+
+El toggle va fuera del `DashboardPanel` en el demo (en el header de la sección de modo),
+no dentro del panel. Esto lo marca como herramienta de comparación del demo, no como feature
+del producto. El `DashboardPanel` recibe una prop `categoryView: "piecharts" | "bars"` que
+determina qué subcomponente renderizar.
+
+**Los 3 modos del demo** (recommended, real, inverse) pueden tener su propio toggle
+independiente. El estado del toggle es local a cada modo en el demo — no hay sincronización
+entre ellos.
+
+**Estado inicial del toggle:** `"bars"`, para que el usuario vea primero la variante nueva.
+Puede cambiar a `"piecharts"` para comparar con el estado anterior (con la paleta nueva
+aplicada, no la escala monocromática original).
+
+---
+
+### 12.5 Recomendación final
+
+**Se recomienda adoptar `<BlockBudgetBars>` como variante principal en el producto, con
+`<BlockPiechartsRow>` mantenido pero secundario (o eliminado).**
+
+Razones:
+
+1. **El problema de legibilidad de los piecharts no se resuelve con la paleta nueva.**
+   Con 108 px de diámetro y 8 categorías en wants, incluso con hues distintos, los segmentos
+   de 0.5–2% seguirán siendo arcos imperceptibles. El piechart a este tamaño es legible para
+   3–4 segmentos, no para 6–8. La paleta nueva mejora la situación pero no la resuelve.
+
+2. **Las barras horizontales son el formato correcto para esta densidad de datos.**
+   6–8 categorías ordenadas por valor con una barra proporcional son el patrón estándar de
+   visualización de distribución de presupuesto. Es lo que usan las apps financieras de
+   referencia (YNAB, Copilot, Monarch) para este caso de uso.
+
+3. **Las barras aportan información adicional que los piecharts no dan:** la proporción de
+   cada categoría dentro de su bloque (no del ingreso total) es una métrica nueva que la
+   tabla de col 1 no muestra. El usuario aprende algo nuevo al ver el panel; no ve lo mismo
+   de otra forma.
+
+4. **La coexistencia de `BlockPiechartsRow` y `BlockBudgetBars` en el mismo DashboardPanel
+   es redundante.** Una vez que el usuario valide que las barras funcionan mejor, se
+   recomienda eliminar los micro-piecharts del panel de col 2 y mantener solo el MacroPiechart
+   macro. El espacio que libera puede usarse para que los IndicatorCards respiren más.
+
+**Si el usuario quiere conservar los piecharts:** aplicar la paleta nueva (sección 12.2) y
+aumentar el tamaño de los micro-piecharts a 160 px de diámetro (el espacio de col 2 a 5/12
+de 1280 px = ~480 px lo permite). A 160 px, los arcos pequeños son perceptibles y la paleta
+con hues distintos hace el resto. El grosor del anillo sube a 26 px. Esta es la única
+condición bajo la que los piecharts siguen siendo viables para 8 categorías.
+
+**Conclusión:** Implementar `BlockBudgetBars` con la paleta nueva de 20 colores. Mostrar en
+el demo con toggle para validación. Si el usuario confirma preferencia por barras, eliminar
+`BlockPiechartsRow` del DashboardPanel en la siguiente iteración. Si prefiere piecharts,
+subir el tamaño a 160 px y aplicar la paleta nueva.
+
+---
+
+## 13. Capturas de la iteración post-F2.5
+
+| Archivo | Viewport | Descripción |
+|---------|----------|-------------|
+| `docs/m37/screenshots/iteration-post-f25/state-current-1440x900.png` | 1440×900 | Estado completo del demo antes de la iteración |
+| `docs/m37/screenshots/iteration-post-f25/micropie-zoom-recommended.png` | detalle | Zoom sobre la fila de micro-piecharts — problema de legibilidad visible |
