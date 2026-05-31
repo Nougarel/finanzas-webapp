@@ -622,6 +622,9 @@ function DiagnosisContent() {
         </div>{/* fin col 1 */}
 
         {/* Col 2: DashboardPanel en mode="real" (solo xl+, oculto en viewports menores).
+            Sin sticky ni scroll interno — col 2 scrollea con la página (M37 F3).
+            pt-[210px]: alinea el panel con el banner navy del ingreso en col 1.
+            Valor fijo para perfil con alertas (igual que /results pero sin chip del modelo: -28px).
             Fuente de datos: realDistribution — muestra lo que el usuario GASTA,
             no la distribución ideal. Los indicadores se calculan sobre el ingreso real
             de referencia como denominador. */}
@@ -629,18 +632,20 @@ function DiagnosisContent() {
           className="hidden xl:block xl:col-span-5"
           aria-label="Dashboard resumen de situación real"
         >
-          <div
-            className="sticky overflow-y-auto panel-scroll-area"
-            style={{
-              top: "calc(var(--site-header-height, 53px) + 1.5rem)",
-              maxHeight: "calc(100vh - var(--site-header-height, 53px) - 3rem)",
-            }}
-          >
+          <div className="xl:pt-[210px]">
             <DashboardPanel
               dataset={dashboardDataset}
               mode="real"
               secondaryCta={{ href: "/calculator", label: "Ver distribución ideal" }}
             />
+            {/* Colofón tipográfico — cierre visual de col 2 cuando col 1 sigue scrolleando */}
+            <div className="mt-8 border-t border-border/20 py-3 text-center">
+              <span
+                className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/40"
+              >
+                flouss
+              </span>
+            </div>
           </div>
         </aside>
 

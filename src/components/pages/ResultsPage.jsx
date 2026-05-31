@@ -678,24 +678,29 @@ function ResultsContent() {
         </div>{/* fin col 1 */}
 
         {/* Col 2: DashboardPanel (solo xl+, oculto en viewports menores).
-            Sticky con scroll interno — el panel cabe en pantallas de ≥800px de alto.
-            En viewports más bajos, overflow-y-auto activa el scroll interno del panel. */}
+            Sin sticky ni scroll interno — col 2 scrollea con la página (M37 F3).
+            pt-[238px]: alinea el panel con el banner navy del ingreso en col 1.
+            Valor fijo basado en el perfil rico (alertas + h1 + subtítulo + chip).
+            En perfiles sin alertas el panel quedará ~110px más arriba del banner — trade-off
+            aceptado por el diseñador sobre implementar medición dinámica con useRef. */}
         <aside
           className="hidden xl:block xl:col-span-5"
           aria-label="Dashboard resumen financiero"
         >
-          <div
-            className="sticky overflow-y-auto panel-scroll-area"
-            style={{
-              top: "calc(var(--site-header-height, 53px) + 1.5rem)",
-              maxHeight: "calc(100vh - var(--site-header-height, 53px) - 3rem)",
-            }}
-          >
+          <div className="xl:pt-[238px]">
             <DashboardPanel
               dataset={dashboardDataset}
               mode="recommended"
               secondaryCta={{ href: `/diagnosis-form?income=${income}`, label: "Compara tu situación real" }}
             />
+            {/* Colofón tipográfico — cierre visual de col 2 cuando col 1 sigue scrolleando */}
+            <div className="mt-8 border-t border-border/20 py-3 text-center">
+              <span
+                className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/40"
+              >
+                flouss
+              </span>
+            </div>
           </div>
         </aside>
 

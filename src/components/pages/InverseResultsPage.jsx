@@ -578,6 +578,9 @@ export default function InverseResultsPage() {
         </div>{/* fin col 1 */}
 
         {/* Col 2: DashboardPanel en mode="inverse" (solo xl+, oculto en viewports menores).
+            Sin sticky ni scroll interno — col 2 scrollea con la página (M37 F3).
+            pt-[128px]: alinea el panel con el banner navy en col 1.
+            Sin alertas de sistema antes del banner → solo h1 + subtítulo + gap = ~128px.
             Modo reducido: MacroPiechart + DTI hipotético + tasa de ahorro ideal.
             Sin BlockBudgetBars en modo inverse (DashboardPanel lo omite según §6 del DESIGN.md).
             Fuente: healthyDistribution del ingreso calculado. */}
@@ -585,18 +588,20 @@ export default function InverseResultsPage() {
           className="hidden xl:block xl:col-span-5"
           aria-label="Dashboard resumen ingreso mínimo calculado"
         >
-          <div
-            className="sticky overflow-y-auto panel-scroll-area"
-            style={{
-              top: "calc(var(--site-header-height, 53px) + 1.5rem)",
-              maxHeight: "calc(100vh - var(--site-header-height, 53px) - 3rem)",
-            }}
-          >
+          <div className="xl:pt-[128px]">
             <DashboardPanel
               dataset={dashboardDataset}
               mode="inverse"
               secondaryCta={{ href: "/inverse-calculator", label: "Calcular de nuevo" }}
             />
+            {/* Colofón tipográfico — cierre visual de col 2 cuando col 1 sigue scrolleando */}
+            <div className="mt-8 border-t border-border/20 py-3 text-center">
+              <span
+                className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/40"
+              >
+                flouss
+              </span>
+            </div>
           </div>
         </aside>
 
