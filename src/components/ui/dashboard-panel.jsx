@@ -4,7 +4,7 @@
  * dashboard-panel.jsx — Panel lateral de resumen del DashboardPanel (col 2).
  *
  * Componente envolvente que F3 insertará en col 2 de las 3 páginas de resultados.
- * Compone MacroPiechart + BlockPiechartsRow + IndicatorCards + DashboardSecondaryCta
+ * Compone MacroPiechart + BlockBudgetBars + IndicatorCards + DashboardSecondaryCta
  * según el modo y la estructura de datos.
  *
  * Modos:
@@ -38,15 +38,11 @@
  * @param {"recommended"|"real"|"inverse"} props.mode - Modo de operación.
  * @param {{ href: string, label: string }} props.secondaryCta - CTA secundario al pie.
  * @param {boolean} [props.skeleton]                - Renderiza skeletons de carga si true.
- * @param {"piecharts"|"bars"} [props.categoryView] - Variante del bloque "Detalle por bloque".
- *   "piecharts" → BlockPiechartsRow (micro-donuts). Default.
- *   "bars"      → BlockBudgetBars (barras horizontales agrupadas por bloque).
- *   En modo "inverse" ninguno se renderiza.
+ * En modo "inverse" el bloque "Detalle por bloque" no se renderiza.
  */
 
 import { useMemo } from "react";
 import { MacroPiechart } from "./macro-piechart";
-import { BlockPiechartsRow } from "./block-piecharts-row";
 import { BlockBudgetBars } from "./block-budget-bars";
 import { IndicatorCard } from "./indicator-card";
 import { DashboardSecondaryCta } from "./dashboard-secondary-cta";
@@ -56,14 +52,7 @@ import {
   calculateEmergencyCoverage,
   extractDtiStatus,
 } from "@/lib/calculators/transversalIndicators";
-
-// ─── Colores de bloque (coinciden con --chart-1/2/3 en globals.css) ──────────
-// Se usan strings CSS porque recharts renderiza en SVG (no CSS variables).
-const BLOCK_COLORS = {
-  needs:   "oklch(0.58 0.18 38)",
-  wants:   "oklch(0.52 0.16 300)",
-  savings: "oklch(0.58 0.15 155)",
-};
+import { BLOCK_COLORS } from "@/lib/m37/categoryColors";
 
 // IDs de categorías por bloque — usados para sumar importes en los indicadores
 const NEEDS_IDS   = ["housing", "utilities", "groceries", "transport", "health", "education"];
@@ -101,7 +90,7 @@ function buildMacroData(blocks) {
 }
 
 /**
- * Construye dataByBlock para el BlockPiechartsRow desde el mapa de categorías.
+ * Construye dataByBlock para el BlockBudgetBars desde el mapa de categorías.
  */
 function buildBlockData(categories) {
   const groupByBlock = { needs: [], wants: [], savings: [] };
@@ -140,7 +129,7 @@ function formatEur(amount) {
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
-export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, skeleton = false, categoryView = "piecharts" }) {
+export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, skeleton = false }) {
   // Si faltan datos, renderiza skeletons
   const showSkeleton = skeleton || !dataset;
 
@@ -267,7 +256,7 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
       </div>
 
       {/* ── Detalle por bloque: piecharts o barras (oculto en lg y md) ───── */}
-      {/* En modo inverse no se renderiza. categoryView controla la variante. */}
+      {/* En modo inverse no se renderiza. */}
       {mode !== "inverse" && (
         <div className="bg-card border border-border rounded-lg px-4 py-5 card-elevated hidden xl:block">
           <p
@@ -277,26 +266,18 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
             Detalle por bloque
           </p>
           {showSkeleton ? (
-            /* Skeleton: 3 mini-anillos en fila (solo referencia visual de piecharts) */
-            <div className="flex flex-row gap-3 justify-between items-center">
+            /* Skeleton: 3 filas de barra (referencia visual de barras) */
+            <div className="flex flex-col gap-3">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="flex flex-col items-center gap-2 flex-1">
-                  <div className="h-2.5 w-16 bg-muted rounded animate-pulse" />
-                  <div
-                    className="rounded-full border-[16px] border-muted animate-pulse"
-                    style={{ width: 88, height: 88 }}
-                  />
+                <div key={i} className="flex flex-col gap-1.5">
+                  <div className="h-2 w-20 bg-muted rounded animate-pulse" />
+                  <div className="h-1.5 w-full bg-muted rounded animate-pulse" />
+                  <div className="h-1.5 w-3/4 bg-muted rounded animate-pulse" />
                 </div>
               ))}
             </div>
-          ) : categoryView === "bars" ? (
-            <BlockBudgetBars dataByBlock={blockData} mode={mode} />
           ) : (
-            <BlockPiechartsRow
-              dataByBlock={blockData}
-              size={108}
-              thickness={18}
-            />
+            <BlockBudgetBars dataByBlock={blockData} mode={mode} />
           )}
         </div>
       )}
