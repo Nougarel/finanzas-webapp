@@ -73,6 +73,12 @@
   --foreground: oklch(0.129 0.042 264.695);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.129 0.042 264.695);
+  /* Superficie del panel de detalle (M36): blanco ligeramente cálido-neutral
+     para separarse del slate-50 del main (--background) por temperatura de
+     color. El delta es imperceptible en aislamiento pero crea separación
+     clara en coexistencia. Contraste AA no afectado (texto sigue sobre
+     fondo claro suficiente: WCAG 4.5:1 garantizado). */
+  --panel-surface: oklch(0.992 0.004 247);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.129 0.042 264.695);
   /* Primario navy #14213D (M35) */

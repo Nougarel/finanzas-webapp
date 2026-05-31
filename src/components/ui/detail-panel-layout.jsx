@@ -5,17 +5,21 @@
  *
  * Desktop (lg+):
  *   El drawer es un panel `position: fixed` anclado a la derecha del viewport.
- *   Modelo de altura adaptativa (M36 Fase 2 — mejora 1):
+ *   Modelo de altura completa (M36 Fase 2 — rediseño consensuado):
  *     - top = altura del SiteHeader + 12px de gap
- *     - height: auto → el panel se ajusta a su contenido
- *     - max-height = 100vh − var(--site-header-height) − 24px (12px arriba + 12px abajo)
- *     - min-height: 300px → evita que el panel parezca "minúsculo" en categorías muy cortas
- *   Cuando el contenido supera max-height, el div interior overflow-y-auto lo maneja.
- *   No se anima el height entre categorías — el salto es intencional (Natural, como Notion/Linear).
- *   Ancho 500px; sombra envolvente; esquinas redondeadas.
+ *     - bottom = 12px de gap (el panel ocupa todo el viewport disponible)
+ *   Ancho 500px. El scroll interno lo gestiona el div interior (flex-1 overflow-y-auto).
+ *
+ *   Tratamientos visuales de materialidad (M36):
+ *     - Superficie: --panel-surface (oklch ligeramente cálido-neutral) en lugar de
+ *       bg-card (blanco puro) — separación por temperatura de color con el slate-50 del main
+ *     - Esquinas: solo top-left y bottom-left redondeadas (rounded-l-xl) — patrón de drawer
+ *     - Borde izquierdo: 2px navy al 20% de opacidad — corte físico visible sin oscurecer
+ *     - Sombra multi-layer asimétrica: capa key (dirección izquierda), edge sharp y ambient
+ *       difusa — el panel parece tener luz desde la derecha proyectando hacia el main
  *
  * Móvil (<lg):
- *   Bottom sheet a media altura usando Dialog de Radix. No se toca en esta mejora.
+ *   Bottom sheet a media altura usando Dialog de Radix. No se toca en este rediseño.
  *
  * Cierre:
  *   Solo mediante el botón X del drawer o la tecla Escape. El click fuera del
@@ -119,11 +123,13 @@ export function DetailPanelLayout({
       <div>{children}</div>
 
       {/* ── Drawer flotante — solo desktop (lg+) ───────────────────────────────
-          position: fixed, anclado a la derecha del viewport CON MARGEN.
-          Tarjeta flotante con esquinas redondeadas — no flush con el borde.
-          Se superpone al contenido sin empujarlo (no hay pr en el main).
-          top = altura del SiteHeader + gap; right/bottom = gap del viewport.
-          Ancho 500px; sombra envolvente.
+          position: fixed, anclado a la derecha del viewport (sin margen derecho:
+          flush con el borde — las esquinas derechas son cuadradas, solo las
+          izquierdas tienen radio, patrón de drawer lateral estándar).
+          Se superpone al contenido sin empujarlo (overlay, no push).
+          top = altura del SiteHeader + 12px gap; bottom = 12px gap.
+          El panel ocupa todo el viewport disponible (altura completa).
+          Ancho 500px; sombra multi-layer asimétrica; borde-left navy.
           Animación: slide-in-from-right 220ms ease-out al abrir.
       */}
       {isOpen && (
@@ -133,24 +139,30 @@ export function DetailPanelLayout({
           className={cn(
             // Solo visible en desktop
             "hidden lg:flex flex-col",
-            // Posicionamiento fixed con margen del viewport (tarjeta flotante)
-            "fixed right-3 z-30",
-            // Altura adaptativa (mejora 1 M36):
-            //   top = header + 12px gap arriba
-            //   h-auto → el panel se ajusta a su contenido natural
-            //   max-h = viewport − header − 24px (12px arriba + 12px abajo)
-            //   min-h = 300px → evita panel "minúsculo" en categorías muy cortas
+            // Posicionamiento fixed: flush con el borde derecho del viewport,
+            // 12px de gap arriba (tras el header) y abajo
+            "fixed right-0 z-30",
+            // Altura completa entre header y borde inferior del viewport
             "top-[calc(var(--site-header-height)+12px)]",
-            "h-auto",
-            "max-h-[calc(100vh-var(--site-header-height)-24px)]",
-            "min-h-[300px]",
+            "bottom-3",
             // Ancho 500px
             "w-[500px]",
-            // Tarjeta: bordes redondeados en las 4 esquinas, borde sutil, fondo card
-            "rounded-xl border border-border bg-card",
-            // Sombra envolvente más generosa (no solo a la izquierda)
-            "shadow-[0_10px_40px_-10px_rgba(0,0,0,0.18),0_4px_16px_-4px_rgba(0,0,0,0.08)]",
-            // Scroll interno
+            // Superficie: blanco ligeramente cálido-neutral (var definida en globals.css)
+            // separada del slate-50 del main por temperatura de color
+            "bg-[var(--panel-surface)]",
+            // Esquinas: solo top-left y bottom-left redondeadas (patrón de drawer lateral)
+            // La derecha es flush con el viewport — radio aquí no tiene sentido visual
+            "rounded-l-xl",
+            // Borde: acento izquierdo navy 20% de opacidad — corte físico visible.
+            // El resto de bordes se omite: el acento izquierdo ya separa el panel
+            // del main; top/bottom quedan en el aire del viewport sin borde necesario.
+            "border-l-2 border-l-[rgba(20,33,61,0.20)]",
+            // Sombra multi-layer asimétrica (M36):
+            //   - capa key: offset -8px en X, radio 28px, navy 10% → luz desde la derecha
+            //   - capa edge: offset -1px en X, radio 2px, navy 6% → corte sharp al borde izq.
+            //   - capa ambient: offset 0/4px, radio 32px, neutro 4% → difusa por debajo
+            "shadow-[-8px_0_28px_0_rgba(20,33,61,0.10),-1px_0_2px_0_rgba(20,33,61,0.06),0_4px_32px_0_rgba(0,0,0,0.04)]",
+            // Scroll interno gestionado por el div interior (overflow-hidden en el aside)
             "overflow-hidden",
             // Padding interior
             "p-5",
@@ -165,10 +177,11 @@ export function DetailPanelLayout({
             ya abierto, los lectores de pantalla anuncian el nuevo
             contenido sin interrumpir lo que estén leyendo.
 
-            Modelo de altura adaptativa (mejora 1):
-            El <aside> tiene flex flex-col + overflow-hidden + max-h.
-            Este div intermedio propaga el flex con overflow-hidden para
-            que CategoryDetail pueda usar flex-shrink en el body scrollable.
+            Modelo de altura completa (M36 rediseño):
+            El <aside> tiene flex flex-col + overflow-hidden + top/bottom fixed.
+            Este div con flex-1 ocupa todo el espacio disponible del aside,
+            y overflow-y-auto gestiona el scroll interno cuando el contenido
+            supera la altura del panel.
           */}
           <div
             className="flex flex-col overflow-hidden flex-1 min-h-0"
