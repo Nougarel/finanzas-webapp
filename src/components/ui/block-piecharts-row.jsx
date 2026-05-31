@@ -211,7 +211,7 @@ function MicroPiechart({ blockKey, data, size, thickness }) {
             )}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
-            isAnimationActive={false}
+            animationDuration={800}
           />
           <Tooltip content={<MicroTooltip />} aria-hidden="true" />
         </PieChart>
