@@ -103,8 +103,9 @@ function DataTable({
                     isInteractive
                       ? "cursor-pointer hover:bg-muted/30 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring"
                       : "hover:bg-muted/30",
-                    // Fila activa: borde izquierdo primario + fondo sutil
-                    isActive && "border-l-2 border-l-primary bg-muted/40 hover:bg-muted/50"
+                    // Fila activa: borde izquierdo primario 3px (puente visual con el panel)
+                    // + bg-muted/50 inequívocamente distinto del hover (bg-muted/30)
+                    isActive && "border-l-[3px] border-l-primary bg-muted/50 hover:bg-muted/60"
                   )}
                 >
                   {columns.map((col) => (
@@ -157,7 +158,8 @@ function DataTable({
               className={cn(
                 "rounded-lg border border-border bg-card p-4 text-sm transition-colors",
                 isInteractive && "cursor-pointer hover:bg-muted/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-                isActive && "border-l-2 border-l-primary bg-muted/40"
+                // Fila activa móvil: mismo tratamiento que desktop
+                isActive && "border-l-[3px] border-l-primary bg-muted/50"
               )}
             >
               <div className="flex items-center justify-between mb-2">
