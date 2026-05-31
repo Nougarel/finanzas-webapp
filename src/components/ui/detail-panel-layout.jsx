@@ -57,6 +57,22 @@ export function DetailPanelLayout({
 }) {
   const isOpen = !!selectedCategoryId;
 
+  // Detectar si estamos en viewport desktop (lg+) para evitar montar el
+  // Dialog.Root en desktop, donde causa una race condition con el click
+  // que abre el panel: Radix detecta el click como pointer-down-outside y,
+  // aunque preventDefault esté declarado en Content, en algunos casos cierra
+  // el estado antes de que el contenido se monte. Solo necesitamos Dialog
+  // para el bottom sheet móvil.
+  const [isMobile, setIsMobile] = React.useState(false);
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mql = window.matchMedia("(max-width: 1023px)");
+    const update = () => setIsMobile(mql.matches);
+    update();
+    mql.addEventListener("change", update);
+    return () => mql.removeEventListener("change", update);
+  }, []);
+
   // Ref al botón de cierre del drawer desktop — para mover el foco al abrir
   const closeBtnRef = React.useRef(null);
 
@@ -99,15 +115,12 @@ export function DetailPanelLayout({
           la opacidad baja a 0.6 para marcar el foco visual sin bloquear clics.
           pointer-events permanece activo: el usuario puede clicar otra fila.
       */}
-      <div
-        className={cn(
-          "transition-opacity duration-200",
-          // En desktop con el drawer abierto: reservamos 420px + gap al lado derecho
-          isOpen && "lg:pr-[436px]",
-          // Atenuación de foco — solo en desktop y solo cuando el drawer está abierto
-          isOpen && "lg:opacity-60"
-        )}
-      >
+      {/* En desktop con el drawer abierto reservamos 420px + gap al lado derecho.
+          NO se aplica opacity al contenido: reducir la opacidad del texto degrada
+          el contraste de los muted-foreground por debajo del 4.5:1 (axe AA falla).
+          La señal visual de "foco en el drawer" la da el drawer mismo (presencia,
+          sombra) y el borde-izquierdo navy en la fila activa de la tabla. */}
+      <div className={cn(isOpen && "lg:pr-[436px]")}>
         {children}
       </div>
 
@@ -186,8 +199,10 @@ export function DetailPanelLayout({
           cuando está abierto, pero el contenido en sí siempre es visible.
           El bottom sheet (Dialog) se superpone sobre él en móvil. */}
 
-      {/* ── Bottom sheet en móvil — Dialog de Radix ── */}
-      {/* Comportamiento idéntico al diseño anterior — sin cambios. */}
+      {/* ── Bottom sheet en móvil — Dialog de Radix ──
+          Solo se monta cuando isMobile es true. En desktop el Dialog NO existe,
+          evitando la race condition con el click de las filas. */}
+      {isMobile && (
       <Dialog.Root
         open={isOpen}
         onOpenChange={(open) => { if (!open) onClose(); }}
@@ -250,6 +265,7 @@ export function DetailPanelLayout({
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
+      )}
     </>
   );
 }
