@@ -220,6 +220,15 @@
   outline: none;
 }
 
+/* ── Recharts: donuts informativos no son clickeables (M37) ─────────────────
+   Los segmentos .recharts-sector heredan cursor:pointer de recharts cuando
+   detecta onMouseEnter/onMouseLeave, aunque no haya onClick. Se fuerza
+   cursor:default para que el usuario no interprete los segmentos como
+   elementos interactivos navegables. */
+.recharts-sector {
+  cursor: default;
+}
+
 /* ── Scrollbar personalizada del panel de detalle (M36) ──────────────────────
    Solo afecta al contenedor interior del panel (.panel-scroll-area).
    No contamina la scrollbar de la página principal ni otras áreas.
