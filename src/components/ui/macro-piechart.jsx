@@ -131,13 +131,17 @@ export function MacroPiechart({
       {/* Gráfico donut */}
       <div style={{ width: size, height: size, flexShrink: 0, position: "relative" }}>
         {/* tabIndex={-1} saca el SVG del orden de tabulación (A2/A3).
-            El contenedor padre ya tiene role="img" + aria-label dinámico. */}
-        <PieChart width={size} height={size} tabIndex={-1}>
+            El contenedor padre ya tiene role="img" + aria-label dinámico.
+            margin={5}: el cornerRadius={2} de Recharts extrude los paths ~4px fuera del
+            outerRadius nominal. Sin margen, el SVG (overflow:hidden) recorta esos extremos.
+            Con 5px de margen en cada lado el pie se dibuja en una área (size-10)×(size-10)
+            y los corners quedan dentro del viewBox. */}
+        <PieChart width={size} height={size} tabIndex={-1} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
           <Pie
             data={data}
             dataKey="value"
-            cx={outerRadius - 1}
-            cy={outerRadius - 1}
+            cx="50%"
+            cy="50%"
             innerRadius={innerRadius}
             outerRadius={outerRadius}
             startAngle={90}
