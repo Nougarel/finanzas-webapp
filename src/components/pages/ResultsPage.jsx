@@ -3,12 +3,11 @@
 import { useState, useEffect, useLayoutEffect, useCallback, Suspense, useRef, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
 import { DataTable } from "@/components/ui/data-table";
 import { MoneyValue } from "@/components/ui/money-value";
 import { PageShell } from "@/components/ui/page-shell";
-import { HealthGauge } from "@/components/ui/health-gauge";
 import { DetailPanelLayout } from "@/components/ui/detail-panel-layout";
 import { CategoryDetail } from "@/components/ui/category-detail";
 import { DashboardPanel } from "@/components/ui/dashboard-panel";
@@ -47,33 +46,9 @@ function IneReference({ ineData, block }) {
   );
 }
 
-// Barra proporcional monocromática (navy).
-// maxPct: valor máximo del bloque para normalizar la escala.
-// Se normaliza al máximo del bloque (no al 100% del ingreso) para que las
-// barras tengan rango visual útil — las categorías individuales raramente
-// superan el 15-20% del ingreso, por lo que una escala absoluta produciría
-// barras demasiado pequeñas para distinguir entre sí.
-function PercentBar({ pct, maxPct }) {
-  const width = maxPct > 0 ? Math.round((pct / maxPct) * 100) : 0;
-  return (
-    <div
-      className="mt-1.5 h-1 w-full rounded-full bg-muted overflow-hidden"
-      role="presentation"
-      aria-hidden="true"
-    >
-      <div
-        className="h-full rounded-full bg-primary transition-[width] duration-300"
-        style={{ width: `${width}%` }}
-      />
-    </div>
-  );
-}
-
 // Columnas para DataTable de categorías dentro de un bloque.
 // Las alertas y referencias INE se renderizan debajo del nombre.
-// maxBlockPct: porcentaje máximo entre las categorías del bloque,
-// usado para normalizar la escala de las barras.
-function buildCategoryColumns(result, blockKey, formatPct, maxBlockPct) {
+function buildCategoryColumns(result, blockKey, formatPct) {
   return [
     {
       key: "label",
@@ -109,12 +84,9 @@ function buildCategoryColumns(result, blockKey, formatPct, maxBlockPct) {
       header: "% ingreso",
       className: "text-right align-top",
       render: (val) => (
-        <div className="flex flex-col items-end gap-0">
-          <span className="tabular-nums text-sm text-muted-foreground">
-            {formatPct(val)}
-          </span>
-          <PercentBar pct={val} maxPct={maxBlockPct} />
-        </div>
+        <span className="tabular-nums text-sm text-muted-foreground">
+          {formatPct(val)}
+        </span>
       ),
     },
   ];
@@ -216,6 +188,10 @@ function ResultsContent() {
       categories,
       transversal: {
         dti: { total: result.transversal?.dti?.total ?? 0 },
+        insurance: {
+          amount: result.transversal?.insurance?.amount ?? 0,
+          total:  result.transversal?.insurance?.total  ?? 0,
+        },
       },
     };
   }, [result, income]);
@@ -321,12 +297,12 @@ function ResultsContent() {
           {(budgetAlert || debtAlert) && (
             <div className="space-y-2">
               {budgetAlert && (
-                <Alert variant={alertVariantFromLevel(budgetAlert.level)}>
+                <Alert variant={alertVariantFromLevel(budgetAlert.level)} size="sm">
                   {budgetAlert.message}
                 </Alert>
               )}
               {debtAlert && (
-                <Alert variant={alertVariantFromLevel(debtAlert.level)}>
+                <Alert variant={alertVariantFromLevel(debtAlert.level)} size="sm">
                   {debtAlert.message}
                 </Alert>
               )}
@@ -383,89 +359,57 @@ function ResultsContent() {
             )}
           </div>
 
-          {/* Salud financiera — colapsado por defecto (M36: secundario, bajo demanda) */}
-          {result.healthScore && (
-            <details className="group rounded-lg border border-border bg-card card-elevated">
-              <summary
-                className={[
-                  "flex cursor-pointer items-center justify-between",
-                  "px-5 py-3.5 text-sm font-medium text-foreground",
-                  "hover:bg-muted/30 transition-colors rounded-lg",
-                  "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring",
-                  "list-none [&::-webkit-details-marker]:hidden",
-                ].join(" ")}
-              >
-                <span className="flex items-center gap-2">
-                  <span className="text-xs font-medium uppercase tracking-meta text-muted-foreground">
-                    Salud financiera
-                  </span>
-                  <span
-                    className="tabular-nums text-sm font-bold"
-                    style={{
-                      color:
-                        result.healthScore.level === "excellent" || result.healthScore.level === "good"
-                          ? "var(--success-foreground)"
-                          : result.healthScore.level === "critical"
-                          ? "var(--destructive)"
-                          : "var(--warning-foreground)",
-                    }}
-                  >
-                    {result.healthScore.score}/100 — {
-                      { excellent: "Excelente", good: "Buena", acceptable: "Aceptable",
-                        improvable: "Mejorable", critical: "Crítica" }[result.healthScore.level] ?? result.healthScore.level
-                    }
-                  </span>
-                </span>
-                {/* Chevron que rota al expandir */}
-                <svg
-                  className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-open:rotate-180"
-                  aria-hidden="true"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-              </summary>
-              <div className="border-t border-border">
-                <HealthGauge
-                  score={result.healthScore.score}
-                  level={result.healthScore.level}
-                  label="Salud financiera"
-                  penalties={result.healthScore.penalties ?? []}
-                />
-              </div>
-            </details>
-          )}
+          {/* HealthGauge eliminado de /results (M37 mejora 8).
+              El score de salud financiera se mantiene solo en /diagnosis donde
+              la comparación real vs. recomendado aporta contexto interpretativo.
+              Las alertas estructurales (_budget_block, _debt_block) ya se muestran
+              en la sección de alertas críticas de sistema al inicio de col 1. */}
 
-          {/* Selector de vista */}
+          {/* Selector de vista — jerarquía visual: opción activa es prominente,
+              la alternativa es un enlace sutil para reducir peso visual */}
           <div className="space-y-2">
-            <div className="flex gap-2" role="group" aria-label="Modo de visualización">
-              <button
-                type="button"
-                onClick={() => setViewMode("detailed")}
-                className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
-                  viewMode === "detailed"
-                    ? "border-primary bg-primary/5 text-primary"
-                    : "border-border hover:border-primary/50"
-                }`}
-                aria-pressed={viewMode === "detailed"}
-              >
-                Por categorías
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode("macro")}
-                className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
-                  viewMode === "macro"
-                    ? "border-primary bg-primary/5 text-primary"
-                    : "border-border hover:border-primary/50"
-                }`}
-                aria-pressed={viewMode === "macro"}
-              >
-                Por bloques
-              </button>
+            <div className="flex items-center gap-3" role="group" aria-label="Modo de visualización">
+              {viewMode === "detailed" ? (
+                <>
+                  {/* Opción activa — prominente */}
+                  <button
+                    type="button"
+                    className="rounded-lg border border-primary bg-primary/5 px-4 py-2 text-sm font-medium text-primary transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    aria-pressed={true}
+                  >
+                    Por categorías
+                  </button>
+                  {/* Opción alternativa — enlace sutil */}
+                  <button
+                    type="button"
+                    onClick={() => setViewMode("macro")}
+                    className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
+                    aria-pressed={false}
+                  >
+                    Ver por bloques
+                  </button>
+                </>
+              ) : (
+                <>
+                  {/* Opción activa — prominente */}
+                  <button
+                    type="button"
+                    className="rounded-lg border border-primary bg-primary/5 px-4 py-2 text-sm font-medium text-primary transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    aria-pressed={true}
+                  >
+                    Por bloques
+                  </button>
+                  {/* Opción alternativa — enlace sutil */}
+                  <button
+                    type="button"
+                    onClick={() => setViewMode("detailed")}
+                    className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
+                    aria-pressed={false}
+                  >
+                    Ver por categorías
+                  </button>
+                </>
+              )}
             </div>
             {viewMode === "detailed" && (
               <p className="text-xs text-muted-foreground">
@@ -539,10 +483,7 @@ function ResultsContent() {
                     alert: result.alerts[cat.id] ?? null,
                   }));
 
-                  // Máximo de % en el bloque para normalizar la escala de las barras
-                  const maxBlockPct = Math.max(...tableData.map((r) => r.percentage), 0);
-
-                  const columns = buildCategoryColumns(result, blockKey, formatPct, maxBlockPct);
+                  const columns = buildCategoryColumns(result, blockKey, formatPct);
 
                   return (
                     <section key={blockKey} aria-labelledby={`block-${blockKey}-heading`}>
@@ -567,7 +508,7 @@ function ResultsContent() {
                       {/* Alerta de bloque */}
                       {blockAlert && (
                         <div className="mb-3">
-                          <Alert variant={alertVariantFromLevel(blockAlert.level)}>
+                          <Alert variant={alertVariantFromLevel(blockAlert.level)} size="sm">
                             {block.label}: {blockAlert.message}
                           </Alert>
                         </div>
@@ -612,6 +553,7 @@ function ResultsContent() {
                   <Alert
                     key={`alert-${blockKey}`}
                     variant={alertVariantFromLevel(blockAlert.level)}
+                    size="sm"
                   >
                     {result.blocks[blockKey].label}: {blockAlert.message}
                   </Alert>
@@ -639,54 +581,6 @@ function ResultsContent() {
               </div>
             </div>
           )}
-
-          {/* Seguros — se mantiene en col 1 (decisión #5 del DESIGN.md).
-              El DTI pasa a col 2 (DashboardPanel). Solo queda seguros aquí
-              porque su valor interpretativo requiere el desglose por componente. */}
-          <section aria-labelledby="insurance-heading">
-            <h2
-              id="insurance-heading"
-              className="text-sm font-semibold text-muted-foreground uppercase tracking-meta mb-3"
-            >
-              Seguros estimados
-            </h2>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Gasto total en seguros</CardTitle>
-                <CardDescription className="text-xs">
-                  Estimación sobre los importes asignados (vida + salud + vehículo)
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold tabular-nums">{formatPct(result.transversal.insurance.total)}</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  <MoneyValue amount={result.transversal.insurance.amount} size="inline" className="text-xs" />{" "}
-                  / mes
-                </p>
-                {/* Desglose por componente */}
-                <div className="mt-3 space-y-1 border-t pt-2">
-                  <p className="text-xs text-muted-foreground italic pb-1">
-                    Estimación orientativa del gasto mensual en seguros. Los importes de seguro de vehículo y salud se calculan a partir del gasto total en su categoría.
-                  </p>
-                  {[
-                    { label: "Seguro de vida", key: "life" },
-                    { label: "Seguro médico",  key: "health" },
-                    { label: "Seguro vehículo", key: "transport" },
-                  ]
-                    .filter(({ key }) => result.transversal.insurance.breakdown[key].amount > 0)
-                    .map(({ label, key }) => {
-                      const item = result.transversal.insurance.breakdown[key];
-                      return (
-                        <div key={key} className="flex justify-between text-xs text-muted-foreground">
-                          <span>{label}</span>
-                          <MoneyValue amount={item.amount} size="inline" className="text-xs" />
-                        </div>
-                      );
-                    })}
-                </div>
-              </CardContent>
-            </Card>
-          </section>
 
           {/* Botones de acción */}
           <div className="flex flex-wrap gap-3 justify-center pt-2">

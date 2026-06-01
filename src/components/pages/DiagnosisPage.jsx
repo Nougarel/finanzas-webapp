@@ -404,12 +404,12 @@ function DiagnosisContent() {
           {(budgetAlert || debtAlert) && (
             <div className="space-y-2">
               {budgetAlert && (
-                <Alert variant={alertVariantFromLevel(budgetAlert.level)}>
+                <Alert variant={alertVariantFromLevel(budgetAlert.level)} size="sm">
                   {budgetAlert.message}
                 </Alert>
               )}
               {debtAlert && (
-                <Alert variant={alertVariantFromLevel(debtAlert.level)}>
+                <Alert variant={alertVariantFromLevel(debtAlert.level)} size="sm">
                   {debtAlert.message}
                 </Alert>
               )}
@@ -595,7 +595,7 @@ function DiagnosisContent() {
                     {/* Alerta de bloque */}
                     {blockAlert && (
                       <div className="mb-3">
-                        <Alert variant={alertVariantFromLevel(blockAlert.level)}>
+                        <Alert variant={alertVariantFromLevel(blockAlert.level)} size="sm">
                           {diagnosis.blocks[blockKey].label}: {blockAlert.message}
                         </Alert>
                       </div>

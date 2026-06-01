@@ -332,28 +332,8 @@ export default function InverseResultsPage() {
       })
     : [];
 
-  // Barra proporcional monocromática (navy) normalizada al máximo del bloque.
-  // Se normaliza al máximo del bloque (no al 100% del ingreso) para que las
-  // barras tengan rango visual útil dentro de cada sección.
-  function PercentBar({ pct, maxPct }) {
-    const width = maxPct > 0 ? Math.round((pct / maxPct) * 100) : 0;
-    return (
-      <div
-        className="mt-1.5 h-1 w-full rounded-full bg-muted overflow-hidden"
-        role="presentation"
-        aria-hidden="true"
-      >
-        <div
-          className="h-full rounded-full bg-primary transition-[width] duration-300"
-          style={{ width: `${width}%` }}
-        />
-      </div>
-    );
-  }
-
   // Construye columnas para la tabla de distribución saludable de un bloque.
-  // maxBlockPct: valor máximo de % en el bloque, para normalizar las barras.
-  function buildDistributionColumns(maxBlockPct) {
+  function buildDistributionColumns() {
     return [
       {
         key: "label",
@@ -374,10 +354,7 @@ export default function InverseResultsPage() {
         header: "% del ingreso",
         className: "text-right",
         render: (val) => (
-          <div className="flex flex-col items-end gap-0">
-            <span className="tabular-nums text-sm text-muted-foreground">{fmtPct(val)}</span>
-            <PercentBar pct={val} maxPct={maxBlockPct} />
-          </div>
+          <span className="tabular-nums text-sm text-muted-foreground">{fmtPct(val)}</span>
         ),
       },
       {
@@ -553,9 +530,6 @@ export default function InverseResultsPage() {
                       })
                       .filter(Boolean);
 
-                    // Máximo de % en el bloque para normalizar la escala de las barras
-                    const maxBlockPct = Math.max(...blockData.map((r) => r.percentage), 0);
-
                     return (
                       <div key={block}>
                         {/* Banner navy de bloque — rounded-t-lg pegado a la DataTable
@@ -564,7 +538,7 @@ export default function InverseResultsPage() {
                           {BLOCK_LABELS[block]}
                         </h3>
                         <DataTable
-                          columns={buildDistributionColumns(maxBlockPct)}
+                          columns={buildDistributionColumns()}
                           data={blockData}
                           caption={`Distribución saludable — ${BLOCK_LABELS[block]}`}
                           rowKey="id"
