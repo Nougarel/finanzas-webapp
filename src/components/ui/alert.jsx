@@ -1,7 +1,7 @@
 // alert.jsx — Componente de alerta semántica con variantes de estado.
 //
 // Variantes: success | warning | error | info
-// Tamaños: default (bloque completo) | compact (inline)
+// Tamaños: default (bloque completo) | compact (inline) | sm (densa, M37)
 // Dismissible: prop `onDismiss` activa el botón de cierre
 //
 // Usa tokens semánticos de globals.css + CVA para variantes.
@@ -42,6 +42,8 @@ const alertVariants = cva(
       size: {
         default: "p-4",
         compact: "p-2.5",
+        // sm: versión más densa para alertas de bloque y críticas de sistema (M37)
+        sm: "px-3 py-2 text-xs",
       },
     },
     defaultVariants: {
@@ -56,6 +58,7 @@ const iconVariants = cva("mt-0.5 shrink-0", {
     size: {
       default: "size-5",
       compact: "size-4",
+      sm:      "size-3.5",
     },
   },
   defaultVariants: { size: "default" },
@@ -66,7 +69,7 @@ const iconVariants = cva("mt-0.5 shrink-0", {
  *
  * @param {Object} props
  * @param {"success"|"warning"|"error"|"info"} props.variant
- * @param {"default"|"compact"} props.size
+ * @param {"default"|"compact"|"sm"} props.size
  * @param {string} [props.title]
  * @param {React.ReactNode} [props.children] - Descripción opcional
  * @param {() => void} [props.onDismiss] - Si se pasa, muestra botón de cierre
@@ -100,7 +103,7 @@ function Alert({
           <p
             className={cn(
               "font-medium leading-snug",
-              size === "compact" ? "text-xs" : "text-sm"
+              size === "compact" || size === "sm" ? "text-xs" : "text-sm"
             )}
           >
             {title}
@@ -110,7 +113,7 @@ function Alert({
           <div
             className={cn(
               "text-current/80",
-              size === "compact" ? "text-xs mt-0.5" : "text-sm mt-1"
+              size === "compact" || size === "sm" ? "text-xs mt-0.5" : "text-sm mt-1"
             )}
           >
             {children}
@@ -129,7 +132,7 @@ function Alert({
             size === "compact" ? "mt-0 self-center" : "mt-0.5"
           )}
         >
-          <X className={size === "compact" ? "size-3.5" : "size-4"} aria-hidden />
+          <X className={size === "compact" || size === "sm" ? "size-3.5" : "size-4"} aria-hidden />
         </button>
       )}
     </div>
