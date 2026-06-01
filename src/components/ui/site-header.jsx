@@ -46,7 +46,7 @@ export default function SiteHeader() {
       className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur-sm"
       role="banner"
     >
-      <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-3 sm:px-6">
+      <div className="mx-auto flex max-w-5xl xl:max-w-7xl items-center gap-3 px-4 py-3 sm:px-6">
         <Link
           href="/"
           className="flex items-center gap-2.5 text-primary focus-visible:outline-2 focus-visible:outline-offset-2"
