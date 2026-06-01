@@ -259,6 +259,60 @@ export function extractDtiStatus({ dtiTotal }) {
   };
 }
 
+// ─── Indicadores por categoría ────────────────────────────────────────────────
+
+/**
+ * Calcula el estado de una categoría respecto a sus umbrales institucionales.
+ *
+ * Lee mild.threshold y severe.threshold de CATEGORIES_CATALOG para la categoría
+ * indicada. No hardcodea umbrales — los obtiene del catálogo.
+ *
+ * Fuentes por categoría:
+ *   housing    — Banco de España / Eurostat
+ *   utilities  — UE pobreza energética (Directiva Boardman)
+ *   groceries  — INE EPF 2024
+ *   transport  — INE EPF 2024
+ *   health     — OMS SDG 3.8.2
+ *   education  — INE EPF 2024
+ *
+ * @param {Object} params
+ * @param {string} params.categoryId  - ID de la categoría en CATEGORIES_CATALOG
+ * @param {number} params.percentage  - Porcentaje asignado a esa categoría (0–100)
+ * @param {import("../models/categories").CatalogCategory[]} params.catalog
+ *   - Array CATEGORIES_CATALOG para no importar directamente (evita ciclos)
+ * @returns {{ value: number, status: "ok"|"warning"|"critical"|"info", formatted: string }}
+ *   - status "info" si la categoría no tiene umbrales definidos.
+ */
+export function calculateCategoryIndicator({ categoryId, percentage, catalog }) {
+  const cat = catalog.find((c) => c.id === categoryId);
+
+  if (!cat || !cat.alerts || !cat.alerts.mild || !cat.alerts.severe) {
+    return {
+      value: percentage,
+      status: "info",
+      formatted: `${percentage.toFixed(1)}%`,
+    };
+  }
+
+  const mildThreshold   = cat.alerts.mild.threshold;
+  const severeThreshold = cat.alerts.severe.threshold;
+
+  let status;
+  if (percentage >= severeThreshold) {
+    status = "critical";
+  } else if (percentage >= mildThreshold) {
+    status = "warning";
+  } else {
+    status = "ok";
+  }
+
+  return {
+    value: percentage,
+    status,
+    formatted: `${percentage.toFixed(1)}%`,
+  };
+}
+
 // ─── Helpers de conveniencia para el DashboardPanel ──────────────────────────
 
 /**
