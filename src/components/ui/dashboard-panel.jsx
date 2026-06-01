@@ -407,6 +407,19 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
         )}
       </div>
 
+      {/* ── Leyenda de fuentes institucionales ──────────────────────────── */}
+      {/* Solo en modos que muestran indicadores (recommended y real, no inverse) */}
+      {mode !== "inverse" && (
+        <div className="mt-1 border-t border-border/30 pt-2">
+          <p className="text-[10px] text-muted-foreground/70 leading-relaxed">
+            <span className="font-medium">BdE</span> Banco de España ·{" "}
+            <span className="font-medium">OMS</span> Org. Mundial de la Salud ·{" "}
+            <span className="font-medium">Eurostat</span> Oficina Estadística UE ·{" "}
+            <span className="font-medium">INE</span> Inst. Nacional de Estadística
+          </p>
+        </div>
+      )}
+
       {/* ── SecondaryCTA ─────────────────────────────────────────────────── */}
       {secondaryCta && (
         <DashboardSecondaryCta href={secondaryCta.href}>
