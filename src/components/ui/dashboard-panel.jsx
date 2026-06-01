@@ -51,12 +51,26 @@ import {
   calculateNeedsRatio,
   calculateEmergencyCoverage,
   extractDtiStatus,
+  calculateCategoryIndicator,
 } from "@/lib/calculators/transversalIndicators";
+import { CATEGORIES_CATALOG } from "@/lib/models/categories";
 import { BLOCK_COLORS } from "@/lib/m37/categoryColors";
 
 // IDs de categorías por bloque — usados para sumar importes en los indicadores
 const NEEDS_IDS   = ["housing", "utilities", "groceries", "transport", "health", "education"];
 const SAVINGS_IDS = ["life_insurance", "emergency_fund", "short_term_savings", "long_term_savings", "investment", "debt_extra"];
+
+// Configuración de las 6 categorías con indicadores por umbral.
+// Los umbrales se leen de CATEGORIES_CATALOG en tiempo de ejecución —
+// esta lista solo define labels UI y fuentes para el tooltip/description.
+const CATEGORY_INDICATOR_CONFIG = [
+  { id: "housing",   label: "Vivienda",      description: "< 35% BdE · < 40% Eurostat" },
+  { id: "utilities", label: "Suministros",   description: "< 10% UE energía" },
+  { id: "groceries", label: "Alimentación",  description: "< 20% INE" },
+  { id: "transport", label: "Transporte",    description: "< 18% INE" },
+  { id: "health",    label: "Salud",         description: "< 10% OMS" },
+  { id: "education", label: "Educación",     description: "< 20% INE" },
+];
 
 // ─── Helpers de mapeo ─────────────────────────────────────────────────────────
 
@@ -191,6 +205,29 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
     });
   }, [amounts, mode, dataset]);
 
+  // ── Indicadores de umbral por categoría ───────────────────────────────────
+  // Se muestran siempre (incluso en verde) para que el usuario vea la distancia
+  // al límite institucional aunque todo esté bien.
+  const categoryIndicators = useMemo(() => {
+    if (!dataset) return [];
+    return CATEGORY_INDICATOR_CONFIG.map((cfg) => {
+      const cat = dataset.categories[cfg.id];
+      const percentage = cat?.percentage ?? 0;
+      const indicator = calculateCategoryIndicator({
+        categoryId: cfg.id,
+        percentage,
+        catalog: CATEGORIES_CATALOG,
+      });
+      return {
+        id: cfg.id,
+        label: cfg.label,
+        description: cfg.description,
+        percentage,
+        status: indicator.status,
+      };
+    });
+  }, [dataset]);
+
   // ── Valor central del donut ────────────────────────────────────────────────
 
   const centerValue = dataset ? formatEur(dataset.income) : null;
@@ -282,10 +319,11 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
         </div>
       )}
 
-      {/* ── IndicatorCards ───────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-3">
+      {/* ── IndicatorCards — grid 2×2 ────────────────────────────────────── */}
+      <div className="grid grid-cols-2 gap-2">
         {/* DTI — presente en todos los modos */}
         <IndicatorCard
+          compact
           label={dtiLabel}
           value={showSkeleton ? "—" : `${dtiIndicator?.value?.toFixed(1)}%`}
           status={showSkeleton ? "info" : (dtiIndicator?.status ?? "info")}
@@ -295,6 +333,7 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
 
         {/* Tasa de ahorro — presente en todos los modos */}
         <IndicatorCard
+          compact
           label="TASA DE AHORRO"
           value={showSkeleton ? "—" : savingsIndicator?.formatted ?? "—"}
           status={showSkeleton ? "info" : (savingsIndicator?.status ?? "info")}
@@ -305,6 +344,7 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
         {/* Ratio necesidades — omitido en modo inverse */}
         {mode !== "inverse" && (
           <IndicatorCard
+            compact
             label="RATIO NECESIDADES"
             value={showSkeleton ? "—" : needsIndicator?.formatted ?? "—"}
             status={showSkeleton ? "info" : (needsIndicator?.status ?? "info")}
@@ -316,6 +356,7 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
         {/* Cobertura emergencia — solo en modo recommended */}
         {mode === "recommended" && (
           <IndicatorCard
+            compact
             label="COBERTURA EMERGENCIA"
             value={showSkeleton ? "—" : emergencyIndicator?.formatted ?? "—"}
             status={showSkeleton ? "info" : (emergencyIndicator?.status ?? "info")}
@@ -327,12 +368,42 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
         {/* Cobertura emergencia — modo real: sin dato disponible */}
         {mode === "real" && (
           <IndicatorCard
+            compact
             label="COBERTURA EMERGENCIA"
             value="N/A"
             status="na"
             description="Sin dato — introduce tu fondo en el perfil para calcularlo."
             skeleton={false}
           />
+        )}
+
+        {/* ── Indicadores por categoría (6) — siempre visibles ─────────── */}
+        {/* Muestran la distancia al umbral institucional aunque estén en verde */}
+        {mode !== "inverse" && !showSkeleton && categoryIndicators.map((ind) => (
+          <IndicatorCard
+            key={ind.id}
+            compact
+            label={ind.label}
+            value={`${ind.percentage.toFixed(1)}%`}
+            status={ind.status}
+            description={ind.description}
+          />
+        ))}
+
+        {/* ── Seguros — full-width (col-span-2), solo en recommended ─────── */}
+        {mode === "recommended" && (
+          <div className="col-span-2">
+            <IndicatorCard
+              compact
+              label="ESTIMADO DE SEGUROS"
+              value={showSkeleton ? "—" : (dataset?.transversal?.insurance?.amount != null
+                ? `${dataset.transversal.insurance.amount.toLocaleString("es-ES", { maximumFractionDigits: 0 })} €`
+                : "—")}
+              status="info"
+              description="Suma estimada de vida + salud + vehículo. Orientativo."
+              skeleton={showSkeleton}
+            />
+          </div>
         )}
       </div>
 

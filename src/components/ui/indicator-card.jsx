@@ -26,6 +26,7 @@
  * @param {string} [props.description]    - Descripción breve (max 2 líneas). Opcional.
  * @param {string} [props.unit]           - Unidad visible junto al valor. Ej: "%", "m". Opcional.
  * @param {boolean} [props.skeleton]      - Si true, renderiza el skeleton de carga.
+ * @param {boolean} [props.compact]       - Si true, aplica tipografía reducida para layout 2-col.
  */
 
 import { cn } from "@/lib/utils";
@@ -79,6 +80,7 @@ export function IndicatorCard({
   description,
   unit,
   skeleton = false,
+  compact = false,
 }) {
   if (skeleton) return <IndicatorCardSkeleton />;
 
@@ -96,15 +98,27 @@ export function IndicatorCard({
 
       {/* Fila valor + badge */}
       <div className="flex items-baseline justify-between gap-2">
-        {/* Valor: text-2xl en panel compacto — ahorra espacio vertical manteniendo legibilidad */}
-        <span className="font-display font-bold text-foreground text-2xl tabular-nums leading-none">
+        {/* Valor: compact reduce a text-xl para que quepa en grid 2-col sin truncar */}
+        <span
+          className={cn(
+            "font-display font-bold text-foreground tabular-nums leading-none",
+            compact ? "text-xl" : "text-2xl"
+          )}
+        >
           {value}
           {unit && (
-            <span className="text-base font-normal text-muted-foreground ml-1">{unit}</span>
+            <span
+              className={cn(
+                "font-normal text-muted-foreground ml-1",
+                compact ? "text-sm" : "text-base"
+              )}
+            >
+              {unit}
+            </span>
           )}
         </span>
 
-        {/* Badge de estado — C1: fontSize subido a 11px */}
+        {/* Badge de estado */}
         <span
           className={cn(
             "px-2 py-0.5 rounded-full font-semibold flex-shrink-0",
@@ -120,7 +134,7 @@ export function IndicatorCard({
       {description && (
         <p
           className="font-sans text-muted-foreground leading-snug line-clamp-2"
-          style={{ fontSize: 12 }}
+          style={{ fontSize: compact ? 11 : 12 }}
         >
           {description}
         </p>
