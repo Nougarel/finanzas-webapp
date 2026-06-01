@@ -62,14 +62,15 @@ const SAVINGS_IDS = ["life_insurance", "emergency_fund", "short_term_savings", "
 
 // Configuración de las 6 categorías con indicadores por umbral.
 // Los umbrales se leen de CATEGORIES_CATALOG en tiempo de ejecución —
-// esta lista solo define labels UI y fuentes para el tooltip/description.
+// esta lista define labels UI, fuentes para description y, cuando hay una
+// fuente principal única, la abreviatura para el tooltip del label (prop abbr).
 const CATEGORY_INDICATOR_CONFIG = [
-  { id: "housing",   label: "Vivienda",      description: "< 35% BdE · < 40% Eurostat" },
-  { id: "utilities", label: "Suministros",   description: "< 10% UE energía" },
-  { id: "groceries", label: "Alimentación",  description: "< 20% INE" },
-  { id: "transport", label: "Transporte",    description: "< 18% INE" },
-  { id: "health",    label: "Salud",         description: "< 10% OMS" },
-  { id: "education", label: "Educación",     description: "< 20% INE" },
+  { id: "housing",   label: "Vivienda",      description: "< 35% BdE · < 40% Eurostat",  abbr: null },
+  { id: "utilities", label: "Suministros",   description: "< 10% UE Energía",            abbr: { text: "UE Energía", title: "Directiva europea de eficiencia energética" } },
+  { id: "groceries", label: "Alimentación",  description: "< 20% INE",                   abbr: { text: "INE", title: "Instituto Nacional de Estadística" } },
+  { id: "transport", label: "Transporte",    description: "< 18% INE",                   abbr: { text: "INE", title: "Instituto Nacional de Estadística" } },
+  { id: "health",    label: "Salud",         description: "< 10% OMS",                   abbr: { text: "OMS", title: "Organización Mundial de la Salud" } },
+  { id: "education", label: "Educación",     description: "< 20% INE",                   abbr: { text: "INE", title: "Instituto Nacional de Estadística" } },
 ];
 
 // ─── Helpers de mapeo ─────────────────────────────────────────────────────────
@@ -222,6 +223,7 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
         id: cfg.id,
         label: cfg.label,
         description: cfg.description,
+        abbr: cfg.abbr,
         percentage,
         status: indicator.status,
       };
@@ -325,6 +327,7 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
         <IndicatorCard
           compact
           label={dtiLabel}
+          abbr={{ text: "BdE", title: "Banco de España" }}
           value={showSkeleton ? "—" : `${dtiIndicator?.value?.toFixed(1)}%`}
           status={showSkeleton ? "info" : (dtiIndicator?.status ?? "info")}
           description={dtiDescription}
@@ -335,6 +338,7 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
         <IndicatorCard
           compact
           label="TASA DE AHORRO"
+          abbr={{ text: "BdE", title: "Banco de España" }}
           value={showSkeleton ? "—" : savingsIndicator?.formatted ?? "—"}
           status={showSkeleton ? "info" : (savingsIndicator?.status ?? "info")}
           description="Porcentaje del ingreso al ahorro. ≥ 20% recomendado (BdE)"
@@ -346,6 +350,7 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
           <IndicatorCard
             compact
             label="RATIO NECESIDADES"
+            abbr={{ text: "Eurostat", title: "Oficina de Estadística de la Unión Europea" }}
             value={showSkeleton ? "—" : needsIndicator?.formatted ?? "—"}
             status={showSkeleton ? "info" : (needsIndicator?.status ?? "info")}
             description="Ingreso en gastos esenciales. Saludable: ≤ 50% (Eurostat)"
@@ -358,6 +363,7 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
           <IndicatorCard
             compact
             label="COBERTURA EMERGENCIA"
+            abbr={{ text: "BdE", title: "Banco de España" }}
             value={showSkeleton ? "—" : emergencyIndicator?.formatted ?? "—"}
             status={showSkeleton ? "info" : (emergencyIndicator?.status ?? "info")}
             description="Gastos cubiertos por emergencia. ≥ 6 m (BdE)"
@@ -370,6 +376,7 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
           <IndicatorCard
             compact
             label="COBERTURA EMERGENCIA"
+            abbr={{ text: "BdE", title: "Banco de España" }}
             value="N/A"
             status="na"
             description="Sin dato — introduce tu fondo en el perfil para calcularlo."
@@ -384,6 +391,7 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
             key={ind.id}
             compact
             label={ind.label}
+            abbr={ind.abbr ?? undefined}
             value={`${ind.percentage.toFixed(1)}%`}
             status={ind.status}
             description={ind.description}

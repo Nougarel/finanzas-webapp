@@ -27,6 +27,10 @@
  * @param {string} [props.unit]           - Unidad visible junto al valor. Ej: "%", "m". Opcional.
  * @param {boolean} [props.skeleton]      - Si true, renderiza el skeleton de carga.
  * @param {boolean} [props.compact]       - Si true, aplica tipografía reducida para layout 2-col.
+ * @param {{ text: string, title: string }} [props.abbr]
+ *   - Si se pasa, la abreviatura se añade al label con tooltip nativo (title HTML).
+ *     Ej: { text: "BdE", title: "Banco de España" }
+ *     El componente renderiza: LABEL — <abbr> con underline punteado y cursor help.
  */
 
 import { cn } from "@/lib/utils";
@@ -81,6 +85,7 @@ export function IndicatorCard({
   unit,
   skeleton = false,
   compact = false,
+  abbr,
 }) {
   if (skeleton) return <IndicatorCardSkeleton />;
 
@@ -88,12 +93,24 @@ export function IndicatorCard({
 
   return (
     <div className="bg-card border border-border rounded-lg px-4 py-3 flex flex-col gap-1.5 hover:bg-muted/30 transition-colors duration-200">
-      {/* Label superior — caps tracking-meta */}
+      {/* Label superior — caps tracking-meta. Si se pasa `abbr`, se añade separada
+          por un guión largo con underline punteado y tooltip nativo (title HTML). */}
       <span
         className="font-sans font-medium uppercase text-muted-foreground"
         style={{ fontSize: 11, letterSpacing: "0.05em" }}
       >
         {label}
+        {abbr && (
+          <>
+            {" — "}
+            <span
+              title={abbr.title}
+              className="underline decoration-dotted decoration-muted-foreground/40 cursor-help"
+            >
+              {abbr.text}
+            </span>
+          </>
+        )}
       </span>
 
       {/* Fila valor + badge */}
