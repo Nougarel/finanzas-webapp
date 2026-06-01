@@ -15,6 +15,7 @@ import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useStudyContextOptional } from "@/lib/research/useStudyContext";
 import { useStudyAwareRouter } from "@/lib/research/useStudyAwareRouter";
 import { useMounted } from "@/lib/hooks/useMounted";
+import { cn } from "@/lib/utils";
 
 const BLOCK_ORDER = ["needs", "wants", "savings"];
 
@@ -365,51 +366,37 @@ function ResultsContent() {
               Las alertas estructurales (_budget_block, _debt_block) ya se muestran
               en la sección de alertas críticas de sistema al inicio de col 1. */}
 
-          {/* Selector de vista — jerarquía visual: opción activa es prominente,
-              la alternativa es un enlace sutil para reducir peso visual */}
+          {/* Selector de vista — pill toggle segmented control */}
           <div className="space-y-2">
-            <div className="flex items-center gap-3" role="group" aria-label="Modo de visualización">
-              {viewMode === "detailed" ? (
-                <>
-                  {/* Opción activa — prominente */}
-                  <button
-                    type="button"
-                    className="rounded-lg border border-primary bg-primary/5 px-4 py-2 text-sm font-medium text-primary transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                    aria-pressed={true}
-                  >
-                    Por categorías
-                  </button>
-                  {/* Opción alternativa — enlace sutil */}
-                  <button
-                    type="button"
-                    onClick={() => setViewMode("macro")}
-                    className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
-                    aria-pressed={false}
-                  >
-                    Ver por bloques
-                  </button>
-                </>
-              ) : (
-                <>
-                  {/* Opción activa — prominente */}
-                  <button
-                    type="button"
-                    className="rounded-lg border border-primary bg-primary/5 px-4 py-2 text-sm font-medium text-primary transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                    aria-pressed={true}
-                  >
-                    Por bloques
-                  </button>
-                  {/* Opción alternativa — enlace sutil */}
-                  <button
-                    type="button"
-                    onClick={() => setViewMode("detailed")}
-                    className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
-                    aria-pressed={false}
-                  >
-                    Ver por categorías
-                  </button>
-                </>
-              )}
+            <div role="group" aria-label="Modo de visualización">
+              <div className="inline-flex rounded-full border border-border bg-muted/40 p-0.5 gap-0.5">
+                <button
+                  type="button"
+                  onClick={() => setViewMode("detailed")}
+                  className={cn(
+                    "rounded-full px-4 py-1.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                    viewMode === "detailed"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                  aria-pressed={viewMode === "detailed"}
+                >
+                  Por categorías
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("macro")}
+                  className={cn(
+                    "rounded-full px-4 py-1.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                    viewMode === "macro"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                  aria-pressed={viewMode === "macro"}
+                >
+                  Por bloques
+                </button>
+              </div>
             </div>
             {viewMode === "detailed" && (
               <p className="text-xs text-muted-foreground">
