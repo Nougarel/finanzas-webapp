@@ -35,14 +35,14 @@ function IneReference({ ineData, block }) {
 
   if (block === "wants") {
     return (
-      <p className="text-xs text-muted-foreground">
-        Media española: {ineReference}% del ingreso
+      <p className="text-[10px] text-muted-foreground/60">
+        <span className="font-medium">INE:</span> {ineReference}% del ingreso
       </p>
     );
   }
   return (
-    <p className="text-xs text-muted-foreground">
-      Media española (INE): {ineReference}%
+    <p className="text-[10px] text-muted-foreground/60">
+      <span className="font-medium">INE:</span> {ineReference}%
     </p>
   );
 }
