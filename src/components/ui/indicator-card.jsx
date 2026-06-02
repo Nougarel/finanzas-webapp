@@ -88,7 +88,7 @@ export function IndicatorCard({
   const badge = BADGE_CONFIG[status] ?? BADGE_CONFIG.na;
 
   return (
-    <div className="relative bg-card border border-border rounded-lg px-4 pt-3 pb-6 flex flex-col gap-1.5 hover:bg-muted/30 transition-colors duration-200">
+    <div className="relative bg-card border border-border rounded-lg px-4 pt-2 pb-6 flex flex-col gap-1.5 hover:bg-muted/30 transition-colors duration-200">
 
       {/* Grupo absoluto top-right: botón "?" + badge.
           Ambos fijos — el label puede wrappear sin arrastrar ninguno. */}
