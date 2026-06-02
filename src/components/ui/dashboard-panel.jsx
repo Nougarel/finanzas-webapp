@@ -11,7 +11,6 @@
  *   "recommended" — /results: distribución ideal calculada para el ingreso del usuario.
  *   "real"        — /diagnosis: distribución real introducida por el usuario.
  *   "inverse"     — /inverse-results: distribución hipotética del ingreso mínimo calculado.
- *                   Modo reducido: solo MacroPiechart + 2 IndicatorCards (DTI hipotético + tasa ahorro).
  *
  * Estructura de `dataset` esperada:
  *   {
@@ -38,7 +37,9 @@
  * @param {"recommended"|"real"|"inverse"} props.mode - Modo de operación.
  * @param {{ href: string, label: string }} props.secondaryCta - CTA secundario al pie.
  * @param {boolean} [props.skeleton]                - Renderiza skeletons de carga si true.
- * En modo "inverse" el bloque "Detalle por bloque" no se renderiza.
+ * En modo "inverse" el bloque "Detalle por bloque" (BlockBudgetBars) no se renderiza.
+ * En modo "inverse", "Estimado de seguros" no se renderiza (dato no disponible en el dataset).
+ * En modo "real", "Cobertura emergencia" muestra N/A (saldo del fondo no disponible en diagnóstico).
  */
 
 import { useMemo } from "react";
@@ -192,21 +193,17 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
 
   const needsIndicator = useMemo(() => {
     if (!dataset) return null;
-    // En modo inverse, el ratio de necesidades se omite (confunde con ideal, no real — §6)
-    if (mode === "inverse") return null;
     return calculateNeedsRatio({
       amounts,
       income: dataset.income,
       needsCatIds: NEEDS_IDS,
     });
-  }, [amounts, dataset, mode]);
+  }, [amounts, dataset]);
 
   const emergencyIndicator = useMemo(() => {
     if (!dataset) return null;
     // En modo real (/diagnosis): no hay dato de fondo de emergencia → "sin dato"
     if (mode === "real") return null;
-    // En modo inverse: omitido (ingreso hipotético — §6)
-    if (mode === "inverse") return null;
 
     const emergencyMonthly = amounts["emergency_fund"] ?? 0;
     const needsTotal = NEEDS_IDS.reduce((acc, id) => acc + (amounts[id] ?? 0), 0);
@@ -359,22 +356,20 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
           skeleton={showSkeleton}
         />
 
-        {/* Ratio necesidades — omitido en modo inverse */}
-        {mode !== "inverse" && (
-          <IndicatorCard
-            compact
-            label="RATIO NECESIDADES"
-            abbr={{ text: "BdE", title: "Banco de España — Finanzas para Todos" }}
-            value={showSkeleton ? "—" : needsIndicator?.formatted ?? "—"}
-            status={showSkeleton ? "info" : (needsIndicator?.status ?? "info")}
-            description="≤ 50% orientativo"
-            tooltip="Porcentaje del ingreso en gastos esenciales (vivienda, alimentación, transporte, salud, suministros, educación). El umbral del 50% procede de la regla 50/30/20 promovida por Finanzas para Todos (BdE+CNMV) — es una referencia educativa, no normativa."
-            skeleton={showSkeleton}
-          />
-        )}
+        {/* Ratio necesidades — presente en todos los modos */}
+        <IndicatorCard
+          compact
+          label="RATIO NECESIDADES"
+          abbr={{ text: "BdE", title: "Banco de España — Finanzas para Todos" }}
+          value={showSkeleton ? "—" : needsIndicator?.formatted ?? "—"}
+          status={showSkeleton ? "info" : (needsIndicator?.status ?? "info")}
+          description="≤ 50% orientativo"
+          tooltip="Porcentaje del ingreso en gastos esenciales (vivienda, alimentación, transporte, salud, suministros, educación). El umbral del 50% procede de la regla 50/30/20 promovida por Finanzas para Todos (BdE+CNMV) — es una referencia educativa, no normativa."
+          skeleton={showSkeleton}
+        />
 
-        {/* Cobertura emergencia — solo en modo recommended */}
-        {mode === "recommended" && (
+        {/* Cobertura emergencia — en recommended e inverse (calculable); en real: N/A */}
+        {mode !== "real" && (
           <IndicatorCard
             compact
             label="COBERTURA EMERGENCIA"
@@ -382,7 +377,11 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
             value={showSkeleton ? "—" : emergencyIndicator?.formatted ?? "—"}
             status={showSkeleton ? "info" : (emergencyIndicator?.status ?? "info")}
             description="≥ 6 m BdE"
-            tooltip="Estima cuántos meses de gastos esenciales cubriría tu fondo de emergencia con las aportaciones mensuales recomendadas. El Banco de España aconseja mantener entre 3 y 6 meses cubiertos."
+            tooltip={
+              mode === "inverse"
+                ? "Estima cuántos meses de gastos esenciales cubriría el fondo de emergencia con las aportaciones de la distribución hipotética calculada. El Banco de España aconseja mantener entre 3 y 6 meses cubiertos."
+                : "Estima cuántos meses de gastos esenciales cubriría tu fondo de emergencia con las aportaciones mensuales recomendadas. El Banco de España aconseja mantener entre 3 y 6 meses cubiertos."
+            }
             skeleton={showSkeleton}
           />
         )}
@@ -401,9 +400,9 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
           />
         )}
 
-        {/* ── Indicadores por categoría (6) — siempre visibles ─────────── */}
+        {/* ── Indicadores por categoría (Vivienda, Salud) — presentes en todos los modos ─── */}
         {/* Muestran la distancia al umbral institucional aunque estén en verde */}
-        {mode !== "inverse" && !showSkeleton && categoryIndicators.map((ind) => (
+        {!showSkeleton && categoryIndicators.map((ind) => (
           <IndicatorCard
             key={ind.id}
             compact
@@ -435,24 +434,22 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
       </div>
 
       {/* ── Leyenda de fuentes institucionales ──────────────────────────── */}
-      {/* Solo en modos que muestran indicadores (recommended y real, no inverse) */}
-      {mode !== "inverse" && (
-        <div className="mt-1 border-t border-border/30 pt-2">
-          <dl className="flex flex-col gap-0.5">
-            {[
-              { abbr: "BdE",      full: "Banco de España" },
-              { abbr: "OMS",      full: "Organización Mundial de la Salud" },
-              { abbr: "Eurostat", full: "Oficina Estadística de la UE" },
-              { abbr: "INE",      full: "Instituto Nacional de Estadística" },
-            ].map(({ abbr, full }) => (
-              <div key={abbr} className="flex gap-1.5" style={{ fontSize: 10 }}>
-                <dt className="text-muted-foreground/90 font-medium flex-shrink-0">{abbr}</dt>
-                <dd className="text-muted-foreground/55">{full}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-      )}
+      {/* Presente en todos los modos */}
+      <div className="mt-1 border-t border-border/30 pt-2">
+        <dl className="flex flex-col gap-0.5">
+          {[
+            { abbr: "BdE",      full: "Banco de España" },
+            { abbr: "OMS",      full: "Organización Mundial de la Salud" },
+            { abbr: "Eurostat", full: "Oficina Estadística de la UE" },
+            { abbr: "INE",      full: "Instituto Nacional de Estadística" },
+          ].map(({ abbr, full }) => (
+            <div key={abbr} className="flex gap-1.5" style={{ fontSize: 10 }}>
+              <dt className="text-muted-foreground/90 font-medium flex-shrink-0">{abbr}</dt>
+              <dd className="text-muted-foreground/55">{full}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
 
       {/* ── SecondaryCTA ─────────────────────────────────────────────────── */}
       {secondaryCta && (

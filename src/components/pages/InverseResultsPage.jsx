@@ -585,8 +585,9 @@ export default function InverseResultsPage() {
             Sin sticky ni scroll interno — col 2 scrollea con la página (M37 F3).
             paddingTop dinámico: calculado por useLayoutEffect para alinear con el banner
             navy de col 1, independientemente de los elementos variables por encima del banner.
-            Modo reducido: MacroPiechart + DTI hipotético + tasa de ahorro ideal.
-            Sin BlockBudgetBars en modo inverse (DashboardPanel lo omite según §6 del DESIGN.md).
+            Indicadores: DTI hipotético, tasa de ahorro, ratio necesidades, cobertura emergencia,
+            vivienda y salud. Sin seguros (dato no disponible en dataset inverse).
+            Sin BlockBudgetBars en modo inverse (DashboardPanel lo omite).
             Fuente: healthyDistribution del ingreso calculado. */}
         <aside
           ref={col2Ref}
