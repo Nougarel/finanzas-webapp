@@ -599,11 +599,9 @@ export default function InverseResultsPage() {
               mode="inverse"
               secondaryCta={{ href: "/inverse-calculator", label: "Calcular de nuevo" }}
             />
-            {/* Colofón tipográfico — cierre visual de col 2 cuando col 1 sigue scrolleando */}
-            <div className="mt-8 border-t border-border/20 py-3 text-center">
-              <span
-                className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/40"
-              >
+            {/* Colofón tipográfico — puramente decorativo, excluido del árbol de accesibilidad */}
+            <div className="mt-8 border-t border-border/20 py-3 text-center" aria-hidden="true">
+              <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/40">
                 flouss
               </span>
             </div>

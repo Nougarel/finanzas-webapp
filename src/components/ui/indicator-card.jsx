@@ -81,7 +81,7 @@ export function IndicatorCard({
   unit,
   skeleton = false,
   compact = false,
-  abbr, // eslint-disable-line no-unused-vars
+  abbr: _abbr,
 }) {
   if (skeleton) return <IndicatorCardSkeleton />;
 
@@ -157,7 +157,7 @@ export function IndicatorCard({
           visual entre el valor del usuario y la referencia institucional. */}
       {description && (
         <span
-          className="mt-3 font-sans font-normal text-muted-foreground/60 leading-none"
+          className="mt-3 font-sans font-normal text-muted-foreground/80 leading-none"
           style={{ fontSize: 10 }}
         >
           {description}
