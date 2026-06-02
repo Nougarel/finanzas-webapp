@@ -243,8 +243,13 @@ export function calculateEmergencyCoverage({ emergencyFundMonthly, needsMonthlyT
 export function extractDtiStatus({ dtiTotal }) {
   const value = round(dtiTotal ?? 0);
 
+  // Umbrales BdE / CNMV documentados en indicadores-transversales.md:
+  //   ok       → < 35%  (umbral prudencial BdE)
+  //   warning  → 35–40% (zona de atención, EFF 2024)
+  //   critical → > 40%  (sobrecarga, Eurostat EU-SILC / BdE)
+  // El >50% tiene rango normativo (RD-ley 6/2012) pero no lo usamos aquí.
   let status;
-  if (value < 30) {
+  if (value < 35) {
     status = "ok";
   } else if (value <= 40) {
     status = "warning";

@@ -60,52 +60,26 @@ import { BLOCK_COLORS } from "@/lib/m37/categoryColors";
 const NEEDS_IDS   = ["housing", "utilities", "groceries", "transport", "health", "education"];
 const SAVINGS_IDS = ["life_insurance", "emergency_fund", "short_term_savings", "long_term_savings", "investment", "debt_extra"];
 
-// Configuración de las 6 categorías con indicadores por umbral.
-// description → texto corto visible bajo el valor (umbral de referencia).
-// tooltip     → texto explicativo completo para el botón "?".
-// abbr        → sello de fuente en esquina inferior derecha.
+// Indicadores de categoría con umbral institucional citable — solo 2.
+// Se excluyen suministros, alimentación, transporte y educación porque:
+//   - Sus umbrales son calibraciones sobre datos INE (descriptivos), sin base normativa.
+//   - La media INE ya se muestra en cada fila de la tabla principal.
+// Solo quedan vivienda (BdE 35% / Eurostat 40%) y salud (OMS SDG 3.8.2 10%),
+// que sí tienen umbrales regulatorios o de organismos internacionales publicados.
 const CATEGORY_INDICATOR_CONFIG = [
   {
     id: "housing",
     label: "Vivienda",
     description: "< 35% BdE · < 40% Eurostat",
-    tooltip: "Porcentaje del ingreso destinado a vivienda (alquiler o hipoteca con gastos asociados). El Banco de España marca el 35% y Eurostat el 40% como umbrales de sobrecarga financiera.",
+    tooltip: "Porcentaje del ingreso en vivienda (alquiler o hipoteca con gastos asociados). El Banco de España establece el 35% como umbral prudencial y Eurostat el 40% como indicador de sobrecarga financiera (EU-SILC ilc_lvho07a).",
     abbr: null,
-  },
-  {
-    id: "utilities",
-    label: "Suministros",
-    description: "< 10% Directiva UE",
-    tooltip: "Porcentaje del ingreso en suministros del hogar: electricidad, gas, agua e internet. La directiva europea sobre eficiencia energética considera problemático superar el 10% del ingreso.",
-    abbr: { text: "UE Energía", title: "Directiva Europea de Eficiencia Energética" },
-  },
-  {
-    id: "groceries",
-    label: "Alimentación",
-    description: "< 20% INE",
-    tooltip: "Porcentaje del ingreso en alimentación y bebidas del hogar. Según la Encuesta de Presupuestos Familiares del INE, la media española se sitúa entre el 14% y el 16%.",
-    abbr: { text: "INE", title: "Instituto Nacional de Estadística" },
-  },
-  {
-    id: "transport",
-    label: "Transporte",
-    description: "< 18% INE",
-    tooltip: "Porcentaje del ingreso en transporte: combustible, transporte público y mantenimiento del vehículo. El INE sitúa el gasto medio español en torno al 12–13% del presupuesto familiar.",
-    abbr: { text: "INE", title: "Instituto Nacional de Estadística" },
   },
   {
     id: "health",
     label: "Salud",
     description: "< 10% OMS",
-    tooltip: "Porcentaje del ingreso en gastos de salud directos: farmacia y consultas privadas. La OMS considera problemático superar el 10% en gastos de bolsillo en salud (SDG 3.8.2).",
+    tooltip: "Porcentaje del ingreso en gastos de salud directos (farmacia, consultas privadas). La OMS define como gasto catastrófico superar el 10% del ingreso en gastos de bolsillo en salud (SDG 3.8.2 / WHO IMR 4844).",
     abbr: { text: "OMS", title: "Organización Mundial de la Salud" },
-  },
-  {
-    id: "education",
-    label: "Educación",
-    description: "< 20% INE",
-    tooltip: "Porcentaje del ingreso en educación: colegios privados, actividades extraescolares y formación continua. Según el INE, la media española se sitúa entre el 3% y el 5% del presupuesto familiar.",
-    abbr: { text: "INE", title: "Instituto Nacional de Estadística" },
   },
 ];
 
@@ -276,11 +250,11 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
   // ── DTI label contextual en modo inverse ──────────────────────────────────
 
   const dtiLabel = mode === "inverse" ? "DTI HIPOTÉTICO" : "DTI";
-  const dtiDescription = "< 30% BdE";
+  const dtiDescription = "< 35% BdE";
   const dtiTooltip =
     mode === "inverse"
-      ? "DTI calculado sobre el ingreso mínimo estimado. Indica si, con ese ingreso, la carga de deuda resultaría manejable según el Banco de España (< 30% saludable, > 40% situación de riesgo)."
-      : "Mide qué parte de tu ingreso mensual se destina al pago de deudas. El Banco de España considera que superar el 30% compromete la estabilidad financiera, y el 40% supone situación de riesgo.";
+      ? "DTI calculado sobre el ingreso mínimo estimado. Indica si, con ese ingreso, la carga de deuda resultaría manejable. El Banco de España establece el 35% como umbral prudencial y el 40% como zona de sobrecarga (EFF 2024)."
+      : "Mide qué parte de tu ingreso mensual se destina al pago de deudas. El Banco de España establece el 35% como umbral prudencial; superar el 40% indica sobrecarga financiera (Gavilán 2024 / EFF 2024).";
 
   return (
     <div className="flex flex-col gap-3">
@@ -390,11 +364,11 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
           <IndicatorCard
             compact
             label="RATIO NECESIDADES"
-            abbr={{ text: "Eurostat", title: "Oficina de Estadística de la Unión Europea" }}
+            abbr={{ text: "BdE", title: "Banco de España — Finanzas para Todos" }}
             value={showSkeleton ? "—" : needsIndicator?.formatted ?? "—"}
             status={showSkeleton ? "info" : (needsIndicator?.status ?? "info")}
-            description="≤ 50% Eurostat"
-            tooltip="Porcentaje del ingreso destinado a gastos esenciales: vivienda, alimentación, transporte, salud, suministros y educación. Eurostat advierte que superar el 50% deja margen insuficiente para el ahorro y el bienestar."
+            description="≤ 50% orientativo"
+            tooltip="Porcentaje del ingreso en gastos esenciales (vivienda, alimentación, transporte, salud, suministros, educación). El umbral del 50% procede de la regla 50/30/20 promovida por Finanzas para Todos (BdE+CNMV) — es una referencia educativa, no normativa."
             skeleton={showSkeleton}
           />
         )}
