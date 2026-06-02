@@ -105,8 +105,10 @@ export function IndicatorCard({
         {badge.label}
       </span>
 
-      {/* Fila: Label + botón "?" tooltip */}
-      <div className="flex items-center gap-1.5 pr-16">
+      {/* Fila: Label + botón "?" tooltip.
+          items-start: el botón se ancla a la primera línea del label aunque
+          el texto desborde a 2 líneas (ej: "COBERTURA EMERGENCIA"). */}
+      <div className="flex items-start gap-1.5 pr-16">
         <span
           className="font-sans font-medium uppercase text-muted-foreground"
           style={{ fontSize: 11, letterSpacing: "0.05em" }}
@@ -118,10 +120,12 @@ export function IndicatorCard({
           <TooltipProvider delayDuration={150}>
             <Tooltip>
               <TooltipTrigger asChild>
+                {/* mt-0.5: compensación óptica para alinear el centro del círculo
+                    con la línea de caps del label (11px uppercase) */}
                 <button
                   type="button"
-                  className="w-3.5 h-3.5 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold flex-shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
-                  style={{ fontSize: 8 }}
+                  className="w-3 h-3 min-w-[12px] rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold flex-shrink-0 mt-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                  style={{ fontSize: 9 }}
                   aria-label={`Información sobre ${label}`}
                 >
                   ?
