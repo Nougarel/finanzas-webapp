@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from "react";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import { MoneyValue } from "@/components/ui/money-value";
 import { PageShell } from "@/components/ui/page-shell";
 import { DetailPanelLayout } from "@/components/ui/detail-panel-layout";
 import { CategoryDetail } from "@/components/ui/category-detail";
+import { DashboardPanel } from "@/components/ui/dashboard-panel";
 import { CATEGORIES_UI, CATEGORIES_META } from "@/lib/models/categories";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useStudyContextOptional } from "@/lib/research/useStudyContext";
@@ -63,6 +64,11 @@ export default function InverseResultsPage() {
       return s ? JSON.parse(s) : null;
     } catch { return null; }
   });
+
+  // Refs para alineación dinámica col 2 con el banner navy (Fix M37).
+  const bannerRef = useRef(null);
+  const col2Ref   = useRef(null);
+  const [col2PaddingTop, setCol2PaddingTop] = useState(0);
 
   // Modo testing guiado (M18 Fase 4): notificar cálculo completado al
   // sistema research si el contexto /study está activo.
@@ -138,7 +144,84 @@ export default function InverseResultsPage() {
     runCalculation(false);
   }, [runCalculation]);
 
+  // ── Dataset para DashboardPanel (mode="inverse") ──────────────────────────────
+  // Construye la estructura unificada desde healthyDistribution del resultado
+  // inverso. El ingreso de referencia es requiredIncome (el calculado, no real).
+  // Los bloques se calculan sumando las categorías por bloque desde CATEGORIES_UI.
+  // El DTI hipotético se deriva como monthlyDebtPayment / requiredIncome * 100.
+  // Debe estar antes de los early returns para cumplir las reglas de hooks.
+  const dashboardDataset = useMemo(() => {
+    if (!result) return null;
+    const { requiredIncome, monthlyDebtPayment, healthyDistribution } = result;
+
+    // Mapa bloque → { label, totalAmount }
+    const BLOCK_LABELS_MAP = { needs: "Necesidades", wants: "Deseos", savings: "Ahorro" };
+    const blockTotals = { needs: 0, wants: 0, savings: 0 };
+
+    // Mapa plano de categorías con label y bloque desde CATEGORIES_UI
+    const categories = {};
+    for (const cat of CATEGORIES_UI) {
+      const h = healthyDistribution[cat.id];
+      if (!h) continue;
+      categories[cat.id] = {
+        id: cat.id,
+        label: cat.label,
+        block: cat.block,
+        percentage: h.percentage,
+        amount: h.amount,
+      };
+      if (blockTotals[cat.block] !== undefined) {
+        blockTotals[cat.block] += h.amount;
+      }
+    }
+
+    // Calcular porcentaje de bloque sobre requiredIncome
+    const needsPct   = requiredIncome > 0 ? (blockTotals.needs   / requiredIncome) * 100 : 0;
+    const wantsPct   = requiredIncome > 0 ? (blockTotals.wants   / requiredIncome) * 100 : 0;
+    const savingsPct = requiredIncome > 0 ? (blockTotals.savings / requiredIncome) * 100 : 0;
+
+    // DTI hipotético: cuota fija mensual / ingreso requerido
+    const dtiHypothetical = requiredIncome > 0 ? (monthlyDebtPayment / requiredIncome) * 100 : 0;
+
+    return {
+      income: requiredIncome,
+      blocks: {
+        needs:   { label: BLOCK_LABELS_MAP.needs,   percentage: parseFloat(needsPct.toFixed(2)),   amount: parseFloat(blockTotals.needs.toFixed(2))   },
+        wants:   { label: BLOCK_LABELS_MAP.wants,   percentage: parseFloat(wantsPct.toFixed(2)),   amount: parseFloat(blockTotals.wants.toFixed(2))   },
+        savings: { label: BLOCK_LABELS_MAP.savings, percentage: parseFloat(savingsPct.toFixed(2)), amount: parseFloat(blockTotals.savings.toFixed(2)) },
+      },
+      categories,
+      transversal: {
+        dti: { total: parseFloat(dtiHypothetical.toFixed(2)) },
+      },
+    };
+  }, [result]);
+
   const goBack = () => router.push("/inverse-calculator");
+
+  // Alineación dinámica col 2 (Fix M37).
+  const recalcCol2Alignment = useCallback(() => {
+    if (!bannerRef.current || !col2Ref.current) return;
+    if (!window.matchMedia("(min-width: 1280px)").matches) {
+      Promise.resolve().then(() => setCol2PaddingTop(0));
+      return;
+    }
+    const bannerTop = bannerRef.current.getBoundingClientRect().top;
+    const col2Top   = col2Ref.current.getBoundingClientRect().top;
+    const offset    = Math.max(0, Math.round(bannerTop - col2Top));
+    // Microtask para evitar setState directo dentro del layout effect (react-hooks/set-state-in-effect).
+    // La medición DOM ya está completa antes del microtask.
+    Promise.resolve().then(() => setCol2PaddingTop(offset));
+  }, []);
+
+  useLayoutEffect(() => {
+    recalcCol2Alignment();
+  }, [result, recalcCol2Alignment]);
+
+  useEffect(() => {
+    window.addEventListener("resize", recalcCol2Alignment);
+    return () => window.removeEventListener("resize", recalcCol2Alignment);
+  }, [recalcCol2Alignment]);
 
   if (!mounted) {
     return (
@@ -249,28 +332,8 @@ export default function InverseResultsPage() {
       })
     : [];
 
-  // Barra proporcional monocromática (navy) normalizada al máximo del bloque.
-  // Se normaliza al máximo del bloque (no al 100% del ingreso) para que las
-  // barras tengan rango visual útil dentro de cada sección.
-  function PercentBar({ pct, maxPct }) {
-    const width = maxPct > 0 ? Math.round((pct / maxPct) * 100) : 0;
-    return (
-      <div
-        className="mt-1.5 h-1 w-full rounded-full bg-muted overflow-hidden"
-        role="presentation"
-        aria-hidden="true"
-      >
-        <div
-          className="h-full rounded-full bg-primary transition-[width] duration-300"
-          style={{ width: `${width}%` }}
-        />
-      </div>
-    );
-  }
-
   // Construye columnas para la tabla de distribución saludable de un bloque.
-  // maxBlockPct: valor máximo de % en el bloque, para normalizar las barras.
-  function buildDistributionColumns(maxBlockPct) {
+  function buildDistributionColumns() {
     return [
       {
         key: "label",
@@ -291,10 +354,7 @@ export default function InverseResultsPage() {
         header: "% del ingreso",
         className: "text-right",
         render: (val) => (
-          <div className="flex flex-col items-end gap-0">
-            <span className="tabular-nums text-sm text-muted-foreground">{fmtPct(val)}</span>
-            <PercentBar pct={val} maxPct={maxBlockPct} />
-          </div>
+          <span className="tabular-nums text-sm text-muted-foreground">{fmtPct(val)}</span>
         ),
       },
       {
@@ -308,8 +368,10 @@ export default function InverseResultsPage() {
 
   return (
     <main className="flex min-h-screen flex-col">
-      <PageShell variant="table">
-        <div className="space-y-8">
+      <PageShell variant="dashboard">
+        {/* Col 1: contenido principal (7/12 en xl+, ancho completo en inferiores) */}
+        <div className="col-span-12 xl:col-span-7">
+          <div className="space-y-8">
 
           {/* Encabezado */}
           <div className="space-y-1">
@@ -322,7 +384,8 @@ export default function InverseResultsPage() {
           </div>
 
           {/* Hero: ingreso requerido — bloque invertido (navy) */}
-          <div className="rounded-2xl bg-primary px-6 py-8 space-y-3 transition-colors duration-200">
+          {/* bannerRef: referencia para calcular la alineación dinámica de col 2 */}
+          <div ref={bannerRef} className="rounded-2xl bg-primary px-6 py-8 space-y-3 transition-colors duration-200">
             {/* Label blanco puro — el /70 anterior daba sensación gris-azulada */}
             <p className="text-xs font-normal uppercase tracking-meta text-primary-foreground">
               Ingreso mínimo necesario
@@ -467,18 +530,15 @@ export default function InverseResultsPage() {
                       })
                       .filter(Boolean);
 
-                    // Máximo de % en el bloque para normalizar la escala de las barras
-                    const maxBlockPct = Math.max(...blockData.map((r) => r.percentage), 0);
-
                     return (
                       <div key={block}>
                         {/* Banner navy de bloque — rounded-t-lg pegado a la DataTable
                             para que se lean como una unidad visual. */}
-                        <h3 className="flex items-center justify-between rounded-t-lg bg-primary px-4 py-2.5 text-xs font-bold uppercase tracking-meta text-primary-foreground">
+                        <h3 className="flex items-center justify-between rounded-t-lg bg-primary px-4 py-3 text-sm font-bold uppercase tracking-meta text-primary-foreground">
                           {BLOCK_LABELS[block]}
                         </h3>
                         <DataTable
-                          columns={buildDistributionColumns(maxBlockPct)}
+                          columns={buildDistributionColumns()}
                           data={blockData}
                           caption={`Distribución saludable — ${BLOCK_LABELS[block]}`}
                           rowKey="id"
@@ -518,7 +578,36 @@ export default function InverseResultsPage() {
             )}
           </div>
 
-        </div>
+          </div>{/* fin space-y-8 de col 1 */}
+        </div>{/* fin col 1 */}
+
+        {/* Col 2: DashboardPanel en mode="inverse" (solo xl+, oculto en viewports menores).
+            Sin sticky ni scroll interno — col 2 scrollea con la página (M37 F3).
+            paddingTop dinámico: calculado por useLayoutEffect para alinear con el banner
+            navy de col 1, independientemente de los elementos variables por encima del banner.
+            Modo reducido: MacroPiechart + DTI hipotético + tasa de ahorro ideal.
+            Sin BlockBudgetBars en modo inverse (DashboardPanel lo omite según §6 del DESIGN.md).
+            Fuente: healthyDistribution del ingreso calculado. */}
+        <aside
+          ref={col2Ref}
+          className="hidden xl:block xl:col-span-5"
+          aria-label="Dashboard resumen ingreso mínimo calculado"
+        >
+          <div style={{ paddingTop: col2PaddingTop > 0 ? col2PaddingTop : undefined }}>
+            <DashboardPanel
+              dataset={dashboardDataset}
+              mode="inverse"
+              secondaryCta={{ href: "/inverse-calculator", label: "Calcular de nuevo" }}
+            />
+            {/* Colofón tipográfico — puramente decorativo, excluido del árbol de accesibilidad */}
+            <div className="mt-8 border-t border-border/20 py-3 text-center" aria-hidden="true">
+              <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/40">
+                flouss
+              </span>
+            </div>
+          </div>
+        </aside>
+
       </PageShell>
     </main>
   );

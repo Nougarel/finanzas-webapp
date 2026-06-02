@@ -1,20 +1,21 @@
 "use client";
 
-import { useState, useEffect, Suspense, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useCallback, Suspense, useRef, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
 import { DataTable } from "@/components/ui/data-table";
 import { MoneyValue } from "@/components/ui/money-value";
 import { PageShell } from "@/components/ui/page-shell";
-import { HealthGauge } from "@/components/ui/health-gauge";
 import { DetailPanelLayout } from "@/components/ui/detail-panel-layout";
 import { CategoryDetail } from "@/components/ui/category-detail";
+import { DashboardPanel } from "@/components/ui/dashboard-panel";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useStudyContextOptional } from "@/lib/research/useStudyContext";
 import { useStudyAwareRouter } from "@/lib/research/useStudyAwareRouter";
 import { useMounted } from "@/lib/hooks/useMounted";
+import { cn } from "@/lib/utils";
 
 const BLOCK_ORDER = ["needs", "wants", "savings"];
 
@@ -23,14 +24,6 @@ const BLOCK_ORDER = ["needs", "wants", "savings"];
 // - mild   → warning (ámbar)
 function alertVariantFromLevel(level) {
   return level === "severe" ? "error" : "warning";
-}
-
-// Clase de color para el DTI usando tokens semánticos del design system.
-// Devuelve clases de texto con CSS variables — sin hardcodes amber/green/red.
-function dtiColorClass(total) {
-  if (total < 35) return "text-[color:var(--success-foreground)]";
-  if (total < 40) return "text-[color:var(--warning-foreground)]";
-  return "text-destructive";
 }
 
 // Referencia INE: media nacional para una categoría.
@@ -42,45 +35,21 @@ function IneReference({ ineData, block }) {
 
   if (block === "wants") {
     return (
-      <p className="text-xs text-muted-foreground">
-        Media española: {ineReference}% del ingreso
+      <p className="text-[10px] text-muted-foreground/60">
+        <span className="font-medium">INE:</span> {ineReference}% del ingreso
       </p>
     );
   }
   return (
-    <p className="text-xs text-muted-foreground">
-      Media española (INE): {ineReference}%
+    <p className="text-[10px] text-muted-foreground/60">
+      <span className="font-medium">INE:</span> {ineReference}%
     </p>
-  );
-}
-
-// Barra proporcional monocromática (navy).
-// maxPct: valor máximo del bloque para normalizar la escala.
-// Se normaliza al máximo del bloque (no al 100% del ingreso) para que las
-// barras tengan rango visual útil — las categorías individuales raramente
-// superan el 15-20% del ingreso, por lo que una escala absoluta produciría
-// barras demasiado pequeñas para distinguir entre sí.
-function PercentBar({ pct, maxPct }) {
-  const width = maxPct > 0 ? Math.round((pct / maxPct) * 100) : 0;
-  return (
-    <div
-      className="mt-1.5 h-1 w-full rounded-full bg-muted overflow-hidden"
-      role="presentation"
-      aria-hidden="true"
-    >
-      <div
-        className="h-full rounded-full bg-primary transition-[width] duration-300"
-        style={{ width: `${width}%` }}
-      />
-    </div>
   );
 }
 
 // Columnas para DataTable de categorías dentro de un bloque.
 // Las alertas y referencias INE se renderizan debajo del nombre.
-// maxBlockPct: porcentaje máximo entre las categorías del bloque,
-// usado para normalizar la escala de las barras.
-function buildCategoryColumns(result, blockKey, formatPct, maxBlockPct) {
+function buildCategoryColumns(result, blockKey, formatPct) {
   return [
     {
       key: "label",
@@ -116,12 +85,9 @@ function buildCategoryColumns(result, blockKey, formatPct, maxBlockPct) {
       header: "% ingreso",
       className: "text-right align-top",
       render: (val) => (
-        <div className="flex flex-col items-end gap-0">
-          <span className="tabular-nums text-sm text-muted-foreground">
-            {formatPct(val)}
-          </span>
-          <PercentBar pct={val} maxPct={maxBlockPct} />
-        </div>
+        <span className="tabular-nums text-sm text-muted-foreground">
+          {formatPct(val)}
+        </span>
       ),
     },
   ];
@@ -153,6 +119,14 @@ function ResultsContent() {
 
   const incomeParam = searchParams.get("income");
   const income = parseFloat(incomeParam);
+
+  // Refs para alineación dinámica col 2 con el banner navy (Fix M37).
+  // bannerRef → div navy de ingreso en col 1.
+  // col2Ref   → aside de col 2.
+  // col2PaddingTop → estado que contiene el paddingTop calculado.
+  const bannerRef = useRef(null);
+  const col2Ref   = useRef(null);
+  const [col2PaddingTop, setCol2PaddingTop] = useState(0);
 
   // Modo testing guiado (M18 Fase 4): si el contexto /study está activo,
   // notificamos el cálculo completado para marcar el flujo como probado.
@@ -187,6 +161,68 @@ function ResultsContent() {
       })
       .finally(() => setLoading(false));
   }, [profile, income]);
+
+  // ── Dataset para DashboardPanel ──────────────────────────────────────────────
+  // Construye la estructura unificada que espera DashboardPanel a partir de
+  // la respuesta de la API. Debe estar antes de los early returns para cumplir
+  // las reglas de hooks (no condicional). Cuando result es null devuelve null
+  // y el panel renderiza en modo skeleton.
+  const dashboardDataset = useMemo(() => {
+    if (!result) return null;
+    const categories = {};
+    for (const [catId, cat] of Object.entries(result.categories)) {
+      categories[catId] = {
+        id: catId,
+        label: cat.label,
+        block: cat.block,
+        percentage: cat.percentage,
+        amount: cat.amount,
+      };
+    }
+    return {
+      income,
+      blocks: {
+        needs:   { label: result.blocks.needs.label,   percentage: result.blocks.needs.percentage,   amount: result.blocks.needs.amount   },
+        wants:   { label: result.blocks.wants.label,   percentage: result.blocks.wants.percentage,   amount: result.blocks.wants.amount   },
+        savings: { label: result.blocks.savings.label, percentage: result.blocks.savings.percentage, amount: result.blocks.savings.amount },
+      },
+      categories,
+      transversal: {
+        dti: { total: result.transversal?.dti?.total ?? 0 },
+        insurance: {
+          amount: result.transversal?.insurance?.amount ?? 0,
+          total:  result.transversal?.insurance?.total  ?? 0,
+        },
+      },
+    };
+  }, [result, income]);
+
+  // Alineación dinámica col 2 — useLayoutEffect para evitar flash visual.
+  // Se recalcula cuando result cambia (alertas pueden aparecer/desaparecer)
+  // y en resize (breakpoint puede cruzar xl).
+  const recalcCol2Alignment = useCallback(() => {
+    if (!bannerRef.current || !col2Ref.current) return;
+    // Solo aplica en xl+ (≥1280px). Por debajo, paddingTop = 0.
+    if (!window.matchMedia("(min-width: 1280px)").matches) {
+      Promise.resolve().then(() => setCol2PaddingTop(0));
+      return;
+    }
+    const bannerTop = bannerRef.current.getBoundingClientRect().top;
+    const col2Top   = col2Ref.current.getBoundingClientRect().top;
+    const offset    = Math.max(0, Math.round(bannerTop - col2Top));
+    // Microtask para evitar setState directo dentro del layout effect (react-hooks/set-state-in-effect).
+    // La medición DOM ya está completa antes del microtask.
+    Promise.resolve().then(() => setCol2PaddingTop(offset));
+  }, []);
+
+  useLayoutEffect(() => {
+    recalcCol2Alignment();
+  }, [result, recalcCol2Alignment]);
+
+  useEffect(() => {
+    window.addEventListener("resize", recalcCol2Alignment);
+    return () => window.removeEventListener("resize", recalcCol2Alignment);
+  }, [recalcCol2Alignment]);
 
   if (!mounted) {
     return (
@@ -253,19 +289,21 @@ function ResultsContent() {
 
   return (
     <main className="flex min-h-screen flex-col">
-      <PageShell variant="table">
-        <div className="space-y-8">
+      <PageShell variant="dashboard">
+        {/* Col 1: contenido principal (7/12 en xl+, ancho completo en inferiores) */}
+        <div className="col-span-12 xl:col-span-7">
+          <div className="space-y-8">
 
           {/* Alertas críticas de sistema — siempre en lo más alto */}
           {(budgetAlert || debtAlert) && (
             <div className="space-y-2">
               {budgetAlert && (
-                <Alert variant={alertVariantFromLevel(budgetAlert.level)}>
+                <Alert variant={alertVariantFromLevel(budgetAlert.level)} size="sm">
                   {budgetAlert.message}
                 </Alert>
               )}
               {debtAlert && (
-                <Alert variant={alertVariantFromLevel(debtAlert.level)}>
+                <Alert variant={alertVariantFromLevel(debtAlert.level)} size="sm">
                   {debtAlert.message}
                 </Alert>
               )}
@@ -289,7 +327,8 @@ function ResultsContent() {
           </div>
 
           {/* Ingreso mensual — hero invertido (navy) */}
-          <div className="rounded-2xl bg-primary px-6 py-8 space-y-3 transition-colors duration-200">
+          {/* bannerRef: referencia para calcular la alineación dinámica de col 2 */}
+          <div ref={bannerRef} className="rounded-2xl bg-primary px-6 py-8 space-y-3 transition-colors duration-200">
             {/* Label en blanco puro (sin opacity attenuation) — el /70 anterior
                 se percibía azul-grisáceo sobre el navy en lugar de blanco. */}
             <p className="text-xs font-normal uppercase tracking-meta text-primary-foreground">
@@ -321,89 +360,43 @@ function ResultsContent() {
             )}
           </div>
 
-          {/* Salud financiera — colapsado por defecto (M36: secundario, bajo demanda) */}
-          {result.healthScore && (
-            <details className="group rounded-lg border border-border bg-card card-elevated">
-              <summary
-                className={[
-                  "flex cursor-pointer items-center justify-between",
-                  "px-5 py-3.5 text-sm font-medium text-foreground",
-                  "hover:bg-muted/30 transition-colors rounded-lg",
-                  "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring",
-                  "list-none [&::-webkit-details-marker]:hidden",
-                ].join(" ")}
-              >
-                <span className="flex items-center gap-2">
-                  <span className="text-xs font-medium uppercase tracking-meta text-muted-foreground">
-                    Salud financiera
-                  </span>
-                  <span
-                    className="tabular-nums text-sm font-bold"
-                    style={{
-                      color:
-                        result.healthScore.level === "excellent" || result.healthScore.level === "good"
-                          ? "var(--success-foreground)"
-                          : result.healthScore.level === "critical"
-                          ? "var(--destructive)"
-                          : "var(--warning-foreground)",
-                    }}
-                  >
-                    {result.healthScore.score}/100 — {
-                      { excellent: "Excelente", good: "Buena", acceptable: "Aceptable",
-                        improvable: "Mejorable", critical: "Crítica" }[result.healthScore.level] ?? result.healthScore.level
-                    }
-                  </span>
-                </span>
-                {/* Chevron que rota al expandir */}
-                <svg
-                  className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-open:rotate-180"
-                  aria-hidden="true"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-              </summary>
-              <div className="border-t border-border">
-                <HealthGauge
-                  score={result.healthScore.score}
-                  level={result.healthScore.level}
-                  label="Salud financiera"
-                  penalties={result.healthScore.penalties ?? []}
-                />
-              </div>
-            </details>
-          )}
+          {/* HealthGauge eliminado de /results (M37 mejora 8).
+              El score de salud financiera se mantiene solo en /diagnosis donde
+              la comparación real vs. recomendado aporta contexto interpretativo.
+              Las alertas estructurales (_budget_block, _debt_block) ya se muestran
+              en la sección de alertas críticas de sistema al inicio de col 1. */}
 
-          {/* Selector de vista */}
+          {/* Selector de vista — pill toggle segmented control */}
           <div className="space-y-2">
-            <div className="flex gap-2" role="group" aria-label="Modo de visualización">
-              <button
-                type="button"
-                onClick={() => setViewMode("detailed")}
-                className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
-                  viewMode === "detailed"
-                    ? "border-primary bg-primary/5 text-primary"
-                    : "border-border hover:border-primary/50"
-                }`}
-                aria-pressed={viewMode === "detailed"}
-              >
-                Por categorías
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode("macro")}
-                className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
-                  viewMode === "macro"
-                    ? "border-primary bg-primary/5 text-primary"
-                    : "border-border hover:border-primary/50"
-                }`}
-                aria-pressed={viewMode === "macro"}
-              >
-                Por bloques
-              </button>
+            <div role="group" aria-label="Modo de visualización">
+              <div className="inline-flex rounded-full border border-border bg-muted/40 p-0.5 gap-0.5">
+                <button
+                  type="button"
+                  onClick={() => setViewMode("detailed")}
+                  className={cn(
+                    "rounded-full px-4 py-1.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                    viewMode === "detailed"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                  aria-pressed={viewMode === "detailed"}
+                >
+                  Por categorías
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("macro")}
+                  className={cn(
+                    "rounded-full px-4 py-1.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                    viewMode === "macro"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                  aria-pressed={viewMode === "macro"}
+                >
+                  Por bloques
+                </button>
+              </div>
             </div>
             {viewMode === "detailed" && (
               <p className="text-xs text-muted-foreground">
@@ -477,25 +470,22 @@ function ResultsContent() {
                     alert: result.alerts[cat.id] ?? null,
                   }));
 
-                  // Máximo de % en el bloque para normalizar la escala de las barras
-                  const maxBlockPct = Math.max(...tableData.map((r) => r.percentage), 0);
-
-                  const columns = buildCategoryColumns(result, blockKey, formatPct, maxBlockPct);
+                  const columns = buildCategoryColumns(result, blockKey, formatPct);
 
                   return (
                     <section key={blockKey} aria-labelledby={`block-${blockKey}-heading`}>
                       {/* Banner navy de bloque — reemplaza la cabecera anterior.
                           rounded-t-lg en el banner + DataTable sin margen superior
                           → visualmente se leen como una unidad. */}
-                      <div className="flex items-center justify-between rounded-t-lg bg-primary px-4 py-2.5">
+                      <div className="flex items-center justify-between rounded-t-lg bg-primary px-4 py-3">
                         <div className="flex items-center gap-2">
                           <h2
                             id={`block-${blockKey}-heading`}
-                            className="text-xs font-bold uppercase tracking-meta text-primary-foreground"
+                            className="text-sm font-bold uppercase tracking-meta text-primary-foreground"
                           >
                             {block.label}
                           </h2>
-                          <span className="text-xs font-medium text-primary-foreground/85 tabular-nums">
+                          <span className="text-sm font-medium text-primary-foreground/85 tabular-nums">
                             {formatPct(block.percentage)}
                           </span>
                         </div>
@@ -505,7 +495,7 @@ function ResultsContent() {
                       {/* Alerta de bloque */}
                       {blockAlert && (
                         <div className="mb-3">
-                          <Alert variant={alertVariantFromLevel(blockAlert.level)}>
+                          <Alert variant={alertVariantFromLevel(blockAlert.level)} size="sm">
                             {block.label}: {blockAlert.message}
                           </Alert>
                         </div>
@@ -550,6 +540,7 @@ function ResultsContent() {
                   <Alert
                     key={`alert-${blockKey}`}
                     variant={alertVariantFromLevel(blockAlert.level)}
+                    size="sm"
                   >
                     {result.blocks[blockKey].label}: {blockAlert.message}
                   </Alert>
@@ -578,99 +569,6 @@ function ResultsContent() {
             </div>
           )}
 
-          {/* Indicadores de referencia */}
-          <section aria-labelledby="indicators-heading">
-            <h2
-              id="indicators-heading"
-              className="text-sm font-semibold text-muted-foreground uppercase tracking-meta mb-3"
-            >
-              Indicadores de referencia
-            </h2>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">Ratio de deuda (DTI)</CardTitle>
-                  <CardDescription className="text-xs">
-                    Hipoteca, cuotas de vehículo y deudas de consumo sobre el ingreso total
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className={`text-2xl font-bold tabular-nums ${dtiColorClass(result.transversal.dti.total)}`}>
-                    {formatPct(result.transversal.dti.total)}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    <MoneyValue amount={result.transversal.dti.amount} size="inline" className="text-xs" />{" "}
-                    / mes ·{" "}
-                    {result.transversal.dti.total < result.transversal.dti.mild
-                      ? "dentro del rango saludable"
-                      : result.transversal.dti.total < result.transversal.dti.severe
-                      ? "en zona de atención"
-                      : "en zona crítica"}
-                  </p>
-                  {/* Desglose por componente */}
-                  {(result.transversal.dti.breakdown.external.amount > 0 ||
-                    result.transversal.dti.breakdown.housing.amount > 0 ||
-                    result.transversal.dti.breakdown.vehicle.amount > 0) && (
-                    <div className="mt-3 space-y-1 border-t pt-2">
-                      {[
-                        { label: "Deudas de consumo", key: "external" },
-                        { label: "Hipoteca",           key: "housing"  },
-                        { label: "Vehículo (cuota)",   key: "vehicle"  },
-                      ]
-                        .filter(({ key }) => result.transversal.dti.breakdown[key].amount > 0)
-                        .map(({ label, key }) => {
-                          const item = result.transversal.dti.breakdown[key];
-                          return (
-                            <div key={key} className="flex justify-between text-xs text-muted-foreground">
-                              <span>{label}</span>
-                              <MoneyValue amount={item.amount} size="inline" className="text-xs" />
-                            </div>
-                          );
-                        })}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">Gasto total en seguros</CardTitle>
-                  <CardDescription className="text-xs">
-                    Estimación sobre los importes asignados (vida + salud + vehículo)
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-2xl font-bold tabular-nums">{formatPct(result.transversal.insurance.total)}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    <MoneyValue amount={result.transversal.insurance.amount} size="inline" className="text-xs" />{" "}
-                    / mes
-                  </p>
-                  {/* Desglose por componente */}
-                  <div className="mt-3 space-y-1 border-t pt-2">
-                    <p className="text-xs text-muted-foreground italic pb-1">
-                      Estimación orientativa del gasto mensual en seguros. Los importes de seguro de vehículo y salud se calculan a partir del gasto total en su categoría.
-                    </p>
-                    {[
-                      { label: "Seguro de vida", key: "life" },
-                      { label: "Seguro médico",  key: "health" },
-                      { label: "Seguro vehículo", key: "transport" },
-                    ]
-                      .filter(({ key }) => result.transversal.insurance.breakdown[key].amount > 0)
-                      .map(({ label, key }) => {
-                        const item = result.transversal.insurance.breakdown[key];
-                        return (
-                          <div key={key} className="flex justify-between text-xs text-muted-foreground">
-                            <span>{label}</span>
-                            <MoneyValue amount={item.amount} size="inline" className="text-xs" />
-                          </div>
-                        );
-                      })}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </section>
-
           {/* Botones de acción */}
           <div className="flex flex-wrap gap-3 justify-center pt-2">
             <Button variant="outline" onClick={() => router.push("/calculator")}>
@@ -693,7 +591,35 @@ function ResultsContent() {
             </Button>
           </div>
 
-        </div>
+          </div>{/* fin space-y-8 de col 1 */}
+        </div>{/* fin col 1 */}
+
+        {/* Col 2: DashboardPanel (solo xl+, oculto en viewports menores).
+            Sin sticky ni scroll interno — col 2 scrollea con la página (M37 F3).
+            paddingTop dinámico: useLayoutEffect mide la distancia entre el top del banner
+            navy (col 1) y el top del aside (col 2) y aplica ese valor como paddingTop.
+            Esto garantiza alineación exacta con el banner independientemente del número
+            de alertas, del chip del modelo o de cualquier otro elemento variable en col 1. */}
+        <aside
+          ref={col2Ref}
+          className="hidden xl:block xl:col-span-5"
+          aria-label="Dashboard resumen financiero"
+        >
+          <div style={{ paddingTop: col2PaddingTop > 0 ? col2PaddingTop : undefined }}>
+            <DashboardPanel
+              dataset={dashboardDataset}
+              mode="recommended"
+              secondaryCta={{ href: `/diagnosis-form?income=${income}`, label: "Compara tu situación real" }}
+            />
+            {/* Colofón tipográfico — puramente decorativo, excluido del árbol de accesibilidad */}
+            <div className="mt-8 border-t border-border/20 py-3 text-center" aria-hidden="true">
+              <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/40">
+                flouss
+              </span>
+            </div>
+          </div>
+        </aside>
+
       </PageShell>
     </main>
   );
