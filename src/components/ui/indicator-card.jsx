@@ -4,12 +4,12 @@
  * indicator-card.jsx — Card compacta de KPI financiero.
  *
  * Layout:
- *   - Grupo absoluto top-right: botón "?" + badge de estado — siempre fijos,
- *     independientemente de cuántas líneas ocupe el label.
- *   - Label en CAPS (puede wrappear libremente) con pr-20 para no solapar el grupo.
+ *   - Grupo absoluto top-right: botón "?" + badge de estado (fijos siempre).
+ *   - Label en CAPS (10px para que labels largos como "COBERTURA EMERGENCIA"
+ *     quepan en 1 línea dentro del pr-20 reservado para el grupo).
  *   - Valor en font-display bold.
- *   - Descripción corta (umbral, ej: "< 30% BdE") → texto secundario bajo el valor.
- *   - Sello de fuente (BdE, OMS…) → esquina inferior derecha, absoluta, terciario.
+ *   - Umbral de referencia → absolute bottom-left (al nivel del fuente stamp anterior).
+ *   - Source stamp eliminado — el umbral ya incluye la fuente (ej: "< 30% BdE").
  */
 
 import { cn } from "@/lib/utils";
@@ -52,7 +52,6 @@ function IndicatorCardSkeleton() {
     <div className="bg-card border border-border rounded-lg px-4 py-3 flex flex-col gap-2">
       <div className="h-2.5 w-16 bg-muted rounded animate-pulse" />
       <div className="h-8 w-24 bg-muted rounded animate-pulse" />
-      <div className="h-2 w-20 bg-muted rounded animate-pulse" />
     </div>
   );
 }
@@ -64,14 +63,14 @@ function IndicatorCardSkeleton() {
  * @param {string} props.label            - Nombre del indicador (se muestra en CAPS).
  * @param {string} props.value            - Valor formateado. Ej: "24.5%".
  * @param {"ok"|"warning"|"critical"|"info"|"na"} props.status
- * @param {string} [props.description]    - Umbral corto visible bajo el valor. Ej: "< 30% BdE".
+ * @param {string} [props.description]    - Umbral corto visible bottom-left. Ej: "< 30% BdE".
  * @param {string} [props.tooltip]        - Texto explicativo completo para el botón "?".
  * @param {string} [props.unit]           - Unidad visible junto al valor.
  * @param {boolean} [props.skeleton]      - Si true, renderiza skeleton de carga.
  * @param {boolean} [props.compact]       - Layout reducido para grid 2-col.
  * @param {{ text: string, title: string }} [props.abbr]
- *   - abbr.text: sello terciario en esquina inferior derecha (BdE, OMS…).
- *   - abbr.title: atributo title para accesibilidad.
+ *   - Mantenido por compatibilidad pero ya no renderiza el sello visual.
+ *     El umbral de description ya incluye la fuente (ej: "< 20% INE").
  */
 export function IndicatorCard({
   label,
@@ -82,17 +81,17 @@ export function IndicatorCard({
   unit,
   skeleton = false,
   compact = false,
-  abbr,
+  abbr, // eslint-disable-line no-unused-vars
 }) {
   if (skeleton) return <IndicatorCardSkeleton />;
 
   const badge = BADGE_CONFIG[status] ?? BADGE_CONFIG.na;
 
   return (
-    <div className="relative bg-card border border-border rounded-lg px-4 pt-3 pb-5 flex flex-col gap-1.5 hover:bg-muted/30 transition-colors duration-200">
+    <div className="relative bg-card border border-border rounded-lg px-4 pt-3 pb-6 flex flex-col gap-1.5 hover:bg-muted/30 transition-colors duration-200">
 
-      {/* Grupo absoluto top-right: botón "?" + badge de estado.
-          Ambos fijos en la esquina — el label puede wrappear sin arrastrar ninguno. */}
+      {/* Grupo absoluto top-right: botón "?" + badge.
+          Ambos fijos — el label puede wrappear sin arrastrar ninguno. */}
       <div className="absolute top-2 right-2 flex items-center gap-1">
         {tooltip && (
           <TooltipProvider delayDuration={150}>
@@ -124,17 +123,19 @@ export function IndicatorCard({
         </span>
       </div>
 
-      {/* Label — pr-20 (80px) reserva espacio para el grupo absoluto [?][badge] */}
-      <div className="pr-20">
+      {/* Label — 10px, pr-16 (64px) reserva espacio para el grupo absoluto.
+          El texto más largo "COBERTURA EMERGENCIA" necesita ~144px; con pr-16
+          el contenido disponible es 146px (2px de margen). */}
+      <div className="pr-16">
         <span
           className="font-sans font-medium uppercase text-muted-foreground"
-          style={{ fontSize: 11, letterSpacing: "0.05em" }}
+          style={{ fontSize: 10, letterSpacing: "0.05em" }}
         >
           {label}
         </span>
       </div>
 
-      {/* Valor principal */}
+      {/* Valor principal — separado del umbral bottom por el pb-6 del card */}
       <span
         className={cn(
           "font-display font-bold text-foreground tabular-nums leading-none",
@@ -154,24 +155,14 @@ export function IndicatorCard({
         )}
       </span>
 
-      {/* Descripción corta — umbral de referencia visible (ej: "< 30% BdE") */}
+      {/* Umbral de referencia — absolute bottom-left, alineado con la base del card.
+          Mismo nivel donde estaban las siglas de fuente (eliminadas por redundancia). */}
       {description && (
-        <p
-          className="font-sans text-muted-foreground/70 leading-snug"
-          style={{ fontSize: compact ? 10 : 11 }}
+        <span
+          className="absolute bottom-1.5 left-4 text-muted-foreground/60 font-normal"
+          style={{ fontSize: 10 }}
         >
           {description}
-        </p>
-      )}
-
-      {/* Sello de fuente — esquina inferior derecha, terciario */}
-      {abbr && (
-        <span
-          className="absolute bottom-1.5 right-2.5 text-muted-foreground/40 font-medium"
-          style={{ fontSize: 9 }}
-          title={abbr.title}
-        >
-          {abbr.text}
         </span>
       )}
     </div>
