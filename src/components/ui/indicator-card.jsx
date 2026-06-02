@@ -123,17 +123,15 @@ export function IndicatorCard({
         </span>
       </div>
 
-      {/* Label — 10px, pr-16 (64px) reserva espacio para el grupo absoluto.
-          El texto más largo "COBERTURA EMERGENCIA" necesita ~144px; con pr-16
-          el contenido disponible es 146px (2px de margen). */}
-      <div className="pr-16">
-        <span
-          className="font-sans font-medium uppercase text-muted-foreground"
-          style={{ fontSize: 10, letterSpacing: "0.05em" }}
-        >
-          {label}
-        </span>
-      </div>
+      {/* Label — span directo en el flex-col para eliminar el strut del div padre
+          (div hereda font-size:16px→line-height:24px que desplaza el texto 9px).
+          Como flex item el span no tiene strut; leading-none lo fija a 10px. */}
+      <span
+        className="pr-16 font-sans font-medium uppercase text-muted-foreground leading-none"
+        style={{ fontSize: 10, letterSpacing: "0.05em" }}
+      >
+        {label}
+      </span>
 
       {/* Valor principal — separado del umbral bottom por el pb-6 del card */}
       <span
