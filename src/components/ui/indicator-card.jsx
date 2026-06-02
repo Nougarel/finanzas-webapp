@@ -4,14 +4,12 @@
  * indicator-card.jsx — Card compacta de KPI financiero.
  *
  * Layout:
- *   - Badge de estado (mini insignia) → esquina superior derecha, absoluta.
- *   - Label en CAPS + botón "?" circular navy → línea superior.
+ *   - Grupo absoluto top-right: botón "?" + badge de estado — siempre fijos,
+ *     independientemente de cuántas líneas ocupe el label.
+ *   - Label en CAPS (puede wrappear libremente) con pr-20 para no solapar el grupo.
  *   - Valor en font-display bold.
  *   - Descripción corta (umbral, ej: "< 30% BdE") → texto secundario bajo el valor.
  *   - Sello de fuente (BdE, OMS…) → esquina inferior derecha, absoluta, terciario.
- *
- * El botón "?" abre un tooltip con la explicación completa del indicador.
- * El estado semántico lo comunica el badge, no el color del valor.
  */
 
 import { cn } from "@/lib/utils";
@@ -66,15 +64,14 @@ function IndicatorCardSkeleton() {
  * @param {string} props.label            - Nombre del indicador (se muestra en CAPS).
  * @param {string} props.value            - Valor formateado. Ej: "24.5%".
  * @param {"ok"|"warning"|"critical"|"info"|"na"} props.status
- * @param {string} [props.description]    - Texto corto visible bajo el valor (umbral de referencia).
- *                                          Ej: "< 30% BdE". Opcional.
- * @param {string} [props.tooltip]        - Texto explicativo completo para el botón "?". Opcional.
- * @param {string} [props.unit]           - Unidad visible junto al valor. Opcional.
- * @param {boolean} [props.skeleton]      - Si true, renderiza el skeleton de carga.
+ * @param {string} [props.description]    - Umbral corto visible bajo el valor. Ej: "< 30% BdE".
+ * @param {string} [props.tooltip]        - Texto explicativo completo para el botón "?".
+ * @param {string} [props.unit]           - Unidad visible junto al valor.
+ * @param {boolean} [props.skeleton]      - Si true, renderiza skeleton de carga.
  * @param {boolean} [props.compact]       - Layout reducido para grid 2-col.
  * @param {{ text: string, title: string }} [props.abbr]
- *   - Si se pasa, `abbr.text` se renderiza como sello terciario en esquina inferior derecha.
- *     `abbr.title` se usa como atributo title para accesibilidad.
+ *   - abbr.text: sello terciario en esquina inferior derecha (BdE, OMS…).
+ *   - abbr.title: atributo title para accesibilidad.
  */
 export function IndicatorCard({
   label,
@@ -94,37 +91,16 @@ export function IndicatorCard({
   return (
     <div className="relative bg-card border border-border rounded-lg px-4 pt-3 pb-5 flex flex-col gap-1.5 hover:bg-muted/30 transition-colors duration-200">
 
-      {/* Badge insignia — esquina superior derecha, absoluta, mini */}
-      <span
-        className={cn(
-          "absolute top-2 right-2 px-1.5 py-0.5 rounded-full font-semibold",
-          badge.className
-        )}
-        style={{ fontSize: 9 }}
-      >
-        {badge.label}
-      </span>
-
-      {/* Fila: Label + botón "?" tooltip.
-          items-start: el botón se ancla a la primera línea del label aunque
-          el texto desborde a 2 líneas (ej: "COBERTURA EMERGENCIA"). */}
-      <div className="flex items-start gap-1.5 pr-16">
-        <span
-          className="font-sans font-medium uppercase text-muted-foreground"
-          style={{ fontSize: 11, letterSpacing: "0.05em" }}
-        >
-          {label}
-        </span>
-
+      {/* Grupo absoluto top-right: botón "?" + badge de estado.
+          Ambos fijos en la esquina — el label puede wrappear sin arrastrar ninguno. */}
+      <div className="absolute top-2 right-2 flex items-center gap-1">
         {tooltip && (
           <TooltipProvider delayDuration={150}>
             <Tooltip>
               <TooltipTrigger asChild>
-                {/* mt-0.5: compensación óptica para alinear el centro del círculo
-                    con la línea de caps del label (11px uppercase) */}
                 <button
                   type="button"
-                  className="w-3 h-3 min-w-[12px] rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold flex-shrink-0 mt-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                  className="w-3 h-3 min-w-[12px] rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold flex-shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   style={{ fontSize: 9 }}
                   aria-label={`Información sobre ${label}`}
                 >
@@ -137,6 +113,25 @@ export function IndicatorCard({
             </Tooltip>
           </TooltipProvider>
         )}
+        <span
+          className={cn(
+            "px-1.5 py-0.5 rounded-full font-semibold",
+            badge.className
+          )}
+          style={{ fontSize: 9 }}
+        >
+          {badge.label}
+        </span>
+      </div>
+
+      {/* Label — pr-20 (80px) reserva espacio para el grupo absoluto [?][badge] */}
+      <div className="pr-20">
+        <span
+          className="font-sans font-medium uppercase text-muted-foreground"
+          style={{ fontSize: 11, letterSpacing: "0.05em" }}
+        >
+          {label}
+        </span>
       </div>
 
       {/* Valor principal */}
