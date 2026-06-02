@@ -559,7 +559,7 @@ consideración en F3 o M38 como mejora opcional.
 
 | Indicador | Fuente dato (`/results`) | Fuente dato (`/diagnosis`) | Fuente dato (`/inverse`) | Umbral saludable | Umbral atención | Umbral crítico |
 |-----------|--------------------------|---------------------------|--------------------------|-----------------|-----------------|----------------|
-| DTI | `result.transversal.dti.total` | `diagnosis.transversal.dti.total` | calculado de `healthyDistribution` | < 30% | 30–40% | > 40% |
+| DTI | `result.transversal.dti.total` | `diagnosis.transversal.dti.total` | calculado de `healthyDistribution` | < 35% | 35–40% | > 40% |
 | Tasa de ahorro | `result.blocks.savings.percentage` | `diagnosis.blocks.savings.realAmount / income * 100` | `healthyDistribution savings block / requiredIncome * 100` | ≥ 20% | 10–20% | < 10% |
 | Ratio necesidades | `result.blocks.needs.percentage` | `diagnosis.blocks.needs.realAmount / income * 100` | Omitido | ≤ 50% | 50–60% | > 60% |
 | Cobertura emergencia (meses) | `result.categories.emergency_fund.amount * 6 / gastos_fijos_mes` (ver nota) | N/A → "Sin dato" | Omitido | ≥ 6 meses | 3–6 meses | < 3 meses |
@@ -1177,3 +1177,75 @@ subir el tamaño a 160 px y aplicar la paleta nueva.
 |---------|----------|-------------|
 | `docs/m37/screenshots/iteration-post-f25/state-current-1440x900.png` | 1440×900 | Estado completo del demo antes de la iteración |
 | `docs/m37/screenshots/iteration-post-f25/micropie-zoom-recommended.png` | detalle | Zoom sobre la fila de micro-piecharts — problema de legibilidad visible |
+
+---
+
+## 14. Iteración F3 — posición y scroll de col 2
+
+Capturas de referencia: `f3-top-1440x900.png` (top de página, scroll=0) y `f3-scroll1000.png` / `f3-scroll2000.png` (scroll 1000px y 2000px).
+Viewport: 1440×900. Perfil: over50, mortgage, expensive_city, freelance, 4 dependientes, income=2000.
+
+### 14.1 Diagnóstico
+
+**Problema 1 — posición de inicio de col 2**
+
+En el estado actual, col 2 arranca al mismo nivel visual que el banner de alerta crítica de col 1 (top ~100px desde el SiteHeader). El resultado es que el MacroPiechart aparece flotando a la altura de los mensajes de error — un contexto cromático y semántico equivocado. El donut de distribución presupuestaria está "compitiendo" visualmente con una alerta roja de sistema cuando debería aparecer como respuesta a los datos, no como contexto de los errores.
+
+**Problema 2 — scroll interno del panel**
+
+Mediciones en el DOM:
+- `panel-scroll-area` tiene `position: sticky`, `maxHeight: 799px`, `scrollHeight: 1306px`
+- El contenido del panel supera en 507px la altura del viewport disponible
+- Los 4 IndicatorCards están a tops de 936px, 1044px, 1153px y 1261px dentro del scroll interno — fuera del viewport sin scrollear col 2
+- A scroll=1000px de página (col 1 en bloque DESEOS), col 2 ya está completamente vacía en el viewport
+
+El "espacio muerto" es real y se puede cuantificar: col 1 tiene ~2700px de contenido; col 2 tiene ~923px de contenido efectivo. Sin sticky, entre scroll=923px y scroll=2700px el lado derecho del grid está completamente vacío durante 1777px de recorrido.
+
+### 14.2 Recomendación de posición — Opción A
+
+**Recomendación: Opción A — col 2 alineada al banner navy del ingreso.**
+
+Razones:
+
+1. El banner navy ("INGRESO MENSUAL NETO DE REFERENCIA / 2000 €") es el primer elemento de datos del flujo. El MacroPiechart también es un elemento de datos — la distribución de ese ingreso. Arrancar al mismo nivel establece la relación causa-efecto de forma visual: ingreso → distribución.
+
+2. Las alertas y el título H1 son contexto del sistema, no del cálculo. El panel de resumen no tiene relación semántica con esos elementos. Alinearlo allí introduce una jerarquía falsa.
+
+3. La Opción B (alineado a la tabla) deja demasiado espacio muerto en la parte superior de col 2 en viewports medianos (1280-1440px), y en perfiles sin alertas col 1 empieza directamente con el H1, haciendo que el padding-top de col 2 sea inconsistente entre perfiles.
+
+**Implementación:** `padding-top` en col 2 igual al alto acumulado del bloque "alertas + H1 + subtítulo + badge". El valor exacto depende del número de alertas, que es dinámico. La alternativa más robusta: calcular la posición del banner navy con `useRef` + `offsetTop` en `ResultsPage.jsx` y aplicarlo como inline style en col 2. El frontend evalúa si un valor fijo aproximado (e.g., `pt-[120px]` para el caso sin alertas, `pt-[180px]` con una alerta) es suficiente o si hace falta la medición dinámica.
+
+### 14.3 Recomendación de scroll — flujo de página, sin sticky
+
+**Decisión: eliminar sticky y scroll interno. Col 2 scrollea con la página.**
+
+El usuario tiene razón en la queja. Un elemento sticky con scroll propio dentro de una página que también scrollea crea dos sistemas de navegación simultáneos incompatibles mentalmente. El panel no es una sidebar de navegación — es contenido complementario. Debe vivir en el flujo.
+
+**Sobre el espacio muerto:** se acepta, con un elemento de cierre.
+
+Las opciones consideradas:
+
+| Opción | Valoración |
+|--------|-----------|
+| Aceptar el vacío | Honesto pero deja col 2 "rota" visualmente durante ~1800px de scroll |
+| Estirar el panel decorativamente | Requiere altura dinámica calculada = complejidad injustificada |
+| Elemento decorativo sutil | Riesgo de parecer relleno sin función |
+| CTA secundario repetido al pie | Redundante con el CTA ya presente en el panel |
+
+**Recomendación:** un separador visual al pie de col 2 — una línea hairline (`border-t border-border/20`) con el label "flouss" en `text-[10px] text-muted-foreground/40 tracking-widest uppercase` centrado, al estilo de un colofón tipográfico. Ocupa 20px, no confunde con contenido funcional, y cierra visualmente el panel sin generar expectativa de interacción. El espacio vacío que queda debajo hasta el final de col 1 es simplemente aire — en la web, el aire en una columna secundaria no es un defecto.
+
+**Implementación para el frontend:** retirar del contenedor `panel-scroll-area` las clases `sticky`, `overflow-y-auto`, `max-h-[...]` y `panel-scroll-area`. El `<aside>` de col 2 pasa a ser un elemento de flujo normal (`xl:col-span-5`). El colofón se añade al pie del `DashboardPanel` como último elemento del `flex flex-col gap-3`.
+
+### 14.4 Diagnóstico del donut cortado
+
+**Veredicto: ilusión óptica, no fallo real.**
+
+Mediciones del DOM:
+- Card contenedor: top=100.6px, bottom=338.5px, padding-top=16px → borde de contenido en 116.6px
+- Recharts wrapper (MacroPiechart 180px): top=141.8px → 25px por debajo del borde de contenido
+- El anillo más alto del donut está en y=141.8px, el borde del card está en y=100.6px — hay 41px de margen
+- No hay `overflow: hidden` en ningún ancestro del donut entre el wrapper y el panel-scroll-area
+
+Lo que el usuario percibe como "corte" es el arco de "Necesidades 88.5%" en navy casi negro que ocupa ~318° del donut. Al ser el segmento tan dominante y tan oscuro, y al estar el card muy próximo al top del viewport, el ojo interpreta que el arco "sube más de lo que debería". El efecto se acentúa por la ausencia de espacio respirable entre el borde superior del card y el arco del donut — el `py-4` del card (16px) más el header de 25px da solo 41px totales. Para un donut de 180px de diámetro, el centro está a 90px del borde del SVG, y el borde del card queda a 41px del borde del SVG: hay un gap visual de apenas 41px entre el borde del card y el punto más alto del anillo.
+
+**Ajuste recomendado:** aumentar el padding-top del card de MacroPiechart de `py-4` a `pt-6 pb-4` (24px arriba, 16px abajo). Esto da 49px entre el borde del card y el arco superior del donut, suficiente para que la ilusión desaparezca. El card crece 8px en altura total: de 237px a 245px — dentro del presupuesto de altura de col 2.
