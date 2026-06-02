@@ -534,7 +534,7 @@ export default function InverseResultsPage() {
                       <div key={block}>
                         {/* Banner navy de bloque — rounded-t-lg pegado a la DataTable
                             para que se lean como una unidad visual. */}
-                        <h3 className="flex items-center justify-between rounded-t-lg bg-primary px-4 py-2.5 text-xs font-bold uppercase tracking-meta text-primary-foreground">
+                        <h3 className="flex items-center justify-between rounded-t-lg bg-primary px-4 py-3 text-sm font-bold uppercase tracking-meta text-primary-foreground">
                           {BLOCK_LABELS[block]}
                         </h3>
                         <DataTable

@@ -578,10 +578,10 @@ function DiagnosisContent() {
                     {/* Banner navy de bloque — reemplaza la cabecera anterior.
                         rounded-t-lg en el banner + DataTable sin margen superior
                         → visualmente se leen como una unidad. */}
-                    <div className="flex items-center justify-between rounded-t-lg bg-primary px-4 py-2.5">
+                    <div className="flex items-center justify-between rounded-t-lg bg-primary px-4 py-3">
                       <h2
                         id={`block-${blockKey}-heading`}
-                        className="text-xs font-bold uppercase tracking-meta text-primary-foreground"
+                        className="text-sm font-bold uppercase tracking-meta text-primary-foreground"
                       >
                         {diagnosis.blocks[blockKey].label}
                       </h2>

@@ -61,16 +61,52 @@ const NEEDS_IDS   = ["housing", "utilities", "groceries", "transport", "health",
 const SAVINGS_IDS = ["life_insurance", "emergency_fund", "short_term_savings", "long_term_savings", "investment", "debt_extra"];
 
 // Configuración de las 6 categorías con indicadores por umbral.
-// Los umbrales se leen de CATEGORIES_CATALOG en tiempo de ejecución —
-// esta lista define labels UI, fuentes para description y, cuando hay una
-// fuente principal única, la abreviatura para el tooltip del label (prop abbr).
+// description → texto corto visible bajo el valor (umbral de referencia).
+// tooltip     → texto explicativo completo para el botón "?".
+// abbr        → sello de fuente en esquina inferior derecha.
 const CATEGORY_INDICATOR_CONFIG = [
-  { id: "housing",   label: "Vivienda",      description: "< 35% BdE · < 40% Eurostat",  abbr: null },
-  { id: "utilities", label: "Suministros",   description: "< 10% UE Energía",            abbr: { text: "UE Energía", title: "Directiva europea de eficiencia energética" } },
-  { id: "groceries", label: "Alimentación",  description: "< 20% INE",                   abbr: { text: "INE", title: "Instituto Nacional de Estadística" } },
-  { id: "transport", label: "Transporte",    description: "< 18% INE",                   abbr: { text: "INE", title: "Instituto Nacional de Estadística" } },
-  { id: "health",    label: "Salud",         description: "< 10% OMS",                   abbr: { text: "OMS", title: "Organización Mundial de la Salud" } },
-  { id: "education", label: "Educación",     description: "< 20% INE",                   abbr: { text: "INE", title: "Instituto Nacional de Estadística" } },
+  {
+    id: "housing",
+    label: "Vivienda",
+    description: "< 35% BdE · < 40% Eurostat",
+    tooltip: "Porcentaje del ingreso destinado a vivienda (alquiler o hipoteca con gastos asociados). El Banco de España marca el 35% y Eurostat el 40% como umbrales de sobrecarga financiera.",
+    abbr: null,
+  },
+  {
+    id: "utilities",
+    label: "Suministros",
+    description: "< 10% Directiva UE",
+    tooltip: "Porcentaje del ingreso en suministros del hogar: electricidad, gas, agua e internet. La directiva europea sobre eficiencia energética considera problemático superar el 10% del ingreso.",
+    abbr: { text: "UE Energía", title: "Directiva Europea de Eficiencia Energética" },
+  },
+  {
+    id: "groceries",
+    label: "Alimentación",
+    description: "< 20% INE",
+    tooltip: "Porcentaje del ingreso en alimentación y bebidas del hogar. Según la Encuesta de Presupuestos Familiares del INE, la media española se sitúa entre el 14% y el 16%.",
+    abbr: { text: "INE", title: "Instituto Nacional de Estadística" },
+  },
+  {
+    id: "transport",
+    label: "Transporte",
+    description: "< 18% INE",
+    tooltip: "Porcentaje del ingreso en transporte: combustible, transporte público y mantenimiento del vehículo. El INE sitúa el gasto medio español en torno al 12–13% del presupuesto familiar.",
+    abbr: { text: "INE", title: "Instituto Nacional de Estadística" },
+  },
+  {
+    id: "health",
+    label: "Salud",
+    description: "< 10% OMS",
+    tooltip: "Porcentaje del ingreso en gastos de salud directos: farmacia y consultas privadas. La OMS considera problemático superar el 10% en gastos de bolsillo en salud (SDG 3.8.2).",
+    abbr: { text: "OMS", title: "Organización Mundial de la Salud" },
+  },
+  {
+    id: "education",
+    label: "Educación",
+    description: "< 20% INE",
+    tooltip: "Porcentaje del ingreso en educación: colegios privados, actividades extraescolares y formación continua. Según el INE, la media española se sitúa entre el 3% y el 5% del presupuesto familiar.",
+    abbr: { text: "INE", title: "Instituto Nacional de Estadística" },
+  },
 ];
 
 // ─── Helpers de mapeo ─────────────────────────────────────────────────────────
@@ -223,6 +259,7 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
         id: cfg.id,
         label: cfg.label,
         description: cfg.description,
+        tooltip: cfg.tooltip,
         abbr: cfg.abbr,
         percentage,
         status: indicator.status,
@@ -239,10 +276,11 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
   // ── DTI label contextual en modo inverse ──────────────────────────────────
 
   const dtiLabel = mode === "inverse" ? "DTI HIPOTÉTICO" : "DTI";
-  const dtiDescription =
+  const dtiDescription = "< 30% BdE";
+  const dtiTooltip =
     mode === "inverse"
-      ? "Deuda/ingreso con el ingreso calculado. < 30% saludable (BdE)"
-      : "Deuda/ingreso. < 30% saludable (BdE)";
+      ? "DTI calculado sobre el ingreso mínimo estimado. Indica si, con ese ingreso, la carga de deuda resultaría manejable según el Banco de España (< 30% saludable, > 40% situación de riesgo)."
+      : "Mide qué parte de tu ingreso mensual se destina al pago de deudas. El Banco de España considera que superar el 30% compromete la estabilidad financiera, y el 40% supone situación de riesgo.";
 
   return (
     <div className="flex flex-col gap-3">
@@ -331,6 +369,7 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
           value={showSkeleton ? "—" : `${dtiIndicator?.value?.toFixed(1)}%`}
           status={showSkeleton ? "info" : (dtiIndicator?.status ?? "info")}
           description={dtiDescription}
+          tooltip={dtiTooltip}
           skeleton={showSkeleton}
         />
 
@@ -341,7 +380,8 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
           abbr={{ text: "BdE", title: "Banco de España" }}
           value={showSkeleton ? "—" : savingsIndicator?.formatted ?? "—"}
           status={showSkeleton ? "info" : (savingsIndicator?.status ?? "info")}
-          description="Porcentaje del ingreso al ahorro. ≥ 20% recomendado (BdE)"
+          description="≥ 20% BdE"
+          tooltip="Porcentaje del ingreso mensual destinado a ahorro total. El Banco de España recomienda ahorrar al menos un 20% para construir patrimonio y mantener capacidad de respuesta ante imprevistos."
           skeleton={showSkeleton}
         />
 
@@ -353,7 +393,8 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
             abbr={{ text: "Eurostat", title: "Oficina de Estadística de la Unión Europea" }}
             value={showSkeleton ? "—" : needsIndicator?.formatted ?? "—"}
             status={showSkeleton ? "info" : (needsIndicator?.status ?? "info")}
-            description="Ingreso en gastos esenciales. Saludable: ≤ 50% (Eurostat)"
+            description="≤ 50% Eurostat"
+            tooltip="Porcentaje del ingreso destinado a gastos esenciales: vivienda, alimentación, transporte, salud, suministros y educación. Eurostat advierte que superar el 50% deja margen insuficiente para el ahorro y el bienestar."
             skeleton={showSkeleton}
           />
         )}
@@ -366,7 +407,8 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
             abbr={{ text: "BdE", title: "Banco de España" }}
             value={showSkeleton ? "—" : emergencyIndicator?.formatted ?? "—"}
             status={showSkeleton ? "info" : (emergencyIndicator?.status ?? "info")}
-            description="Gastos cubiertos por emergencia. ≥ 6 m (BdE)"
+            description="≥ 6 m BdE"
+            tooltip="Estima cuántos meses de gastos esenciales cubriría tu fondo de emergencia con las aportaciones mensuales recomendadas. El Banco de España aconseja mantener entre 3 y 6 meses cubiertos."
             skeleton={showSkeleton}
           />
         )}
@@ -379,7 +421,8 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
             abbr={{ text: "BdE", title: "Banco de España" }}
             value="N/A"
             status="na"
-            description="Sin dato — introduce tu fondo en el perfil para calcularlo."
+            description={null}
+            tooltip="El cálculo requiere conocer el saldo actual de tu fondo de emergencia, que no está disponible en el flujo de diagnóstico. Introdúcelo en tu perfil para activar este indicador."
             skeleton={false}
           />
         )}
@@ -395,6 +438,7 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
             value={`${ind.percentage.toFixed(1)}%`}
             status={ind.status}
             description={ind.description}
+            tooltip={ind.tooltip}
           />
         ))}
 
@@ -408,7 +452,8 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
                 ? `${dataset.transversal.insurance.amount.toLocaleString("es-ES", { maximumFractionDigits: 0 })} €`
                 : "—")}
               status="info"
-              description="Suma estimada de vida + salud + vehículo. Orientativo."
+              description={null}
+              tooltip="Estimación de las primas mensuales equivalentes para seguros de vida, salud privada y vehículo, según el perfil del usuario. Valor orientativo calculado sobre medias del sector asegurador español."
               skeleton={showSkeleton}
             />
           </div>
@@ -419,12 +464,19 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
       {/* Solo en modos que muestran indicadores (recommended y real, no inverse) */}
       {mode !== "inverse" && (
         <div className="mt-1 border-t border-border/30 pt-2">
-          <p className="text-[10px] text-muted-foreground/70 leading-relaxed">
-            <span className="font-medium">BdE</span> Banco de España ·{" "}
-            <span className="font-medium">OMS</span> Org. Mundial de la Salud ·{" "}
-            <span className="font-medium">Eurostat</span> Oficina Estadística UE ·{" "}
-            <span className="font-medium">INE</span> Inst. Nacional de Estadística
-          </p>
+          <dl className="flex flex-col gap-0.5">
+            {[
+              { abbr: "BdE",      full: "Banco de España" },
+              { abbr: "OMS",      full: "Organización Mundial de la Salud" },
+              { abbr: "Eurostat", full: "Oficina Estadística de la UE" },
+              { abbr: "INE",      full: "Instituto Nacional de Estadística" },
+            ].map(({ abbr, full }) => (
+              <div key={abbr} className="flex gap-1.5" style={{ fontSize: 10 }}>
+                <dt className="text-muted-foreground/90 font-medium flex-shrink-0">{abbr}</dt>
+                <dd className="text-muted-foreground/55">{full}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
       )}
 
