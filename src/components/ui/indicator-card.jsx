@@ -88,7 +88,7 @@ export function IndicatorCard({
   const badge = BADGE_CONFIG[status] ?? BADGE_CONFIG.na;
 
   return (
-    <div className="relative bg-card border border-border rounded-lg px-4 pt-2 pb-6 flex flex-col gap-1.5 hover:bg-muted/30 transition-colors duration-200">
+    <div className="relative bg-card border border-border rounded-lg px-4 pt-2 pb-4 flex flex-col gap-1.5 hover:bg-muted/30 transition-colors duration-200">
 
       {/* Grupo absoluto top-right: botón "?" + badge.
           Ambos fijos — el label puede wrappear sin arrastrar ninguno. */}
@@ -153,11 +153,11 @@ export function IndicatorCard({
         )}
       </span>
 
-      {/* Umbral de referencia — absolute bottom-left, alineado con la base del card.
-          Mismo nivel donde estaban las siglas de fuente (eliminadas por redundancia). */}
+      {/* Umbral de referencia — en el flex flow con mt-3 para crear un salto de línea
+          visual entre el valor del usuario y la referencia institucional. */}
       {description && (
         <span
-          className="absolute bottom-1.5 left-4 text-muted-foreground/60 font-normal"
+          className="mt-3 font-sans font-normal text-muted-foreground/60 leading-none"
           style={{ fontSize: 10 }}
         >
           {description}

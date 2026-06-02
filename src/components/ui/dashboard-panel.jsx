@@ -452,7 +452,7 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
                 ? `${dataset.transversal.insurance.amount.toLocaleString("es-ES", { maximumFractionDigits: 0 })} €`
                 : "—")}
               status="info"
-              description={null}
+              description="Vida · salud · vehículo"
               tooltip="Estimación de las primas mensuales equivalentes para seguros de vida, salud privada y vehículo, según el perfil del usuario. Valor orientativo calculado sobre medias del sector asegurador español."
               skeleton={showSkeleton}
             />
