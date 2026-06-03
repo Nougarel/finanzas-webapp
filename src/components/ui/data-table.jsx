@@ -293,9 +293,11 @@ function DataTable({
                   : columns.slice(1)
                 ).map((col) => (
                   <span key={col.key} className={cn("text-sm", col.mobileClassName ?? col.className)}>
-                    {typeof col.render === "function"
-                      ? col.render(row[col.key], row)
-                      : row[col.key] ?? "—"}
+                    {typeof col.mobileRender === "function"
+                      ? col.mobileRender(row[col.key], row)
+                      : typeof col.render === "function"
+                        ? col.render(row[col.key], row)
+                        : row[col.key] ?? "—"}
                   </span>
                 ))}
                 {/* Chevron si hay onRowClick */}

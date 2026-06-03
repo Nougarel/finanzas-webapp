@@ -84,9 +84,14 @@ function buildCategoryColumns(result, blockKey, formatPct) {
       key: "percentage",
       header: "% ingreso",
       className: "text-right align-top",
-      mobileClassName: "text-right text-[10px] text-muted-foreground tabular-nums",
+      mobileClassName: "text-right",
       render: (val) => (
         <span className="tabular-nums text-sm text-muted-foreground">
+          {formatPct(val)}
+        </span>
+      ),
+      mobileRender: (val) => (
+        <span className="tabular-nums text-[10px] text-muted-foreground/60 leading-none">
           {formatPct(val)}
         </span>
       ),
