@@ -13,6 +13,7 @@ import { DetailPanelLayout } from "@/components/ui/detail-panel-layout";
 import { CategoryDetail } from "@/components/ui/category-detail";
 import { DashboardPanel } from "@/components/ui/dashboard-panel";
 import { ProfilePanel } from "@/components/ui/profile-panel";
+import { MobileResultsSummary } from "@/components/ui/mobile-results-summary";
 import { CATEGORIES_UI, CATEGORIES_META, CATEGORIES_CATALOG } from "@/lib/models/categories";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useStudyContextOptional } from "@/lib/research/useStudyContext";
@@ -387,6 +388,7 @@ export default function InverseResultsPage() {
         key: "percentage",
         header: "% del ingreso",
         className: "text-right",
+        mobileClassName: "text-right text-[10px] text-muted-foreground tabular-nums",
         render: (val) => (
           <span className="tabular-nums text-sm text-muted-foreground">{fmtPct(val)}</span>
         ),
@@ -428,6 +430,16 @@ export default function InverseResultsPage() {
             <p className="text-muted-foreground font-light">
               Ingreso neto mensual para sostener los importes que has especificado
             </p>
+          </div>
+
+          {/* Franja de resumen mobile — visible solo en < xl */}
+          <div className="xl:hidden">
+            <MobileResultsSummary
+              dataset={dashboardDataset}
+              profile={profile}
+              mode="inverse"
+              income={requiredIncome}
+            />
           </div>
 
           {/* Hero: ingreso requerido — bloque invertido (navy) */}
@@ -616,6 +628,7 @@ export default function InverseResultsPage() {
                           caption={`Distribución saludable — ${BLOCK_LABELS[block]}`}
                           rowKey="id"
                           flushTop
+                          mobileMode="rows"
                           onRowClick={(row) => {
                             // Clic en fila activa = no-op (el drawer permanece abierto).
                             // Clic en fila distinta = cambia el contenido del drawer.

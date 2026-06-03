@@ -12,7 +12,9 @@ import { DetailPanelLayout } from "@/components/ui/detail-panel-layout";
 import { CategoryDetail } from "@/components/ui/category-detail";
 import { DashboardPanel } from "@/components/ui/dashboard-panel";
 import { ProfilePanel } from "@/components/ui/profile-panel";
+import { MobileResultsSummary } from "@/components/ui/mobile-results-summary";
 import { CollapsibleHint } from "@/components/ui/collapsible-hint";
+import { BlockBudgetBars } from "@/components/ui/block-budget-bars";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useStudyContextOptional } from "@/lib/research/useStudyContext";
 import { useStudyAwareRouter } from "@/lib/research/useStudyAwareRouter";
@@ -20,6 +22,23 @@ import { useMounted } from "@/lib/hooks/useMounted";
 import { cn } from "@/lib/utils";
 
 const BLOCK_ORDER = ["needs", "wants", "savings"];
+
+// Construye el objeto dataByBlock que espera BlockBudgetBars desde result.categories.
+// Misma lógica que buildBlockData en dashboard-panel.jsx, pero operando sobre result.categories.
+function buildBlockDataFromResult(categories) {
+  const groupByBlock = { needs: [], wants: [], savings: [] };
+  for (const cat of Object.values(categories)) {
+    if (groupByBlock[cat.block]) {
+      groupByBlock[cat.block].push({
+        id: cat.id,
+        label: cat.label,
+        value: cat.amount,
+        percentage: cat.percentage,
+      });
+    }
+  }
+  return groupByBlock;
+}
 
 // Mapeo de nivel de alerta del backend a variante del componente Alert.
 // - severe → error (rojo destructivo)
@@ -65,6 +84,7 @@ function buildCategoryColumns(result, blockKey, formatPct) {
       key: "percentage",
       header: "% ingreso",
       className: "text-right align-top",
+      mobileClassName: "text-right text-[10px] text-muted-foreground tabular-nums",
       render: (val) => (
         <span className="tabular-nums text-sm text-muted-foreground">
           {formatPct(val)}
@@ -319,6 +339,16 @@ function ResultsContent() {
             </p>
           </div>
 
+          {/* Franja de resumen mobile — visible solo en < xl */}
+          <div className="xl:hidden">
+            <MobileResultsSummary
+              dataset={dashboardDataset}
+              profile={profile}
+              mode="direct"
+              income={income}
+            />
+          </div>
+
           {/* Ingreso mensual — hero invertido (navy) */}
           {/* bannerRef: referencia para calcular la alineación dinámica de col 2 */}
           <div ref={bannerRef} className="relative rounded-2xl bg-primary px-6 py-8 space-y-3 transition-colors duration-200">
@@ -510,6 +540,8 @@ function ResultsContent() {
                         caption={`Distribución de ${block.label}`}
                         rowKey="id"
                         flushTop
+                        mobileMode="rows"
+                        mobileRowOrder={[0, 2, 1]}
                         onRowClick={(row) => {
                           // Clic en fila activa = no-op (el drawer permanece abierto).
                           // Clic en fila distinta = cambia el contenido del drawer.
@@ -568,6 +600,14 @@ function ResultsContent() {
                     </Card>
                   );
                 })}
+              </div>
+
+              {/* Desglose por categoría — visible solo en < xl (en xl+ lo muestra DashboardPanel) */}
+              <div className="xl:hidden bg-card border border-border rounded-lg px-4 py-5 card-elevated">
+                <p className="font-sans font-medium uppercase text-muted-foreground mb-3" style={{ fontSize: 11, letterSpacing: "0.05em" }}>
+                  Detalle por categoría
+                </p>
+                <BlockBudgetBars dataByBlock={buildBlockDataFromResult(result.categories)} />
               </div>
             </div>
           )}

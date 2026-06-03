@@ -847,7 +847,7 @@ function ProfileForm() {
   return (
     <main className="flex flex-1 flex-col">
       <PageShell variant="profile">
-        <div className="space-y-6">
+        <div className="space-y-6 pb-24 sm:pb-0">
           {currentStep < 4 ? renderSection(currentStep) : renderSummary()}
         </div>
       </PageShell>

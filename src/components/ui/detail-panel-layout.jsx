@@ -224,19 +224,17 @@ export function DetailPanelLayout({
       >
         <Dialog.Portal>
           {/*
-            Overlay translúcido (no oscuro completo) para que el usuario siga
-            viendo qué fila disparó el panel. modal=false para no bloquear
-            interacciones con el fondo — el usuario puede tocar otra fila.
-            Solo visible en <lg.
+            Overlay manual: modal=false hace que Radix no renderice Dialog.Overlay
+            en el DOM. Se usa un div nativo con z-40 para el backdrop y onClick
+            para cerrar al tocar fuera del sheet. Solo visible en <lg.
           */}
-          <Dialog.Overlay
-            className={cn(
-              "lg:hidden fixed inset-0 z-40 bg-black/20",
-              "data-[state=open]:animate-in data-[state=open]:fade-in-0",
-              "data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
-              "duration-200"
-            )}
-          />
+          {isOpen && (
+            <div
+              onClick={onClose}
+              aria-hidden="true"
+              className="lg:hidden fixed inset-0 z-40 bg-black/40 cursor-pointer animate-in fade-in-0 duration-200"
+            />
+          )}
           <Dialog.Content
             className={cn(
               // Solo visible en <lg

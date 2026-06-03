@@ -15,6 +15,7 @@ import { DetailPanelLayout } from "@/components/ui/detail-panel-layout";
 import { CategoryDetail } from "@/components/ui/category-detail";
 import { DashboardPanel } from "@/components/ui/dashboard-panel";
 import { ProfilePanel } from "@/components/ui/profile-panel";
+import { MobileResultsSummary } from "@/components/ui/mobile-results-summary";
 import { CATEGORIES_UI } from "@/lib/models/categories";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useStudyContextOptional } from "@/lib/research/useStudyContext";
@@ -441,6 +442,16 @@ function DiagnosisContent() {
             <p className="text-muted-foreground font-light">
               Comparación de tu gasto real contra la distribución saludable para tu perfil
             </p>
+          </div>
+
+          {/* Franja de resumen mobile — visible solo en < xl */}
+          <div className="xl:hidden">
+            <MobileResultsSummary
+              dataset={dashboardDataset}
+              profile={profile}
+              mode="real"
+              income={income}
+            />
           </div>
 
           {/* Ingreso de referencia — hero invertido (navy) */}

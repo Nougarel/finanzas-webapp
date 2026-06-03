@@ -229,7 +229,7 @@ export default function InverseCalculatorPage() {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-3">
+          <form onSubmit={handleSubmit} className="space-y-3 pb-24 sm:pb-0">
 
             {BLOCK_ORDER.map(block => {
               const meta = BLOCK_META[block];
