@@ -424,9 +424,15 @@ export function calculateInverse(profile, specifiedAmounts = {}, options = {}) {
     };
   }
 
-  // 6. Comparación: especificado vs. referencia INE (deseos) o distribución saludable (resto)
-  // Para deseos: healthyAmount = referencia INE (informativa, no prescriptiva)
-  // Para necesidades y ahorros: healthyAmount = lo que el LP asignó
+  // 6. Comparación: especificado vs. referencia INE (deseos y necesidades) o
+  //    target del perfil (ahorros).
+  // Para deseos: healthyAmount = referencia INE proporcional (informativa).
+  // Para necesidades: healthyAmount = referencia INE del catálogo × ingreso calculado.
+  // Para ahorros (sin referencia INE): healthyAmount = target del perfil × ingreso calculado.
+  // Si se usara healthyDistribution[catId] en needs/savings fijadas, el LP las
+  // habría clavado al importe especificado → diff = 0 (la referencia perdería sentido).
+  const targetMap = Object.fromEntries(targets.map(t => [t.categoryId, t.target]));
+
   const comparison = {};
   for (const [catId, specifiedAmount] of Object.entries(specifiedAmounts)) {
     let healthyAmount, healthyPct;
@@ -435,10 +441,17 @@ export function calculateInverse(profile, specifiedAmounts = {}, options = {}) {
       healthyAmount = wantsIneReference[catId]?.amount     ?? 0;
       healthyPct    = wantsIneReference[catId]?.percentage ?? 0;
     } else {
-      const h = healthyDistribution[catId];
-      if (!h) continue;
-      healthyAmount = h.amount;
-      healthyPct    = h.percentage;
+      const cat = CATEGORIES_CATALOG.find(c => c.id === catId);
+      if (cat?.ineReference != null) {
+        // needs: referencia INE del catálogo como porcentaje del ingreso calculado
+        healthyPct    = cat.ineReference;
+        healthyAmount = parseFloat(((cat.ineReference / 100) * incomeForDistribution).toFixed(2));
+      } else {
+        // savings (ineReference = null): target del perfil al ingreso calculado
+        const tgt = targetMap[catId] ?? 0;
+        healthyPct    = parseFloat(tgt.toFixed(2));
+        healthyAmount = parseFloat(((tgt / 100) * incomeForDistribution).toFixed(2));
+      }
     }
     comparison[catId] = {
       specifiedAmount: parseFloat(specifiedAmount.toFixed(2)),

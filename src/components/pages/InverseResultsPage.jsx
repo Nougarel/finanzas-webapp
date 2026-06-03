@@ -11,7 +11,7 @@ import { PageShell } from "@/components/ui/page-shell";
 import { DetailPanelLayout } from "@/components/ui/detail-panel-layout";
 import { CategoryDetail } from "@/components/ui/category-detail";
 import { DashboardPanel } from "@/components/ui/dashboard-panel";
-import { CATEGORIES_UI, CATEGORIES_META } from "@/lib/models/categories";
+import { CATEGORIES_UI, CATEGORIES_META, CATEGORIES_CATALOG } from "@/lib/models/categories";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useStudyContextOptional } from "@/lib/research/useStudyContext";
 import { useStudyAwareRouter } from "@/lib/research/useStudyAwareRouter";
@@ -427,8 +427,17 @@ export default function InverseResultsPage() {
                 ? (() => {
                     // Construir objeto `category` para CategoryDetail combinando
                     // metadatos del catálogo con los importes de healthyDistribution.
-                    const meta = CATEGORIES_META[selectedCategoryId];
-                    const h    = healthyDistribution[selectedCategoryId] ?? { percentage: 0, amount: 0 };
+                    const meta       = CATEGORIES_META[selectedCategoryId];
+                    const h          = healthyDistribution[selectedCategoryId] ?? { percentage: 0, amount: 0 };
+                    const catalogCat = CATEGORIES_CATALOG.find(c => c.id === selectedCategoryId);
+                    const ineRef     = catalogCat?.ineReference ?? null;
+                    const ineData    = ineRef != null
+                      ? {
+                          ineReference: ineRef,
+                          assigned:     parseFloat(h.percentage.toFixed(1)),
+                          vsIne:        parseFloat((h.percentage - ineRef).toFixed(1)),
+                        }
+                      : null;
                     const categoryObj = {
                       id:                   meta.id,
                       label:                meta.label,
@@ -442,7 +451,7 @@ export default function InverseResultsPage() {
                     return (
                       <CategoryDetail
                         category={categoryObj}
-                        ineData={null}
+                        ineData={ineData}
                         income={requiredIncome}
                         onClose={() => setSelectedCategoryId(null)}
                         drivers={result.explanation?.[selectedCategoryId]?.drivers ?? []}
