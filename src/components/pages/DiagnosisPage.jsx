@@ -445,12 +445,13 @@ function DiagnosisContent() {
           </div>
 
           {/* Franja de resumen mobile — visible solo en < xl */}
-          <div className="xl:hidden">
+          <div className="xl:hidden mb-2">
             <MobileResultsSummary
               dataset={dashboardDataset}
               profile={profile}
               mode="real"
               income={income}
+              onEdit={() => router.push("/profile")}
             />
           </div>
 

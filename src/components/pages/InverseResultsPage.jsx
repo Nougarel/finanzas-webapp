@@ -437,12 +437,13 @@ export default function InverseResultsPage() {
           </div>
 
           {/* Franja de resumen mobile — visible solo en < xl */}
-          <div className="xl:hidden">
+          <div className="xl:hidden mb-2">
             <MobileResultsSummary
               dataset={dashboardDataset}
               profile={profile}
               mode="inverse"
               income={requiredIncome}
+              onEdit={() => router.push("/profile")}
             />
           </div>
 
@@ -457,8 +458,9 @@ export default function InverseResultsPage() {
             >
               Ajustar importes →
             </button>
-            {/* Label blanco puro — el /70 anterior daba sensación gris-azulada */}
-            <p className="text-xs font-normal uppercase tracking-meta text-primary-foreground">
+            {/* Label blanco puro — el /70 anterior daba sensación gris-azulada.
+                mt-6 sm:mt-0: separa el label del botón en mobile sin afectar desktop. */}
+            <p className="mt-6 sm:mt-0 text-xs font-normal uppercase tracking-meta text-primary-foreground">
               Ingreso mínimo necesario
             </p>
             <MoneyValue

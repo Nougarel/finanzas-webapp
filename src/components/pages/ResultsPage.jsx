@@ -344,12 +344,13 @@ function ResultsContent() {
           </div>
 
           {/* Franja de resumen mobile — visible solo en < xl */}
-          <div className="xl:hidden">
+          <div className="xl:hidden mb-2">
             <MobileResultsSummary
               dataset={dashboardDataset}
               profile={profile}
               mode="direct"
               income={income}
+              onEdit={() => router.push("/profile")}
             />
           </div>
 
@@ -365,8 +366,9 @@ function ResultsContent() {
               Cambiar ingreso →
             </button>
             {/* Label en blanco puro (sin opacity attenuation) — el /70 anterior
-                se percibía azul-grisáceo sobre el navy en lugar de blanco. */}
-            <p className="text-xs font-normal uppercase tracking-meta text-primary-foreground">
+                se percibía azul-grisáceo sobre el navy en lugar de blanco.
+                mt-6 sm:mt-0: separa el label del botón en mobile sin afectar desktop. */}
+            <p className="mt-6 sm:mt-0 text-xs font-normal uppercase tracking-meta text-primary-foreground">
               Ingreso mensual neto de referencia
             </p>
             <MoneyValue
@@ -511,7 +513,7 @@ function ResultsContent() {
                           >
                             {block.label}
                           </h2>
-                          <span className="text-sm font-medium text-primary-foreground/85 tabular-nums">
+                          <span className="text-[10px] font-normal text-primary-foreground/60 tabular-nums">
                             {formatPct(block.percentage)}
                           </span>
                         </div>
@@ -548,11 +550,6 @@ function ResultsContent() {
                   );
                 })}
 
-                {/* Nota al pie sobre datos INE */}
-                <p className="text-xs text-muted-foreground italic border-t pt-3">
-                  Datos de referencia del INE (Instituto Nacional de Estadística). Los porcentajes medios
-                  pueden variar según la composición del hogar y la comunidad autónoma.
-                </p>
               </div>
             </DetailPanelLayout>
           )}
