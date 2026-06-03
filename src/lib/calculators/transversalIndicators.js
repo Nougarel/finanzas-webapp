@@ -99,9 +99,11 @@ export function calculateSavingsRate({ amounts, income, savingsCatIds }) {
 /**
  * Calcula el ratio de necesidades (needs) como porcentaje del ingreso mensual.
  *
- * Fuente: Eurostat / OMS — umbral saludable de gastos esenciales < 50% del ingreso neto.
- * Las necesidades básicas (vivienda, alimentación, transporte, salud, utilities, educación)
- * no deberían superar la mitad del ingreso para dejar margen a deseos y ahorro.
+ * Referencia: regla 50/30/20 (BdE/CNMV — Finanzas para Todos). El ideal es ≤ 50%.
+ * En economías modernas y ciudades de alto coste de vida superar el 50% es habitual y
+ * no indica riesgo por sí solo. La regla 60/20/20 reconoce esta realidad.
+ * El umbral crítico se fija en > 70%: por encima del 70% apenas queda margen para
+ * ahorro y gastos discrecionales, comprometiendo la estabilidad financiera.
  *
  * @param {Object} params
  * @param {Object} params.amounts           - Mapa { categoryId: amount } con importes mensuales.
@@ -110,13 +112,13 @@ export function calculateSavingsRate({ amounts, income, savingsCatIds }) {
  *                                            Si no se pasa, se suma todo.
  * @returns {{ value: number, status: "ok"|"warning"|"critical", formatted: string }}
  *   - value: porcentaje de necesidades (0–100).
- *   - status: "ok" si ≤ 50%; "warning" si 50% < x ≤ 60%; "critical" si > 60%.
+ *   - status: "ok" si ≤ 50%; "warning" si 50% < x ≤ 70%; "critical" si > 70%.
  *   - formatted: string listo para mostrar, ej. "41.7%".
  *
- * Umbrales (Eurostat / OMS):
- *   ok       → ≤ 50%
- *   warning  → 50% < x ≤ 60%
- *   critical → > 60%
+ * Umbrales:
+ *   ok       → ≤ 50%   (objetivo 50/30/20, BdE/CNMV)
+ *   warning  → 50–70%  (rango habitual — regla 60/20/20, alto coste de vida)
+ *   critical → > 70%   (margen insuficiente para ahorro y calidad de vida)
  */
 export function calculateNeedsRatio({ amounts, income, needsCatIds }) {
   if (!income || income <= 0) {
@@ -138,7 +140,7 @@ export function calculateNeedsRatio({ amounts, income, needsCatIds }) {
   let status;
   if (clamped <= 50) {
     status = "ok";
-  } else if (clamped <= 60) {
+  } else if (clamped <= 70) {
     status = "warning";
   } else {
     status = "critical";

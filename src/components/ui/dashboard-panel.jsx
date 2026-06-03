@@ -363,8 +363,8 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
           abbr={{ text: "BdE", title: "Banco de España — Finanzas para Todos" }}
           value={showSkeleton ? "—" : needsIndicator?.formatted ?? "—"}
           status={showSkeleton ? "info" : (needsIndicator?.status ?? "info")}
-          description="≤ 50% orientativo"
-          tooltip="Porcentaje del ingreso en gastos esenciales (vivienda, alimentación, transporte, salud, suministros, educación). El umbral del 50% procede de la regla 50/30/20 promovida por Finanzas para Todos (BdE+CNMV) — es una referencia educativa, no normativa."
+          description="≤ 50% ideal · > 70% crítico"
+          tooltip="Porcentaje del ingreso en gastos esenciales. El ideal es ≤ 50% (regla 50/30/20, BdE/CNMV). En economías modernas y ciudades de alto coste de vida superar el 50% es habitual — la regla 60/20/20 lo reconoce. Se considera crítico superar el 70%."
           skeleton={showSkeleton}
         />
 
