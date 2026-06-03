@@ -277,15 +277,38 @@ export default function InverseResultsPage() {
       render: (val) => <MoneyValue amount={val} size="table" />,
     },
     {
+      key: "targetAmount",
+      header: "Target",
+      className: "text-right",
+      render: (val, row) => {
+        // null para wants — no tienen target de perfil independiente
+        if (val == null) {
+          return <span className="inline-flex justify-end text-muted-foreground/50 tabular-nums text-sm">—</span>;
+        }
+        return (
+          <span className="inline-flex items-center gap-1.5 justify-end">
+            <MoneyValue amount={val} size="table" />
+            <span className="text-xs text-muted-foreground tabular-nums">({fmtPct(row.targetPct)})</span>
+          </span>
+        );
+      },
+    },
+    {
       key: "healthyAmount",
       header: "Ref. INE",
       className: "text-right",
-      render: (val, row) => (
-        <span className="inline-flex items-center gap-1.5 justify-end">
-          <MoneyValue amount={val} size="table" className="text-muted-foreground" />
-          <span className="text-xs text-muted-foreground tabular-nums">({fmtPct(row.healthyPct)})</span>
-        </span>
-      ),
+      render: (val, row) => {
+        // null para savings — sin referencia INE
+        if (val == null) {
+          return <span className="inline-flex justify-end text-muted-foreground/50 tabular-nums text-sm">—</span>;
+        }
+        return (
+          <span className="inline-flex items-center gap-1.5 justify-end">
+            <MoneyValue amount={val} size="table" className="text-muted-foreground" />
+            <span className="text-xs text-muted-foreground tabular-nums">({fmtPct(row.healthyPct)})</span>
+          </span>
+        );
+      },
     },
     {
       key: "diff",
@@ -325,9 +348,11 @@ export default function InverseResultsPage() {
           id: catId,
           label: cat?.label ?? catId,
           specifiedAmount: row.specifiedAmount,
-          healthyAmount: row.healthyAmount,
-          healthyPct: row.healthyPct,
-          diff: row.diff,
+          targetAmount:    row.targetAmount,      // NUEVO
+          targetPct:       row.targetPct,         // NUEVO
+          healthyAmount:   row.healthyAmount,     // ahora puede ser null
+          healthyPct:      row.healthyPct,        // ahora puede ser null
+          diff:            row.diff,
         };
       })
     : [];
@@ -486,10 +511,13 @@ export default function InverseResultsPage() {
                   {/* Guía de lectura (J4) */}
                   <p className="text-sm font-light text-muted-foreground mb-4 leading-relaxed">
                     La columna <span className="font-medium text-foreground">Especificado</span> recoge
-                    los importes que fijaste. <span className="font-medium text-foreground">Ref. INE</span>{" "}
-                    es lo que correspondería en una distribución saludable para el ingreso calculado.
-                    Una diferencia positiva <span className="text-[color:var(--warning-foreground)] font-medium">(↑)</span>{" "}
-                    indica que estás gastando más de lo recomendado en esa categoría;
+                    los importes que fijaste. <span className="font-medium text-foreground">Target</span>{" "}
+                    es lo que nuestro motor recomienda para tu perfil con el ingreso calculado, y es la
+                    referencia de acción. <span className="font-medium text-foreground">Ref. INE</span>{" "}
+                    es la media española, solo informativa (muestra «—» en ahorro, porque el INE no
+                    publica una referencia de ahorro). La <span className="font-medium text-foreground">Diferencia</span>{" "}
+                    es Especificado − Target: positiva <span className="text-[color:var(--warning-foreground)] font-medium">(↑)</span>{" "}
+                    indica que gastas o ahorras más de lo recomendado;
                     negativa <span className="text-[color:var(--success-foreground)] font-medium">(↓)</span>, menos.
                   </p>
                   <DataTable

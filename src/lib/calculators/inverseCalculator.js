@@ -424,40 +424,53 @@ export function calculateInverse(profile, specifiedAmounts = {}, options = {}) {
     };
   }
 
-  // 6. Comparación: especificado vs. referencia INE (deseos y necesidades) o
-  //    target del perfil (ahorros).
-  // Para deseos: healthyAmount = referencia INE proporcional (informativa).
-  // Para necesidades: healthyAmount = referencia INE del catálogo × ingreso calculado.
-  // Para ahorros (sin referencia INE): healthyAmount = target del perfil × ingreso calculado.
-  // Si se usara healthyDistribution[catId] en needs/savings fijadas, el LP las
-  // habría clavado al importe especificado → diff = 0 (la referencia perdería sentido).
-  const targetMap = Object.fromEntries(targets.map(t => [t.categoryId, t.target]));
+  // 6. Comparación: Especificado vs Target recomendado (motor) vs Ref. INE (INE).
+  // - Target: profile target × ingreso calculado. Disponible para todas las categorías.
+  //   diff = Especificado − Target (referencia de acción).
+  // - Ref. INE: solo needs + wants (ineReference != null). null para savings → UI muestra "—".
+  // - Savings reincluidas: tienen Target pero no Ref. INE.
+  const targetPctMap = Object.fromEntries(targets.map(t => [t.categoryId, t.target]));
 
   const comparison = {};
   for (const [catId, specifiedAmount] of Object.entries(specifiedAmounts)) {
-    let healthyAmount, healthyPct;
+    // — Ref. INE (puede ser null para savings) —
+    let healthyAmount = null;
+    let healthyPct    = null;
     if (WANTS_IDS.includes(catId)) {
-      // Referencia INE — muestra desviación respecto a la media española
-      healthyAmount = wantsIneReference[catId]?.amount     ?? 0;
-      healthyPct    = wantsIneReference[catId]?.percentage ?? 0;
+      healthyAmount = wantsIneReference[catId]?.amount     ?? null;
+      healthyPct    = wantsIneReference[catId]?.percentage ?? null;
     } else {
       const cat = CATEGORIES_CATALOG.find(c => c.id === catId);
       if (cat?.ineReference != null) {
-        // needs: referencia INE del catálogo como porcentaje del ingreso calculado
         healthyPct    = cat.ineReference;
         healthyAmount = parseFloat(((cat.ineReference / 100) * incomeForDistribution).toFixed(2));
-      } else {
-        // savings (ineReference = null): target del perfil al ingreso calculado
-        const tgt = targetMap[catId] ?? 0;
-        healthyPct    = parseFloat(tgt.toFixed(2));
-        healthyAmount = parseFloat(((tgt / 100) * incomeForDistribution).toFixed(2));
       }
+      // savings: healthyAmount y healthyPct quedan null — se muestra "—" en UI
     }
+
+    // — Target recomendado —
+    // wants: no tienen target de perfil — su distribución es la referencia INE proporcional,
+    //        así que no hay una recomendación independiente. Target = null → UI muestra "—".
+    //        diff vuelve a ser Especificado − INE (healthyAmount) para wants.
+    // needs/savings: target del profileCalculator × ingreso calculado.
+    let targetPct    = null;
+    let targetAmount = null;
+    if (!WANTS_IDS.includes(catId)) {
+      targetPct    = targetPctMap[catId] ?? 0;
+      targetAmount = parseFloat(((targetPct / 100) * incomeForDistribution).toFixed(2));
+    }
+
+    // diff: Especificado − Target para needs/savings; Especificado − INE para wants
+    const diffBase = targetAmount !== null ? targetAmount : (healthyAmount ?? specifiedAmount);
+    const diff     = parseFloat((specifiedAmount - diffBase).toFixed(2));
+
     comparison[catId] = {
       specifiedAmount: parseFloat(specifiedAmount.toFixed(2)),
-      healthyAmount:   parseFloat(healthyAmount.toFixed(2)),
-      healthyPct:      parseFloat(healthyPct.toFixed(2)),
-      diff:            parseFloat((specifiedAmount - healthyAmount).toFixed(2)),
+      targetAmount,                                           // null para wants
+      targetPct:       targetPct !== null ? parseFloat(targetPct.toFixed(2)) : null,
+      healthyAmount,                                          // null para savings
+      healthyPct,                                             // null para savings
+      diff,
     };
   }
 
