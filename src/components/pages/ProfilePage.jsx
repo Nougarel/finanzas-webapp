@@ -461,8 +461,14 @@ function ProfileForm() {
       (currentStep === 2 && showFreelanceTravel && profileData.freelanceRegularTravel === null)
     );
 
-  const handleNext = () => setCurrentStep((s) => s + 1);
-  const handlePrev = () => setCurrentStep((s) => s - 1);
+  const handleNext = () => {
+    setCurrentStep((s) => s + 1);
+    window.scrollTo({ top: 0, behavior: "instant" });
+  };
+  const handlePrev = () => {
+    setCurrentStep((s) => s - 1);
+    window.scrollTo({ top: 0, behavior: "instant" });
+  };
 
   const handleConfirm = () => {
     // En modo inverso, forzamos valores neutros para los campos ocultos
@@ -756,7 +762,7 @@ function ProfileForm() {
               variant="ghost"
               size="sm"
               className="h-7 text-xs transition-colors duration-200"
-              onClick={() => setCurrentStep(sectionIndex)}
+              onClick={() => { setCurrentStep(sectionIndex); window.scrollTo({ top: 0, behavior: "instant" }); }}
             >
               Editar
             </Button>
