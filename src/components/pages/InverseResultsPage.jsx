@@ -11,6 +11,7 @@ import { PageShell } from "@/components/ui/page-shell";
 import { DetailPanelLayout } from "@/components/ui/detail-panel-layout";
 import { CategoryDetail } from "@/components/ui/category-detail";
 import { DashboardPanel } from "@/components/ui/dashboard-panel";
+import { ProfilePanel } from "@/components/ui/profile-panel";
 import { CATEGORIES_UI, CATEGORIES_META, CATEGORIES_CATALOG } from "@/lib/models/categories";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useStudyContextOptional } from "@/lib/research/useStudyContext";
@@ -399,8 +400,18 @@ export default function InverseResultsPage() {
   return (
     <main className="flex min-h-screen flex-col">
       <PageShell variant="dashboard">
-        {/* Col 1: contenido principal (7/12 en xl+, ancho completo en inferiores) */}
-        <div className="col-span-12 xl:col-span-7">
+        {/* Col 0: perfil del usuario (2/12 en xl+, oculto en inferiores).
+            xl:order-first posiciona visualmente a la izquierda sin alterar el orden DOM. */}
+        <aside className="hidden xl:block xl:col-span-2 xl:order-first" aria-label="Tu perfil">
+          <ProfilePanel
+            profile={profile}
+            mode="inverse"
+            onEdit={() => router.push("/profile")}
+          />
+        </aside>
+
+        {/* Col 1: contenido principal (6/12 en xl+, ancho completo en inferiores) */}
+        <div className="col-span-12 xl:col-span-6">
           <div className="space-y-8">
 
           {/* Encabezado */}
@@ -633,7 +644,7 @@ export default function InverseResultsPage() {
             Fuente: healthyDistribution del ingreso calculado. */}
         <aside
           ref={col2Ref}
-          className="hidden xl:block xl:col-span-5"
+          className="hidden xl:block xl:col-span-4"
           aria-label="Dashboard resumen ingreso mínimo calculado"
         >
           <div style={{ paddingTop: col2PaddingTop > 0 ? col2PaddingTop : undefined }}>
