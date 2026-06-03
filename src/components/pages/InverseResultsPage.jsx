@@ -11,7 +11,7 @@ import { PageShell } from "@/components/ui/page-shell";
 import { DetailPanelLayout } from "@/components/ui/detail-panel-layout";
 import { CategoryDetail } from "@/components/ui/category-detail";
 import { DashboardPanel } from "@/components/ui/dashboard-panel";
-import { CATEGORIES_UI, CATEGORIES_META } from "@/lib/models/categories";
+import { CATEGORIES_UI, CATEGORIES_META, CATEGORIES_CATALOG } from "@/lib/models/categories";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useStudyContextOptional } from "@/lib/research/useStudyContext";
 import { useStudyAwareRouter } from "@/lib/research/useStudyAwareRouter";
@@ -277,15 +277,38 @@ export default function InverseResultsPage() {
       render: (val) => <MoneyValue amount={val} size="table" />,
     },
     {
+      key: "targetAmount",
+      header: "Target",
+      className: "text-right",
+      render: (val, row) => {
+        // null para wants — no tienen target de perfil independiente
+        if (val == null) {
+          return <span className="inline-flex justify-end text-muted-foreground/50 tabular-nums text-sm">—</span>;
+        }
+        return (
+          <span className="inline-flex items-center gap-1.5 justify-end">
+            <MoneyValue amount={val} size="table" />
+            <span className="text-xs text-muted-foreground tabular-nums">({fmtPct(row.targetPct)})</span>
+          </span>
+        );
+      },
+    },
+    {
       key: "healthyAmount",
       header: "Ref. INE",
       className: "text-right",
-      render: (val, row) => (
-        <span className="inline-flex items-center gap-1.5 justify-end">
-          <MoneyValue amount={val} size="table" className="text-muted-foreground" />
-          <span className="text-xs text-muted-foreground tabular-nums">({fmtPct(row.healthyPct)})</span>
-        </span>
-      ),
+      render: (val, row) => {
+        // null para savings — sin referencia INE
+        if (val == null) {
+          return <span className="inline-flex justify-end text-muted-foreground/50 tabular-nums text-sm">—</span>;
+        }
+        return (
+          <span className="inline-flex items-center gap-1.5 justify-end">
+            <MoneyValue amount={val} size="table" className="text-muted-foreground" />
+            <span className="text-xs text-muted-foreground tabular-nums">({fmtPct(row.healthyPct)})</span>
+          </span>
+        );
+      },
     },
     {
       key: "diff",
@@ -318,18 +341,25 @@ export default function InverseResultsPage() {
     },
   ];
 
+  const BLOCK_PRIORITY = { needs: 0, wants: 1, savings: 2 };
+
   const comparisonData = comparison
-    ? Object.entries(comparison).map(([catId, row]) => {
-        const cat = CATEGORIES_UI.find(c => c.id === catId);
-        return {
-          id: catId,
-          label: cat?.label ?? catId,
-          specifiedAmount: row.specifiedAmount,
-          healthyAmount: row.healthyAmount,
-          healthyPct: row.healthyPct,
-          diff: row.diff,
-        };
-      })
+    ? Object.entries(comparison)
+        .map(([catId, row]) => {
+          const cat = CATEGORIES_UI.find(c => c.id === catId);
+          return {
+            id: catId,
+            label: cat?.label ?? catId,
+            block: cat?.block ?? "wants",
+            specifiedAmount: row.specifiedAmount,
+            targetAmount:    row.targetAmount,      // NUEVO
+            targetPct:       row.targetPct,         // NUEVO
+            healthyAmount:   row.healthyAmount,     // ahora puede ser null
+            healthyPct:      row.healthyPct,        // ahora puede ser null
+            diff:            row.diff,
+          };
+        })
+        .sort((a, b) => (BLOCK_PRIORITY[a.block] ?? 1) - (BLOCK_PRIORITY[b.block] ?? 1))
     : [];
 
   // Construye columnas para la tabla de distribución saludable de un bloque.
@@ -427,8 +457,17 @@ export default function InverseResultsPage() {
                 ? (() => {
                     // Construir objeto `category` para CategoryDetail combinando
                     // metadatos del catálogo con los importes de healthyDistribution.
-                    const meta = CATEGORIES_META[selectedCategoryId];
-                    const h    = healthyDistribution[selectedCategoryId] ?? { percentage: 0, amount: 0 };
+                    const meta       = CATEGORIES_META[selectedCategoryId];
+                    const h          = healthyDistribution[selectedCategoryId] ?? { percentage: 0, amount: 0 };
+                    const catalogCat = CATEGORIES_CATALOG.find(c => c.id === selectedCategoryId);
+                    const ineRef     = catalogCat?.ineReference ?? null;
+                    const ineData    = ineRef != null
+                      ? {
+                          ineReference: ineRef,
+                          assigned:     parseFloat(h.percentage.toFixed(1)),
+                          vsIne:        parseFloat((h.percentage - ineRef).toFixed(1)),
+                        }
+                      : null;
                     const categoryObj = {
                       id:                   meta.id,
                       label:                meta.label,
@@ -442,7 +481,7 @@ export default function InverseResultsPage() {
                     return (
                       <CategoryDetail
                         category={categoryObj}
-                        ineData={null}
+                        ineData={ineData}
                         income={requiredIncome}
                         onClose={() => setSelectedCategoryId(null)}
                         drivers={result.explanation?.[selectedCategoryId]?.drivers ?? []}
@@ -477,10 +516,13 @@ export default function InverseResultsPage() {
                   {/* Guía de lectura (J4) */}
                   <p className="text-sm font-light text-muted-foreground mb-4 leading-relaxed">
                     La columna <span className="font-medium text-foreground">Especificado</span> recoge
-                    los importes que fijaste. <span className="font-medium text-foreground">Ref. INE</span>{" "}
-                    es lo que correspondería en una distribución saludable para el ingreso calculado.
-                    Una diferencia positiva <span className="text-[color:var(--warning-foreground)] font-medium">(↑)</span>{" "}
-                    indica que estás gastando más de lo recomendado en esa categoría;
+                    los importes que fijaste. <span className="font-medium text-foreground">Target</span>{" "}
+                    es lo que nuestro motor recomienda para tu perfil con el ingreso calculado, y es la
+                    referencia de acción. <span className="font-medium text-foreground">Ref. INE</span>{" "}
+                    es la media española, solo informativa (muestra «—» en ahorro, porque el INE no
+                    publica una referencia de ahorro). La <span className="font-medium text-foreground">Diferencia</span>{" "}
+                    es Especificado − Target: positiva <span className="text-[color:var(--warning-foreground)] font-medium">(↑)</span>{" "}
+                    indica que gastas o ahorras más de lo recomendado;
                     negativa <span className="text-[color:var(--success-foreground)] font-medium">(↓)</span>, menos.
                   </p>
                   <DataTable
