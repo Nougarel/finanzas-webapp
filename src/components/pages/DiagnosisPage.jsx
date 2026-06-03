@@ -559,26 +559,16 @@ function DiagnosisContent() {
           >
             <div className="space-y-8">
 
-              {/* Guía de lectura J4 — cómo interpretar la tabla */}
-              <CollapsibleHint>
-                <p className="text-sm font-light text-muted-foreground leading-relaxed">
-                  La tabla compara lo que gastas realmente en cada categoría frente a la distribución
-                  saludable calculada para tu perfil e ingreso. El campo{" "}
-                  <span className="font-medium text-foreground">Estado</span> indica si tu gasto está{" "}
-                  <span className="font-medium text-[color:var(--success-foreground)]">Alineado</span>{" "}
-                  con el rango saludable,{" "}
-                  <span className="font-medium text-[color:var(--warning-foreground)]">Por encima</span>{" "}
-                  (riesgo de desajuste) o{" "}
-                  <span className="font-medium text-[color:var(--info-foreground)]">Por debajo</span>{" "}
-                  (margen de mejora). El{" "}
-                  <span className="font-medium text-foreground">score de salud financiera</span> resume
-                  el conjunto: cuantas más categorías estén alineadas, mayor será la puntuación.
-                </p>
-              </CollapsibleHint>
+              {/* Mini-leyenda de estados — oculta en mobile, visible en sm+ */}
+              <p className="hidden sm:flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                <span className="text-[color:var(--success-foreground)] font-medium">✓ Alineado</span>
+                <span className="text-[color:var(--warning-foreground)] font-medium">↑ Por encima</span>
+                <span className="text-[color:var(--info-foreground)] font-medium">↓ Por debajo</span>
+              </p>
 
               {/* Hint clicable — desaparece cuando el panel está abierto */}
               {!selectedCategoryId && (
-                <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <p className="hidden sm:flex text-xs text-muted-foreground items-center gap-1.5">
                   <span aria-hidden="true">›</span>
                   Toca cualquier categoría para ver el respaldo institucional de su cálculo.
                 </p>

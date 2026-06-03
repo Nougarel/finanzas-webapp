@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from "react";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
-import { CollapsibleHint } from "@/components/ui/collapsible-hint";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
@@ -538,7 +537,7 @@ export default function InverseResultsPage() {
 
               {/* Hint clicable — desaparece cuando el panel está abierto */}
               {!selectedCategoryId && (
-                <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <p className="hidden sm:flex text-xs text-muted-foreground items-center gap-1.5">
                   <span aria-hidden="true">›</span>
                   Toca cualquier categoría para ver el respaldo institucional de su cálculo.
                 </p>
@@ -555,22 +554,14 @@ export default function InverseResultsPage() {
                       Tus importes frente a la distribución saludable con el ingreso calculado
                     </p>
                   </div>
-                  {/* Guía de lectura (J4) */}
-                  <div className="mb-4">
-                    <CollapsibleHint>
-                      <p className="text-sm font-light text-muted-foreground leading-relaxed">
-                        La columna <span className="font-medium text-foreground">Especificado</span> recoge
-                        los importes que fijaste. <span className="font-medium text-foreground">Target</span>{" "}
-                        es lo que nuestro motor recomienda para tu perfil con el ingreso calculado, y es la
-                        referencia de acción. <span className="font-medium text-foreground">Ref. INE</span>{" "}
-                        es la media española, solo informativa (muestra «—» en ahorro, porque el INE no
-                        publica una referencia de ahorro). La <span className="font-medium text-foreground">Diferencia</span>{" "}
-                        es Especificado − Target: positiva <span className="text-[color:var(--warning-foreground)] font-medium">(↑)</span>{" "}
-                        indica que gastas o ahorras más de lo recomendado;
-                        negativa <span className="text-[color:var(--success-foreground)] font-medium">(↓)</span>, menos.
-                      </p>
-                    </CollapsibleHint>
-                  </div>
+                  {/* Mini-leyenda Comparativa — oculta en mobile, visible en sm+ */}
+                  <p className="hidden sm:block text-xs text-muted-foreground mb-4">
+                    Diferencia = Especificado − Target
+                    {" · "}
+                    <span className="text-[color:var(--warning-foreground)] font-medium">↑</span> más de lo recomendado
+                    {" · "}
+                    <span className="text-[color:var(--success-foreground)] font-medium">↓</span> menos
+                  </p>
                   <DataTable
                     columns={comparisonColumns}
                     data={comparisonData}
@@ -594,15 +585,6 @@ export default function InverseResultsPage() {
                   <h2 id="distribution-heading" className="font-display font-black tracking-display text-xl text-foreground">
                     Distribución saludable completa
                   </h2>
-                  {/* Guía de lectura (J4) */}
-                  <CollapsibleHint>
-                    <p className="text-sm font-light text-muted-foreground leading-relaxed">
-                      Esta es la distribución óptima para el ingreso calculado. Las categorías marcadas
-                      como <span className="font-medium text-primary">fijado</span> respetan exactamente
-                      los importes que indicaste; el resto se calcula automáticamente para mantener la
-                      salud financiera del conjunto.
-                    </p>
-                  </CollapsibleHint>
                 </div>
                 <div className="space-y-6">
                   {BLOCK_ORDER.map(block => {

@@ -13,7 +13,6 @@ import { CategoryDetail } from "@/components/ui/category-detail";
 import { DashboardPanel } from "@/components/ui/dashboard-panel";
 import { ProfilePanel } from "@/components/ui/profile-panel";
 import { MobileResultsSummary } from "@/components/ui/mobile-results-summary";
-import { CollapsibleHint } from "@/components/ui/collapsible-hint";
 import { BlockBudgetBars } from "@/components/ui/block-budget-bars";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useStudyContextOptional } from "@/lib/research/useStudyContext";
@@ -473,20 +472,9 @@ function ResultsContent() {
             >
               <div className="space-y-8">
 
-                {/* Guía de lectura (J4) */}
-                <CollapsibleHint>
-                  <p className="text-sm font-light text-muted-foreground leading-relaxed">
-                    Cada bloque agrupa categorías relacionadas: <span className="font-medium text-foreground">Necesidades</span> (gastos
-                    imprescindibles), <span className="font-medium text-foreground">Deseos</span> (calidad de vida) y{" "}
-                    <span className="font-medium text-foreground">Ahorro</span> (tu futuro financiero). El porcentaje
-                    indica qué parte de tu ingreso mensual se destina a cada categoría. Las alertas señalan categorías
-                    donde la distribución se aleja de los umbrales saludables para tu perfil.
-                  </p>
-                </CollapsibleHint>
-
                 {/* Hint clicable — solo en vista detallada, desaparece cuando el panel está abierto */}
                 {!selectedCategoryId && (
-                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                  <p className="hidden sm:flex text-xs text-muted-foreground items-center gap-1.5">
                     <span aria-hidden="true">›</span>
                     Toca cualquier categoría para ver el respaldo institucional de su cálculo.
                   </p>
