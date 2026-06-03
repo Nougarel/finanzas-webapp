@@ -67,13 +67,13 @@ export function ProfilePanel({ profile, mode = "direct", onEdit }) {
       <div className="bg-card border border-border rounded-lg px-4 py-4 card-elevated">
         <div className="flex items-center gap-3">
           {/* Avatar circular */}
-          <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-            <User size={20} className="text-muted-foreground" />
+          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <User size={20} className="text-primary" />
           </div>
 
           <div className="min-w-0 flex-1">
             <p
-              className="font-sans font-medium uppercase text-muted-foreground"
+              className="font-sans font-medium uppercase text-primary"
               style={{ fontSize: 11, letterSpacing: "0.05em" }}
             >
               Tu perfil
