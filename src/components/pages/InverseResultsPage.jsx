@@ -341,20 +341,25 @@ export default function InverseResultsPage() {
     },
   ];
 
+  const BLOCK_PRIORITY = { needs: 0, wants: 1, savings: 2 };
+
   const comparisonData = comparison
-    ? Object.entries(comparison).map(([catId, row]) => {
-        const cat = CATEGORIES_UI.find(c => c.id === catId);
-        return {
-          id: catId,
-          label: cat?.label ?? catId,
-          specifiedAmount: row.specifiedAmount,
-          targetAmount:    row.targetAmount,      // NUEVO
-          targetPct:       row.targetPct,         // NUEVO
-          healthyAmount:   row.healthyAmount,     // ahora puede ser null
-          healthyPct:      row.healthyPct,        // ahora puede ser null
-          diff:            row.diff,
-        };
-      })
+    ? Object.entries(comparison)
+        .map(([catId, row]) => {
+          const cat = CATEGORIES_UI.find(c => c.id === catId);
+          return {
+            id: catId,
+            label: cat?.label ?? catId,
+            block: cat?.block ?? "wants",
+            specifiedAmount: row.specifiedAmount,
+            targetAmount:    row.targetAmount,      // NUEVO
+            targetPct:       row.targetPct,         // NUEVO
+            healthyAmount:   row.healthyAmount,     // ahora puede ser null
+            healthyPct:      row.healthyPct,        // ahora puede ser null
+            diff:            row.diff,
+          };
+        })
+        .sort((a, b) => (BLOCK_PRIORITY[a.block] ?? 1) - (BLOCK_PRIORITY[b.block] ?? 1))
     : [];
 
   // Construye columnas para la tabla de distribución saludable de un bloque.
