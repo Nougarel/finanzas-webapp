@@ -37,7 +37,6 @@
  * @param {"recommended"|"real"|"inverse"} props.mode - Modo de operación.
  * @param {{ href: string, label: string }} props.secondaryCta - CTA secundario al pie.
  * @param {boolean} [props.skeleton]                - Renderiza skeletons de carga si true.
- * En modo "inverse" el bloque "Detalle por bloque" (BlockBudgetBars) no se renderiza.
  * En modo "inverse", "Estimado de seguros" no se renderiza (dato no disponible en el dataset).
  * En modo "real", "Cobertura emergencia" muestra N/A (saldo del fondo no disponible en diagnóstico).
  */
@@ -242,7 +241,7 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
 
   const centerValue = dataset ? formatEur(dataset.income) : null;
   const centerLabel =
-    mode === "real" ? "gasto real" : "ingreso";
+    mode === "real" ? "ingreso ref." : "ingreso";
 
   // ── DTI label contextual en modo inverse ──────────────────────────────────
 
@@ -303,32 +302,37 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
         )}
       </div>
 
-      {/* ── Detalle por bloque: piecharts o barras (oculto en lg y md) ───── */}
-      {/* En modo inverse no se renderiza. */}
-      {mode !== "inverse" && (
-        <div className="bg-card border border-border rounded-lg px-4 py-5 card-elevated hidden xl:block">
-          <p
-            className="font-sans font-medium uppercase text-muted-foreground mb-2"
-            style={{ fontSize: 11, letterSpacing: "0.05em" }}
-          >
-            Detalle por bloque
-          </p>
-          {showSkeleton ? (
-            /* Skeleton: 3 filas de barra (referencia visual de barras) */
-            <div className="flex flex-col gap-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex flex-col gap-1.5">
-                  <div className="h-2 w-20 bg-muted rounded animate-pulse" />
-                  <div className="h-1.5 w-full bg-muted rounded animate-pulse" />
-                  <div className="h-1.5 w-3/4 bg-muted rounded animate-pulse" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <BlockBudgetBars dataByBlock={blockData} mode={mode} />
-          )}
-        </div>
+      {/* ── Modelo de distribución más cercano — solo en recommended ─────── */}
+      {dataset?.modelClosest?.label && (
+        <p className="text-xs text-muted-foreground text-center px-1">
+          Distribución próxima al modelo{" "}
+          <span className="font-medium text-foreground">{dataset.modelClosest.label}</span>
+        </p>
       )}
+
+      {/* ── Detalle por bloque: piecharts o barras (oculto en lg y md) ───── */}
+      <div className="bg-card border border-border rounded-lg px-4 py-5 card-elevated hidden xl:block">
+        <p
+          className="font-sans font-medium uppercase text-muted-foreground mb-2"
+          style={{ fontSize: 11, letterSpacing: "0.05em" }}
+        >
+          Detalle por bloque
+        </p>
+        {showSkeleton ? (
+          /* Skeleton: 3 filas de barra (referencia visual de barras) */
+          <div className="flex flex-col gap-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex flex-col gap-1.5">
+                <div className="h-2 w-20 bg-muted rounded animate-pulse" />
+                <div className="h-1.5 w-full bg-muted rounded animate-pulse" />
+                <div className="h-1.5 w-3/4 bg-muted rounded animate-pulse" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <BlockBudgetBars dataByBlock={blockData} mode={mode} />
+        )}
+      </div>
 
       {/* ── IndicatorCards — grid 2×2 ────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-2">

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from "react";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { CollapsibleHint } from "@/components/ui/collapsible-hint";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
@@ -67,8 +68,10 @@ export default function InverseResultsPage() {
   });
 
   // Refs para alineación dinámica col 2 con el banner navy (Fix M37).
-  const bannerRef = useRef(null);
-  const col2Ref   = useRef(null);
+  // profileColRef: aside de col 0 (ProfilePanel) — reutiliza el mismo offset.
+  const bannerRef     = useRef(null);
+  const col2Ref       = useRef(null);
+  const profileColRef = useRef(null);
   const [col2PaddingTop, setCol2PaddingTop] = useState(0);
 
   // Modo testing guiado (M18 Fase 4): notificar cálculo completado al
@@ -401,13 +404,16 @@ export default function InverseResultsPage() {
     <main className="flex min-h-screen flex-col">
       <PageShell variant="dashboard">
         {/* Col 0: perfil del usuario (2/12 en xl+, oculto en inferiores).
-            xl:order-first posiciona visualmente a la izquierda sin alterar el orden DOM. */}
-        <aside className="hidden xl:block xl:col-span-2 xl:order-first" aria-label="Tu perfil">
-          <ProfilePanel
-            profile={profile}
-            mode="inverse"
-            onEdit={() => router.push("/profile")}
-          />
+            xl:order-first posiciona visualmente a la izquierda sin alterar el orden DOM.
+            profileColRef + paddingTop: mismo offset que col2 para alinear con el banner navy. */}
+        <aside ref={profileColRef} className="hidden xl:block xl:col-span-2 xl:order-first xl:sticky xl:top-16" aria-label="Tu perfil">
+          <div style={{ paddingTop: col2PaddingTop > 0 ? col2PaddingTop : undefined }}>
+            <ProfilePanel
+              profile={profile}
+              mode="inverse"
+              onEdit={() => router.push("/profile")}
+            />
+          </div>
         </aside>
 
         {/* Col 1: contenido principal (6/12 en xl+, ancho completo en inferiores) */}
@@ -426,7 +432,15 @@ export default function InverseResultsPage() {
 
           {/* Hero: ingreso requerido — bloque invertido (navy) */}
           {/* bannerRef: referencia para calcular la alineación dinámica de col 2 */}
-          <div ref={bannerRef} className="rounded-2xl bg-primary px-6 py-8 space-y-3 transition-colors duration-200">
+          <div ref={bannerRef} className="relative rounded-2xl bg-primary px-6 py-8 space-y-3 transition-colors duration-200">
+            {/* Botón discreto "Ajustar importes" — esquina superior derecha del banner */}
+            <button
+              type="button"
+              onClick={() => router.push("/inverse-calculator")}
+              className="absolute top-3 right-4 text-xs text-primary-foreground/70 hover:text-primary-foreground transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
+            >
+              Ajustar importes →
+            </button>
             {/* Label blanco puro — el /70 anterior daba sensación gris-azulada */}
             <p className="text-xs font-normal uppercase tracking-meta text-primary-foreground">
               Ingreso mínimo necesario
@@ -525,17 +539,21 @@ export default function InverseResultsPage() {
                     </p>
                   </div>
                   {/* Guía de lectura (J4) */}
-                  <p className="text-sm font-light text-muted-foreground mb-4 leading-relaxed">
-                    La columna <span className="font-medium text-foreground">Especificado</span> recoge
-                    los importes que fijaste. <span className="font-medium text-foreground">Target</span>{" "}
-                    es lo que nuestro motor recomienda para tu perfil con el ingreso calculado, y es la
-                    referencia de acción. <span className="font-medium text-foreground">Ref. INE</span>{" "}
-                    es la media española, solo informativa (muestra «—» en ahorro, porque el INE no
-                    publica una referencia de ahorro). La <span className="font-medium text-foreground">Diferencia</span>{" "}
-                    es Especificado − Target: positiva <span className="text-[color:var(--warning-foreground)] font-medium">(↑)</span>{" "}
-                    indica que gastas o ahorras más de lo recomendado;
-                    negativa <span className="text-[color:var(--success-foreground)] font-medium">(↓)</span>, menos.
-                  </p>
+                  <div className="mb-4">
+                    <CollapsibleHint>
+                      <p className="text-sm font-light text-muted-foreground leading-relaxed">
+                        La columna <span className="font-medium text-foreground">Especificado</span> recoge
+                        los importes que fijaste. <span className="font-medium text-foreground">Target</span>{" "}
+                        es lo que nuestro motor recomienda para tu perfil con el ingreso calculado, y es la
+                        referencia de acción. <span className="font-medium text-foreground">Ref. INE</span>{" "}
+                        es la media española, solo informativa (muestra «—» en ahorro, porque el INE no
+                        publica una referencia de ahorro). La <span className="font-medium text-foreground">Diferencia</span>{" "}
+                        es Especificado − Target: positiva <span className="text-[color:var(--warning-foreground)] font-medium">(↑)</span>{" "}
+                        indica que gastas o ahorras más de lo recomendado;
+                        negativa <span className="text-[color:var(--success-foreground)] font-medium">(↓)</span>, menos.
+                      </p>
+                    </CollapsibleHint>
+                  </div>
                   <DataTable
                     columns={comparisonColumns}
                     data={comparisonData}
@@ -553,19 +571,21 @@ export default function InverseResultsPage() {
                 </section>
               )}
 
-              {/* Distribución saludable completa */}
-              <section aria-labelledby="distribution-heading">
+              {/* Distribución saludable completa — separador respecto a la sección anterior */}
+              <section aria-labelledby="distribution-heading" className="border-t border-border/40 pt-6">
                 <div className="mb-4 space-y-1">
                   <h2 id="distribution-heading" className="font-display font-black tracking-display text-xl text-foreground">
                     Distribución saludable completa
                   </h2>
                   {/* Guía de lectura (J4) */}
-                  <p className="text-sm font-light text-muted-foreground leading-relaxed">
-                    Esta es la distribución óptima para el ingreso calculado. Las categorías marcadas
-                    como <span className="font-medium text-primary">fijado</span> respetan exactamente
-                    los importes que indicaste; el resto se calcula automáticamente para mantener la
-                    salud financiera del conjunto.
-                  </p>
+                  <CollapsibleHint>
+                    <p className="text-sm font-light text-muted-foreground leading-relaxed">
+                      Esta es la distribución óptima para el ingreso calculado. Las categorías marcadas
+                      como <span className="font-medium text-primary">fijado</span> respetan exactamente
+                      los importes que indicaste; el resto se calcula automáticamente para mantener la
+                      salud financiera del conjunto.
+                    </p>
+                  </CollapsibleHint>
                 </div>
                 <div className="space-y-6">
                   {BLOCK_ORDER.map(block => {
@@ -644,7 +664,7 @@ export default function InverseResultsPage() {
             Fuente: healthyDistribution del ingreso calculado. */}
         <aside
           ref={col2Ref}
-          className="hidden xl:block xl:col-span-4"
+          className="hidden xl:block xl:col-span-4 xl:sticky xl:top-16"
           aria-label="Dashboard resumen ingreso mínimo calculado"
         >
           <div style={{ paddingTop: col2PaddingTop > 0 ? col2PaddingTop : undefined }}>

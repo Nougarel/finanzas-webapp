@@ -138,7 +138,7 @@ function DataTable({
                   {columns.map((col) => (
                     <td
                       key={col.key}
-                      className={cn("px-4 py-3 text-foreground", col.className)}
+                      className={cn("px-4 py-4 text-foreground", col.className)}
                     >
                       {col.render
                         ? col.render(row[col.key], row)
@@ -147,7 +147,7 @@ function DataTable({
                   ))}
                   {/* Chevron solo en filas interactivas — columna extra al final */}
                   {isInteractive && (
-                    <td className="px-2 py-3 text-muted-foreground/50 w-6" aria-hidden="true">
+                    <td className="px-2 py-4 text-muted-foreground/50 w-6" aria-hidden="true">
                       <ChevronRight
                         className={cn(
                           "h-4 w-4 transition-colors",

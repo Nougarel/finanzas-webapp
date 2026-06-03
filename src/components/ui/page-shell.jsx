@@ -5,7 +5,7 @@
 //   profile   → max-w-3xl  — cuestionario de perfil (más opciones)
 //   hero      → max-w-4xl  — landing y páginas hero
 //   table     → max-w-5xl  — resultados y tablas densas
-//   dashboard → max-w-7xl  — páginas de resultados con DashboardPanel en col 2 (M37).
+//   dashboard → max-w-screen-2xl — páginas de resultados con DashboardPanel en col 2 (M37).
 //               Activa un grid de 12 columnas en xl+ (≥1280px). En viewports menores,
 //               los children se apilan verticalmente (grid colapsa a 1 col).
 //               Uso:
@@ -28,7 +28,7 @@ const MAX_WIDTHS = {
   profile: "max-w-3xl",
   hero: "max-w-4xl",
   table: "max-w-5xl",
-  dashboard: "max-w-7xl",
+  dashboard: "max-w-screen-2xl",
 };
 
 // El variant dashboard activa el grid xl en el contenedor interior.

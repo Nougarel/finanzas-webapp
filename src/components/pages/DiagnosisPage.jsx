@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useLayoutEffect, useCallback, Suspense, useRef, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
+import { CollapsibleHint } from "@/components/ui/collapsible-hint";
 import { Check, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -201,8 +202,10 @@ function DiagnosisContent() {
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
 
   // Refs para alineación dinámica col 2 con el banner navy (Fix M37).
-  const bannerRef = useRef(null);
-  const col2Ref   = useRef(null);
+  // profileColRef: aside de col 0 (ProfilePanel) — reutiliza el mismo offset.
+  const bannerRef     = useRef(null);
+  const col2Ref       = useRef(null);
+  const profileColRef = useRef(null);
   const [col2PaddingTop, setCol2PaddingTop] = useState(0);
 
   // Modo testing guiado (M18 Fase 4): notificar diagnóstico completado al
@@ -398,13 +401,16 @@ function DiagnosisContent() {
     <main className="flex min-h-screen flex-col">
       <PageShell variant="dashboard">
         {/* Col 0: perfil del usuario (2/12 en xl+, oculto en inferiores).
-            xl:order-first posiciona visualmente a la izquierda sin alterar el orden DOM. */}
-        <aside className="hidden xl:block xl:col-span-2 xl:order-first" aria-label="Tu perfil">
-          <ProfilePanel
-            profile={profile}
-            mode="direct"
-            onEdit={() => router.push("/profile")}
-          />
+            xl:order-first posiciona visualmente a la izquierda sin alterar el orden DOM.
+            profileColRef + paddingTop: mismo offset que col2 para alinear con el banner navy. */}
+        <aside ref={profileColRef} className="hidden xl:block xl:col-span-2 xl:order-first xl:sticky xl:top-16" aria-label="Tu perfil">
+          <div style={{ paddingTop: col2PaddingTop > 0 ? col2PaddingTop : undefined }}>
+            <ProfilePanel
+              profile={profile}
+              mode="direct"
+              onEdit={() => router.push("/profile")}
+            />
+          </div>
         </aside>
 
         {/* Col 1: contenido principal (6/12 en xl+, ancho completo en inferiores) */}
@@ -543,19 +549,21 @@ function DiagnosisContent() {
             <div className="space-y-8">
 
               {/* Guía de lectura J4 — cómo interpretar la tabla */}
-              <p className="text-sm font-light text-muted-foreground leading-relaxed">
-                La tabla compara lo que gastas realmente en cada categoría frente a la distribución
-                saludable calculada para tu perfil e ingreso. El campo{" "}
-                <span className="font-medium text-foreground">Estado</span> indica si tu gasto está{" "}
-                <span className="font-medium text-[color:var(--success-foreground)]">Alineado</span>{" "}
-                con el rango saludable,{" "}
-                <span className="font-medium text-[color:var(--warning-foreground)]">Por encima</span>{" "}
-                (riesgo de desajuste) o{" "}
-                <span className="font-medium text-[color:var(--info-foreground)]">Por debajo</span>{" "}
-                (margen de mejora). El{" "}
-                <span className="font-medium text-foreground">score de salud financiera</span> resume
-                el conjunto: cuantas más categorías estén alineadas, mayor será la puntuación.
-              </p>
+              <CollapsibleHint>
+                <p className="text-sm font-light text-muted-foreground leading-relaxed">
+                  La tabla compara lo que gastas realmente en cada categoría frente a la distribución
+                  saludable calculada para tu perfil e ingreso. El campo{" "}
+                  <span className="font-medium text-foreground">Estado</span> indica si tu gasto está{" "}
+                  <span className="font-medium text-[color:var(--success-foreground)]">Alineado</span>{" "}
+                  con el rango saludable,{" "}
+                  <span className="font-medium text-[color:var(--warning-foreground)]">Por encima</span>{" "}
+                  (riesgo de desajuste) o{" "}
+                  <span className="font-medium text-[color:var(--info-foreground)]">Por debajo</span>{" "}
+                  (margen de mejora). El{" "}
+                  <span className="font-medium text-foreground">score de salud financiera</span> resume
+                  el conjunto: cuantas más categorías estén alineadas, mayor será la puntuación.
+                </p>
+              </CollapsibleHint>
 
               {/* Hint clicable — desaparece cuando el panel está abierto */}
               {!selectedCategoryId && (
@@ -565,7 +573,7 @@ function DiagnosisContent() {
                 </p>
               )}
 
-              {BLOCK_ORDER.map((blockKey) => {
+              {BLOCK_ORDER.map((blockKey, blockIndex) => {
                 const cats = CATEGORIES_UI.filter((c) => c.block === blockKey);
                 const blockAlert = diagnosis.alerts?.[`_${blockKey}_block`];
 
@@ -585,7 +593,11 @@ function DiagnosisContent() {
                 });
 
                 return (
-                  <section key={blockKey} aria-labelledby={`block-${blockKey}-heading`}>
+                  <section
+                    key={blockKey}
+                    aria-labelledby={`block-${blockKey}-heading`}
+                    className={blockIndex > 0 ? "border-t border-border/40 pt-6" : undefined}
+                  >
                     {/* Banner navy de bloque — reemplaza la cabecera anterior.
                         rounded-t-lg en el banner + DataTable sin margen superior
                         → visualmente se leen como una unidad. */}
@@ -670,7 +682,7 @@ function DiagnosisContent() {
             variables por encima del banner. */}
         <aside
           ref={col2Ref}
-          className="hidden xl:block xl:col-span-4"
+          className="hidden xl:block xl:col-span-4 xl:sticky xl:top-16"
           aria-label="Dashboard resumen de situación real"
         >
           <div style={{ paddingTop: col2PaddingTop > 0 ? col2PaddingTop : undefined }}>

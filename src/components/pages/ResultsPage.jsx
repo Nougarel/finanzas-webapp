@@ -12,6 +12,7 @@ import { DetailPanelLayout } from "@/components/ui/detail-panel-layout";
 import { CategoryDetail } from "@/components/ui/category-detail";
 import { DashboardPanel } from "@/components/ui/dashboard-panel";
 import { ProfilePanel } from "@/components/ui/profile-panel";
+import { CollapsibleHint } from "@/components/ui/collapsible-hint";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useStudyContextOptional } from "@/lib/research/useStudyContext";
 import { useStudyAwareRouter } from "@/lib/research/useStudyAwareRouter";
@@ -27,29 +28,9 @@ function alertVariantFromLevel(level) {
   return level === "severe" ? "error" : "warning";
 }
 
-// Referencia INE: media nacional para una categoría.
-// Los datos INE son estadísticas descriptivas, no benchmarks de salud financiera —
-// se muestran siempre en gris neutro independientemente de la desviación.
-function IneReference({ ineData, block }) {
-  if (!ineData) return null;
-  const { ineReference } = ineData;
-
-  if (block === "wants") {
-    return (
-      <p className="text-[10px] text-muted-foreground/60">
-        <span className="font-medium">INE:</span> {ineReference}% del ingreso
-      </p>
-    );
-  }
-  return (
-    <p className="text-[10px] text-muted-foreground/60">
-      <span className="font-medium">INE:</span> {ineReference}%
-    </p>
-  );
-}
-
 // Columnas para DataTable de categorías dentro de un bloque.
-// Las alertas y referencias INE se renderizan debajo del nombre.
+// Las alertas se renderizan debajo del nombre de categoría.
+// La referencia INE se omite de las filas — visible en el panel de detalle al clicar.
 function buildCategoryColumns(result, blockKey, formatPct) {
   return [
     {
@@ -61,7 +42,6 @@ function buildCategoryColumns(result, blockKey, formatPct) {
           {row.description && (
             <p className="text-xs text-muted-foreground">{row.description}</p>
           )}
-          {row.ineData && <IneReference ineData={row.ineData} block={blockKey} />}
           {row.alert && (
             <div className="mt-1.5">
               <Alert
@@ -122,11 +102,14 @@ function ResultsContent() {
   const income = parseFloat(incomeParam);
 
   // Refs para alineación dinámica col 2 con el banner navy (Fix M37).
-  // bannerRef → div navy de ingreso en col 1.
-  // col2Ref   → aside de col 2.
-  // col2PaddingTop → estado que contiene el paddingTop calculado.
-  const bannerRef = useRef(null);
-  const col2Ref   = useRef(null);
+  // bannerRef      → div navy de ingreso en col 1.
+  // col2Ref        → aside de col 2 (DashboardPanel).
+  // profileColRef  → aside de col 0 (ProfilePanel).
+  // col2PaddingTop → offset calculado; se reutiliza para ambas columnas laterales
+  //                  porque los asides arrancan al mismo top en el grid.
+  const bannerRef     = useRef(null);
+  const col2Ref       = useRef(null);
+  const profileColRef = useRef(null);
   const [col2PaddingTop, setCol2PaddingTop] = useState(0);
 
   // Modo testing guiado (M18 Fase 4): si el contexto /study está activo,
@@ -195,6 +178,8 @@ function ResultsContent() {
           total:  result.transversal?.insurance?.total  ?? 0,
         },
       },
+      // D2: modelo más cercano para mostrar en DashboardPanel
+      modelClosest: result.closestModel ?? null,
     };
   }, [result, income]);
 
@@ -292,13 +277,16 @@ function ResultsContent() {
     <main className="flex min-h-screen flex-col">
       <PageShell variant="dashboard">
         {/* Col 0: perfil del usuario (2/12 en xl+, oculto en inferiores).
-            xl:order-first posiciona visualmente a la izquierda sin alterar el orden DOM. */}
-        <aside className="hidden xl:block xl:col-span-2 xl:order-first" aria-label="Tu perfil">
-          <ProfilePanel
-            profile={profile}
-            mode="direct"
-            onEdit={() => router.push("/profile")}
-          />
+            xl:order-first posiciona visualmente a la izquierda sin alterar el orden DOM.
+            profileColRef + paddingTop: mismo offset que col2 para alinear con el banner navy. */}
+        <aside ref={profileColRef} className="hidden xl:block xl:col-span-2 xl:order-first xl:sticky xl:top-16" aria-label="Tu perfil">
+          <div style={{ paddingTop: col2PaddingTop > 0 ? col2PaddingTop : undefined }}>
+            <ProfilePanel
+              profile={profile}
+              mode="direct"
+              onEdit={() => router.push("/profile")}
+            />
+          </div>
         </aside>
 
         {/* Col 1: contenido principal (6/12 en xl+, ancho completo en inferiores) */}
@@ -329,17 +317,19 @@ function ResultsContent() {
             <p className="text-muted-foreground font-light">
               Distribución personalizada según tu perfil
             </p>
-            {result.closestModel && (
-              <span className="inline-block text-xs border rounded-full px-3 py-1 text-muted-foreground mt-1">
-                Tu distribución se aproxima al modelo:{" "}
-                <strong>{result.closestModel.label}</strong>
-              </span>
-            )}
           </div>
 
           {/* Ingreso mensual — hero invertido (navy) */}
           {/* bannerRef: referencia para calcular la alineación dinámica de col 2 */}
-          <div ref={bannerRef} className="rounded-2xl bg-primary px-6 py-8 space-y-3 transition-colors duration-200">
+          <div ref={bannerRef} className="relative rounded-2xl bg-primary px-6 py-8 space-y-3 transition-colors duration-200">
+            {/* Botón discreto "Cambiar ingreso" — esquina superior derecha del banner */}
+            <button
+              type="button"
+              onClick={() => router.push("/calculator")}
+              className="absolute top-3 right-4 text-xs text-primary-foreground/70 hover:text-primary-foreground transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
+            >
+              Cambiar ingreso →
+            </button>
             {/* Label en blanco puro (sin opacity attenuation) — el /70 anterior
                 se percibía azul-grisáceo sobre el navy en lugar de blanco. */}
             <p className="text-xs font-normal uppercase tracking-meta text-primary-foreground">
@@ -449,13 +439,15 @@ function ResultsContent() {
               <div className="space-y-8">
 
                 {/* Guía de lectura (J4) */}
-                <p className="text-sm font-light text-muted-foreground leading-relaxed">
-                  Cada bloque agrupa categorías relacionadas: <span className="font-medium text-foreground">Necesidades</span> (gastos
-                  imprescindibles), <span className="font-medium text-foreground">Deseos</span> (calidad de vida) y{" "}
-                  <span className="font-medium text-foreground">Ahorro</span> (tu futuro financiero). El porcentaje
-                  indica qué parte de tu ingreso mensual se destina a cada categoría. Las alertas señalan categorías
-                  donde la distribución se aleja de los umbrales saludables para tu perfil.
-                </p>
+                <CollapsibleHint>
+                  <p className="text-sm font-light text-muted-foreground leading-relaxed">
+                    Cada bloque agrupa categorías relacionadas: <span className="font-medium text-foreground">Necesidades</span> (gastos
+                    imprescindibles), <span className="font-medium text-foreground">Deseos</span> (calidad de vida) y{" "}
+                    <span className="font-medium text-foreground">Ahorro</span> (tu futuro financiero). El porcentaje
+                    indica qué parte de tu ingreso mensual se destina a cada categoría. Las alertas señalan categorías
+                    donde la distribución se aleja de los umbrales saludables para tu perfil.
+                  </p>
+                </CollapsibleHint>
 
                 {/* Hint clicable — solo en vista detallada, desaparece cuando el panel está abierto */}
                 {!selectedCategoryId && (
@@ -613,7 +605,7 @@ function ResultsContent() {
             de alertas, del chip del modelo o de cualquier otro elemento variable en col 1. */}
         <aside
           ref={col2Ref}
-          className="hidden xl:block xl:col-span-4"
+          className="hidden xl:block xl:col-span-4 xl:sticky xl:top-16"
           aria-label="Dashboard resumen financiero"
         >
           <div style={{ paddingTop: col2PaddingTop > 0 ? col2PaddingTop : undefined }}>
