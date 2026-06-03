@@ -13,7 +13,8 @@
  *
  * No se usa recharts. Layout puro con Tailwind + divs.
  *
- * En modo "inverse" no se renderiza.
+ * Se renderiza en todos los modos (recommended, real e inverse): las barras por
+ * bloque son agnósticas al modo, solo dependen de los importes de `dataByBlock`.
  *
  * @param {Object} props
  * @param {Object} props.dataByBlock
@@ -22,8 +23,6 @@
  *     wants:   Array<{ id: string, label: string, value: number, percentage: number }>,
  *     savings: Array<{ id: string, label: string, value: number, percentage: number }>,
  *   }
- * @param {"recommended"|"real"|"inverse"} [props.mode]
- *   En modo "inverse" el componente devuelve null. Default: "recommended".
  */
 
 import { BLOCK_COLORS } from "@/lib/m37/categoryColors";
@@ -175,9 +174,7 @@ function BlockSection({ blockKey, categories, blockPctOfTotal }) {
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
-export function BlockBudgetBars({ dataByBlock, mode = "recommended" }) {
-  // En modo inverse no se renderiza
-  if (mode === "inverse") return null;
+export function BlockBudgetBars({ dataByBlock }) {
   if (!dataByBlock) return null;
 
   // Calcular % de bloque sobre el ingreso total a partir de los porcentajes de categoría

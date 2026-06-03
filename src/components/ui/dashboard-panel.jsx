@@ -39,6 +39,7 @@
  * @param {boolean} [props.skeleton]                - Renderiza skeletons de carga si true.
  * En modo "inverse", "Estimado de seguros" no se renderiza (dato no disponible en el dataset).
  * En modo "real", "Cobertura emergencia" muestra N/A (saldo del fondo no disponible en diagnóstico).
+ * El detalle por bloque (BlockBudgetBars) se renderiza en todos los modos, incluido "inverse".
  */
 
 import { useMemo } from "react";
@@ -330,7 +331,7 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
             ))}
           </div>
         ) : (
-          <BlockBudgetBars dataByBlock={blockData} mode={mode} />
+          <BlockBudgetBars dataByBlock={blockData} />
         )}
       </div>
 

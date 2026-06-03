@@ -660,7 +660,7 @@ export default function InverseResultsPage() {
             navy de col 1, independientemente de los elementos variables por encima del banner.
             Indicadores: DTI hipotético, tasa de ahorro, ratio necesidades, cobertura emergencia,
             vivienda y salud. Sin seguros (dato no disponible en dataset inverse).
-            Sin BlockBudgetBars en modo inverse (DashboardPanel lo omite).
+            Incluye BlockBudgetBars (detalle por bloque), que ahora se muestra en todos los modos.
             Fuente: healthyDistribution del ingreso calculado. */}
         <aside
           ref={col2Ref}
