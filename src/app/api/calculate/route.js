@@ -13,6 +13,14 @@ export async function POST(request) {
     }
 
     const result = calculateDistribution(profile, income);
+
+    if (result.insolvencyBlock) {
+      return NextResponse.json(
+        { error: result.error, insolvencyBlock: true },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json(

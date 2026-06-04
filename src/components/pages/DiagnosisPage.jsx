@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useLayoutEffect, useCallback, Suspense, useRef, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { CollapsibleHint } from "@/components/ui/collapsible-hint";
-import { Check, ArrowUp, ArrowDown } from "lucide-react";
+import { Check, ArrowUp, ArrowDown, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
@@ -199,6 +200,7 @@ function DiagnosisContent() {
     );
   });
   const [calcError, setCalcError] = useState(null);
+  const [insolvencyError, setInsolvencyError] = useState(false);
   // Estado efímero del panel de detalle (ADR-11 — no en URL)
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
 
@@ -234,8 +236,16 @@ function DiagnosisContent() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ profile, income, realAmounts }),
     })
-      .then((r) => r.json())
-      .then((data) => {
+      .then(async (r) => {
+        const data = await r.json();
+        if (!r.ok) {
+          if (data.insolvencyBlock) {
+            setInsolvencyError(true);
+            return;
+          }
+          setCalcError(data.error ?? "Error en el diagnóstico.");
+          return;
+        }
         if (data.error) setCalcError(data.error);
         else setDiagnosis(data);
       })
@@ -354,10 +364,39 @@ function DiagnosisContent() {
     );
   }
 
-  if (loading || (!diagnosis && !calcError)) {
+  if (loading || (!diagnosis && !calcError && !insolvencyError)) {
     return (
       <main className="flex min-h-screen items-center justify-center">
         <p className="text-muted-foreground">Analizando tu situación...</p>
+      </main>
+    );
+  }
+
+  if (insolvencyError) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center px-4 py-12">
+        <Card className="border-destructive bg-destructive/5 w-full max-w-lg">
+          <CardContent className="pt-6 flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="text-destructive h-6 w-6 shrink-0" aria-hidden />
+              <h2 className="font-semibold text-destructive">Deuda superior al ingreso</h2>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Tu cuota de deuda mensual supera tu ingreso neto. No es posible elaborar un presupuesto viable en esta situación.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Para continuar, reduce la cuota de deuda en tu perfil o introduce un ingreso mensual mayor.
+            </p>
+            <div className="flex flex-wrap gap-3 pt-2">
+              <Button asChild variant="outline">
+                <Link href="/profile">Editar perfil</Link>
+              </Button>
+              <Button asChild>
+                <Link href="/diagnosis-form">Cambiar ingreso</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </main>
     );
   }

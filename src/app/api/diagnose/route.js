@@ -36,6 +36,14 @@ export async function POST(request) {
     }
 
     const diagnosis = diagnoseDistribution(profile, income, clean);
+
+    if (diagnosis.insolvencyBlock) {
+      return NextResponse.json(
+        { error: diagnosis.error, insolvencyBlock: true },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json(diagnosis);
   } catch (error) {
     return NextResponse.json(

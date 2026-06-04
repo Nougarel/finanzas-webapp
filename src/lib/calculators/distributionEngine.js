@@ -313,6 +313,21 @@ function calculateHealthScore(categoryDiagnosis, alerts) {
 export function calculateDistribution(profile, income) {
   // 0. Ingreso efectivo (descuenta la cuota fija de deudas de consumo)
   const monthlyDebt     = profile.monthlyDebtPayment ?? 0;
+
+  // Insolvencia: si la deuda mensual iguala o supera el ingreso no hay
+  // presupuesto viable. Bloqueamos antes de cualquier cálculo para no
+  // devolver distribuciones con la invariante presupuestaria rota.
+  if (monthlyDebt >= income) {
+    return {
+      income,
+      effectiveIncome: 0,
+      monthlyDebtPayment: monthlyDebt,
+      feasible: false,
+      insolvencyBlock: true,
+      error: 'Las cuotas de deuda mensual superan o igualan el ingreso. No es posible elaborar un presupuesto viable.',
+    };
+  }
+
   const rawEffective    = income - monthlyDebt;
   const effectiveIncome = Math.max(rawEffective, 200);
   const incomeRatio     = effectiveIncome / income;
@@ -537,6 +552,12 @@ export function calculateDistribution(profile, income) {
 export function diagnoseDistribution(profile, income, realAmounts) {
   // 1. Distribución saludable según perfil + ingreso (la que el sistema recomienda)
   const healthy = calculateDistribution(profile, income);
+
+  // Propaga el bloqueo por insolvencia: sin distribución saludable no hay
+  // base contra la que comparar los importes reales.
+  if (healthy.insolvencyBlock) {
+    return healthy;
+  }
 
   // 2. Real distribution por categoría
   const realDistribution = {};
