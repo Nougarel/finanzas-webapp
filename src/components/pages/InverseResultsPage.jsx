@@ -262,6 +262,14 @@ export default function InverseResultsPage() {
 
   const { requiredIncome, monthlyDebtPayment, healthyDistribution, specifiedAmounts, comparison, warnings } = result;
 
+  // Nota informativa: cuando el usuario fija las 20 categorías, requiredIncome
+  // puede superar el coste directo del estilo de vida (lifestyleCost) porque el
+  // motor busca el ingreso al que esas proporciones son saludables. Threshold del
+  // 3% sobre el residuo (ingreso − deuda − lifestyleCost) para evitar ruido de redondeo.
+  const showLifestyleNote = result?.allCategoriesFixed &&
+    result?.lifestyleCost > 0 &&
+    (result.requiredIncome - (result.monthlyDebtPayment || 0) - result.lifestyleCost) / result.requiredIncome > 0.03;
+
   // Agrupar categorías por bloque para las tablas de distribución saludable
   const catsByBlock = {};
   for (const block of BLOCK_ORDER) {
@@ -476,6 +484,13 @@ export default function InverseResultsPage() {
                 Incluye{" "}
                 <MoneyValue amount={monthlyDebtPayment} size="inline" className="font-medium text-primary-foreground" />
                 /mes de cuotas de deuda fija.
+              </p>
+            )}
+            {showLifestyleNote && (
+              <p className="text-sm text-primary-foreground/80 font-light">
+                Al haber definido todas las categorías, el coste directo de este estilo de vida es{" "}
+                <MoneyValue amount={result.lifestyleCost} size="inline" className="font-medium text-primary-foreground" />
+                /mes. El ingreso recomendado garantiza que ninguna categoría supere sus ratios saludables.
               </p>
             )}
           </div>

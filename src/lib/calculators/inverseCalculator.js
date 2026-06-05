@@ -563,10 +563,20 @@ export function calculateInverse(profile, specifiedAmounts = {}, options = {}) {
   const monthlyDebt    = profile.monthlyDebtPayment ?? 0;
   const requiredIncome = incomeForDistribution + monthlyDebt;
 
+  // Coste directo del estilo de vida: suma de los importes que el usuario fijó.
+  // allCategoriesFixed: true solo cuando las 20 categorías del catálogo tienen
+  // importe > 0. En ese caso healthyDistribution suma fixedSum, no requiredIncome,
+  // porque requiredIncome es el ingreso al que esos importes son saludables en %.
+  const allCategoriesFixed = CATEGORIES_CATALOG.every(
+    c => (specifiedAmounts[c.id] ?? 0) > 0
+  );
+
   return {
     feasible: true,
     requiredIncome,
     monthlyDebtPayment: monthlyDebt,
+    lifestyleCost: parseFloat(fixedSum.toFixed(2)),
+    allCategoriesFixed,
     healthyDistribution,
     specifiedAmounts,
     comparison,
