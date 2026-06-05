@@ -31,7 +31,8 @@ const BIDIRECTIONAL_MAP = Object.fromEntries(
 );
 
 // ─── Constantes de factibilidad ──────────────────────────────────────────────
-const TOLERANCE_MULTIPLIER = 1.4;   // Cond. 2: hasta 40% sobre target base
+// Cond. 2: cada necesidad fijada debe representar ≤ factibleMax de la categoría
+// (techo físico del modelo; FACTIBLE_MAX_MAP, definido arriba).
 const MIN_NEED_COVERAGE    = 0.80;  // Cond. 1a: necesidades ≥ 80% target escalado
 const MIN_SAVINGS_COVERAGE = 0.70;  // Cond. 1b: ahorro total ≥ 70% targets ahorro
 
@@ -134,9 +135,9 @@ function runLP(profile, income, specifiedAmounts) {
  *
  * Flujo:
  *   1. Condición 2 (filtro rápido sin LP): cada necesidad fijada debe
- *      representar ≤ baseTarget × TOLERANCE_MULTIPLIER del ingreso candidato.
- *      Compara contra target BASE (sin escalar), con margen del 40%.
- *      No aplica a ahorro ni deseos.
+ *      representar ≤ factibleMax de su categoría sobre el ingreso candidato.
+ *      Compara contra el techo físico del modelo (FACTIBLE_MAX_MAP), no contra
+ *      el target estadístico de perfil. No aplica a ahorro ni deseos.
  *
  *   2. Si la condición 2 pasa, ejecutar el LP a este ingreso.
  *      Si el LP es infactible → return false.
@@ -163,7 +164,7 @@ function isIncomeFeasible(profile, income, specifiedAmounts, baseTargetMap) {
   for (const [catId, amount] of Object.entries(specifiedAmounts)) {
     if (!NEEDS_IDS.includes(catId)) continue;
     const catPct = (amount / income) * 100;
-    const maxAcceptable = (baseTargetMap[catId] ?? 0) * TOLERANCE_MULTIPLIER;
+    const maxAcceptable = FACTIBLE_MAX_MAP[catId] ?? Infinity;
     if (catPct > maxAcceptable) return false;
   }
 
