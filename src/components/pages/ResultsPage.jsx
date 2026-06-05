@@ -18,7 +18,7 @@ import { MobileResultsSummary } from "@/components/ui/mobile-results-summary";
 import { BlockBudgetBars } from "@/components/ui/block-budget-bars";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useStudyContextOptional } from "@/lib/research/useStudyContext";
-import { useStudyAwareRouter } from "@/lib/research/useStudyAwareRouter";
+import { useStudyAwareRouter, useStudyAwareHref } from "@/lib/research/useStudyAwareRouter";
 import { useMounted } from "@/lib/hooks/useMounted";
 import { cn } from "@/lib/utils";
 
@@ -103,6 +103,8 @@ function buildCategoryColumns(result, blockKey, formatPct) {
 
 function ResultsContent() {
   const router = useStudyAwareRouter();
+  const calculatorHref    = useStudyAwareHref("/calculator");
+  const diagnosisFormHref = useStudyAwareHref("/diagnosis-form");
   const searchParams = useSearchParams();
   const mounted = useMounted();
 
@@ -312,7 +314,7 @@ function ResultsContent() {
                 <Link href="/profile">Editar perfil</Link>
               </Button>
               <Button asChild>
-                <Link href="/calculator">Cambiar ingreso</Link>
+                <Link href={calculatorHref}>Cambiar ingreso</Link>
               </Button>
             </div>
           </CardContent>
@@ -682,7 +684,7 @@ function ResultsContent() {
             <DashboardPanel
               dataset={dashboardDataset}
               mode="recommended"
-              secondaryCta={{ href: `/diagnosis-form?income=${income}`, label: "Compara tu situación real" }}
+              secondaryCta={{ href: `${diagnosisFormHref}?income=${income}`, label: "Compara tu situación real" }}
             />
             {/* Colofón tipográfico — puramente decorativo, excluido del árbol de accesibilidad */}
             <div className="mt-8 border-t border-border/20 py-3 text-center" aria-hidden="true">

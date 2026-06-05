@@ -20,7 +20,7 @@ import { MobileResultsSummary } from "@/components/ui/mobile-results-summary";
 import { CATEGORIES_UI } from "@/lib/models/categories";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useStudyContextOptional } from "@/lib/research/useStudyContext";
-import { useStudyAwareRouter } from "@/lib/research/useStudyAwareRouter";
+import { useStudyAwareRouter, useStudyAwareHref } from "@/lib/research/useStudyAwareRouter";
 import { useMounted } from "@/lib/hooks/useMounted";
 
 const BLOCK_ORDER = ["needs", "wants", "savings"];
@@ -167,6 +167,8 @@ function buildComparisonColumns(formatPct) {
 
 function DiagnosisContent() {
   const router = useStudyAwareRouter();
+  const calculatorHref    = useStudyAwareHref("/calculator");
+  const diagnosisFormHref = useStudyAwareHref("/diagnosis-form");
   const searchParams = useSearchParams();
   const mounted = useMounted();
 
@@ -392,7 +394,7 @@ function DiagnosisContent() {
                 <Link href="/profile">Editar perfil</Link>
               </Button>
               <Button asChild>
-                <Link href="/diagnosis-form">Cambiar ingreso</Link>
+                <Link href={diagnosisFormHref}>Cambiar ingreso</Link>
               </Button>
             </div>
           </CardContent>
@@ -730,7 +732,7 @@ function DiagnosisContent() {
             <DashboardPanel
               dataset={dashboardDataset}
               mode="real"
-              secondaryCta={{ href: "/calculator", label: "Ver distribución ideal" }}
+              secondaryCta={{ href: calculatorHref, label: "Ver distribución ideal" }}
             />
             {/* Colofón tipográfico — puramente decorativo, excluido del árbol de accesibilidad */}
             <div className="mt-8 border-t border-border/20 py-3 text-center" aria-hidden="true">

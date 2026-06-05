@@ -10,6 +10,7 @@
 // estabilizar el state machine.
 
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useStudyContext } from "@/lib/research/useStudyContext";
 import { POSTTEST_STEPS } from "@/lib/research/studyConfig";
 import SusScreen from "@/components/study/screens/SusScreen";
@@ -18,7 +19,8 @@ import QualitativeScreen from "@/components/study/screens/QualitativeScreen";
 import ClosingScreen from "@/components/study/screens/ClosingScreen";
 
 export default function StudyPosttestFunnel() {
-  const { currentStep, goToStep, isLoading, error } = useStudyContext();
+  const { currentStep, goToStep, isLoading, error, sessionId } = useStudyContext();
+  const router = useRouter();
 
   // Si llegan a /study/posttest con un step de pre-app, normalizamos a "sus".
   useEffect(() => {
@@ -26,6 +28,14 @@ export default function StudyPosttestFunnel() {
       goToStep("sus");
     }
   }, [currentStep, isLoading, goToStep]);
+
+  // Guard de sesión: sin sesión activa tras la carga, redirigimos dentro del
+  // funnel a /study/expired (mismo destino que el timeout en StudyContext).
+  useEffect(() => {
+    if (!isLoading && !sessionId) {
+      router.replace("/study/expired");
+    }
+  }, [isLoading, sessionId, router]);
 
   if (isLoading) {
     return (

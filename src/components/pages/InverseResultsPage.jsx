@@ -17,7 +17,7 @@ import { MobileResultsSummary } from "@/components/ui/mobile-results-summary";
 import { CATEGORIES_UI, CATEGORIES_META, CATEGORIES_CATALOG } from "@/lib/models/categories";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useStudyContextOptional } from "@/lib/research/useStudyContext";
-import { useStudyAwareRouter } from "@/lib/research/useStudyAwareRouter";
+import { useStudyAwareRouter, useStudyAwareHref } from "@/lib/research/useStudyAwareRouter";
 import CoherenceWarningScreen from "@/components/pages/CoherenceWarningScreen";
 import { useMounted } from "@/lib/hooks/useMounted";
 import { cn } from "@/lib/utils";
@@ -45,6 +45,7 @@ function ErrorCard({ title, message, onBack }) {
 
 export default function InverseResultsPage() {
   const router = useStudyAwareRouter();
+  const inverseCalcHref = useStudyAwareHref("/inverse-calculator");
   const mounted = useMounted();
 
   const [amountsMissing] = useState(() => {
@@ -737,7 +738,7 @@ export default function InverseResultsPage() {
             <DashboardPanel
               dataset={dashboardDataset}
               mode="inverse"
-              secondaryCta={{ href: "/inverse-calculator", label: "Calcular de nuevo" }}
+              secondaryCta={{ href: inverseCalcHref, label: "Calcular de nuevo" }}
             />
             {/* Colofón tipográfico — puramente decorativo, excluido del árbol de accesibilidad */}
             <div className="mt-8 border-t border-border/20 py-3 text-center" aria-hidden="true">

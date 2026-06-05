@@ -252,3 +252,13 @@
   scrollbar-width: thin;
   scrollbar-color: rgba(20, 33, 61, 0.25) transparent;
 }
+
+/* Ocultar flechas nativas de inputs numéricos — consistencia cross-browser */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
