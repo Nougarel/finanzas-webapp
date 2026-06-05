@@ -590,6 +590,8 @@ export default function InverseResultsPage() {
                         onClose={() => setSelectedCategoryId(null)}
                         drivers={result.explanation?.[selectedCategoryId]?.drivers ?? []}
                         profile={profile}
+                        isFixedWant={categoryObj.block === 'wants' && !!(specifiedAmounts?.[selectedCategoryId])}
+                        hasFixedWantsInBlock={categoryObj.block === 'wants' && hasFixedWants}
                       />
                     );
                   })()

@@ -121,7 +121,7 @@ function ProfileDriversBullets({ bullets }) {
 
 // ── Componente principal ─────────────────────────────────────────────────────
 
-export function CategoryDetail({ category, ineData, income, onClose, drivers, profile }) {
+export function CategoryDetail({ category, ineData, income, onClose, drivers, profile, isFixedWant, hasFixedWantsInBlock }) {
   // Ref al contenedor scrollable interno — usado para el reset de scroll (mejora 4).
   // Declarado antes del early return para no violar la regla de hooks.
   const scrollRef = React.useRef(null);
@@ -248,7 +248,37 @@ export function CategoryDetail({ category, ineData, income, onClose, drivers, pr
 
           {/* Sección 5: Nota sobre flexibilidad — solo en CONTEXTUAL, separador arriba */}
           {isContextual && (
-            <div className="border-t border-border/50 pt-5 pb-5">
+            <div className="border-t border-border/50 pt-5 pb-5 space-y-3">
+              {/* Nota contextual de redistribución — solo en flujo inverso con wants fijados */}
+              {isFixedWant && (
+                <div
+                  className="rounded-md border border-border bg-muted/20 px-3 py-3 space-y-1"
+                  role="note"
+                  aria-label="Nota sobre redistribución de deseos"
+                >
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-meta">
+                    Categoría fijada
+                  </p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Has fijado el importe de esta categoría. El presupuesto restante del bloque deseos se redistribuye entre las categorías que dejaste libres.
+                  </p>
+                </div>
+              )}
+              {!isFixedWant && hasFixedWantsInBlock && (
+                <div
+                  className="rounded-md border border-border bg-muted/20 px-3 py-3 space-y-1"
+                  role="note"
+                  aria-label="Nota sobre redistribución de deseos"
+                >
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-meta">
+                    Asignación del sobrante
+                  </p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Esta categoría recibió su asignación del presupuesto sobrante del bloque deseos, después de cubrir las categorías que fijaste.
+                  </p>
+                </div>
+              )}
+              {/* Nota de flexibilidad — siempre presente en categorías CONTEXTUAL */}
               <div
                 className="rounded-md border border-border bg-muted/20 px-3 py-3 space-y-1"
                 role="note"
