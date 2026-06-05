@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from "react";
-import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
 import { DataTable } from "@/components/ui/data-table";
@@ -19,6 +20,7 @@ import { useStudyContextOptional } from "@/lib/research/useStudyContext";
 import { useStudyAwareRouter } from "@/lib/research/useStudyAwareRouter";
 import CoherenceWarningScreen from "@/components/pages/CoherenceWarningScreen";
 import { useMounted } from "@/lib/hooks/useMounted";
+import { cn } from "@/lib/utils";
 
 const BLOCK_LABELS = { needs: "Necesidades", wants: "Deseos", savings: "Ahorro" };
 const BLOCK_ORDER  = ["needs", "wants", "savings"];
@@ -262,6 +264,32 @@ export default function InverseResultsPage() {
 
   const { requiredIncome, monthlyDebtPayment, healthyDistribution, specifiedAmounts, comparison, warnings } = result;
 
+  // ── Tooltip "want a 0€ por bloque cubierto" ───────────────────────────────
+  // IDs de las categorías de deseos según CATEGORIES_CATALOG (block: "wants")
+  const WANTS_CATS = [
+    'dining_out', 'travel', 'clothing', 'personal_care',
+    'entertainment', 'hobbies', 'subscriptions', 'gifts',
+  ];
+
+  // Wants que el usuario fijó explícitamente
+  const fixedWantsCats = Object.keys(specifiedAmounts ?? {})
+    .filter(k => WANTS_CATS.includes(k));
+  const hasFixedWants = fixedWantsCats.length > 0;
+
+  /**
+   * Devuelve true si esta categoría de want debe mostrar el tooltip explicativo.
+   * Condición: want no fijado, con importe 0 en la distribución saludable,
+   * cuando hay al menos un want fijado (el bloque ya estaba cubierto por ellos).
+   */
+  const showWantZeroTooltip = (catId) => {
+    if (!hasFixedWants) return false;
+    if (!WANTS_CATS.includes(catId)) return false;
+    const amount = healthyDistribution?.[catId]?.amount ?? 0;
+    if (amount >= 0.01) return false;
+    if (specifiedAmounts?.[catId]) return false; // está fijada — no aplica
+    return true;
+  };
+
   // Nota informativa: cuando el usuario fija las 20 categorías, requiredIncome
   // puede superar el coste directo del estilo de vida (lifestyleCost) porque el
   // motor busca el ingreso al que esas proporciones son saludables. Threshold del
@@ -381,12 +409,25 @@ export default function InverseResultsPage() {
         key: "label",
         header: "Categoría",
         render: (val, row) => (
-          <span className="inline-flex items-center gap-2">
+          <span className={cn("inline-flex items-center gap-2", row.isDimmed && "text-muted-foreground")}>
             {val}
             {row.isSpecified && (
               <span className="text-xs rounded-full bg-primary/10 text-primary px-1.5 py-0.5 font-medium">
                 fijado
               </span>
+            )}
+            {showWantZeroTooltip(row.id) && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info
+                    className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground transition-colors cursor-help shrink-0"
+                    aria-label="¿Por qué 0€?"
+                  />
+                </TooltipTrigger>
+                <TooltipContent side="right" className="max-w-56 text-xs">
+                  El presupuesto de deseos para tu perfil, ya está cubierto por los importes que fijaste.
+                </TooltipContent>
+              </Tooltip>
             )}
           </span>
         ),
@@ -396,8 +437,8 @@ export default function InverseResultsPage() {
         header: "% del ingreso",
         className: "text-right",
         mobileClassName: "text-right",
-        render: (val) => (
-          <span className="tabular-nums text-sm text-muted-foreground">{fmtPct(val)}</span>
+        render: (val, row) => (
+          <span className={cn("tabular-nums text-sm text-muted-foreground", row.isDimmed && "opacity-60")}>{fmtPct(val)}</span>
         ),
         mobileRender: (val) => (
           <span className="tabular-nums text-[10px] text-muted-foreground/60 leading-none">
@@ -409,12 +450,17 @@ export default function InverseResultsPage() {
         key: "amount",
         header: "Importe",
         className: "text-right",
-        render: (val) => <MoneyValue amount={val} size="table" />,
+        render: (val, row) => (
+          <span className={row.isDimmed ? "opacity-60" : undefined}>
+            <MoneyValue amount={val} size="table" />
+          </span>
+        ),
       },
     ];
   }
 
   return (
+    <TooltipProvider>
     <main className="flex min-h-screen flex-col">
       <PageShell variant="dashboard">
         {/* Col 0: perfil del usuario (2/12 en xl+, oculto en inferiores).
@@ -615,6 +661,7 @@ export default function InverseResultsPage() {
                           percentage: h.percentage,
                           amount: h.amount,
                           isSpecified: cat.id in (specifiedAmounts ?? {}),
+                          isDimmed: (h.amount ?? 0) < 0.01,
                         };
                       })
                       .filter(Boolean);
@@ -701,5 +748,6 @@ export default function InverseResultsPage() {
 
       </PageShell>
     </main>
+    </TooltipProvider>
   );
 }
