@@ -12,6 +12,7 @@ import solver from 'javascript-lp-solver';
  * @param {number} [options.minWantsPercentage] - mínimo que debe ir a deseos (suma wants especificados)
  * @param {object} [options.lpWeightOverrides] - { [catId]: weight } — sobrescribe el peso lpWeight de la categoría
  * @param {object} [options.factibleMaxOverrides] - { [catId]: max } — sobrescribe el factibleMax estático del catálogo
+ * @param {number} [options.wantsFloor=10] - suelo rígido del bloque deseos en %. Default 10 (flujo directo); el flujo inverso pasa 0
  * @returns {{ feasible: boolean, distribution?: object, error?: string }}
  */
 export function solveDistribution(categoryTargets, categoryConfigs, options = {}) {
@@ -20,6 +21,7 @@ export function solveDistribution(categoryTargets, categoryConfigs, options = {}
     minWantsPercentage   = 0,
     lpWeightOverrides    = {},
     factibleMaxOverrides = {},
+    wantsFloor           = 10,
   } = options;
 
   const needs   = categoryConfigs.filter(c => c.block === 'needs');
@@ -30,8 +32,10 @@ export function solveDistribution(categoryTargets, categoryConfigs, options = {}
 
   constraints.budget   = { equal: 100 };
   constraints.wants_ub = { max: 80 };
-  // Suelo mínimo de deseos: 10% siempre, o el mínimo fijado por el usuario si es mayor.
-  const effectiveWantsMin = Math.max(10, minWantsPercentage || 0);
+  // Suelo mínimo de deseos: wantsFloor (10% por defecto en el flujo directo), o el
+  // mínimo fijado por el usuario si es mayor. El flujo inverso pasa wantsFloor = 0
+  // para eliminar el suelo rígido y dejar que el target INE actúe como criterio blando.
+  const effectiveWantsMin = Math.max(wantsFloor, minWantsPercentage || 0);
   constraints.wants_lb = { min: effectiveWantsMin };
 
   // ── Necesidades ──────────────────────────────────────────────────────────────

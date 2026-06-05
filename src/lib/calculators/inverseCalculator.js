@@ -34,7 +34,13 @@ const BIDIRECTIONAL_MAP = Object.fromEntries(
 const TOLERANCE_MULTIPLIER = 1.4;   // Cond. 2: hasta 40% sobre target base
 const MIN_NEED_COVERAGE    = 0.80;  // Cond. 1a: necesidades ≥ 80% target escalado
 const MIN_SAVINGS_COVERAGE = 0.70;  // Cond. 1b: ahorro total ≥ 70% targets ahorro
-const MIN_WANTS_PCT        = 5;     // Cond. 1c: deseos ≥ 5% del ingreso
+
+// Target blando del bloque deseos: suma de ineReference de las 8 categorías wants
+// (datos INE). Reemplaza el suelo rígido del 10% en el flujo inverso. La cobertura
+// se mide sobre el RESIDUO (target − lo que el usuario ya fijó en wants), de modo
+// que si el usuario ya cubre buena parte del bloque, el LP no necesita inflar más.
+const WANTS_BLOCK_TARGET_INE = 22;  // Σ ineReference de las 8 categorías wants
+const MIN_WANTS_COVERAGE     = 0.60; // cobertura mínima del target residual; calibrable
 
 // ─── Constantes de la búsqueda del ingreso mínimo ────────────────────────────
 // El predicado isIncomeFeasible NO es monótono sobre todo el rango de ingreso:
@@ -114,9 +120,13 @@ function runLP(profile, income, specifiedAmounts) {
     minWantsPercentage: wantsFixedPct > 0 ? wantsFixedPct : 0,
     lpWeightOverrides,
     factibleMaxOverrides,
+    // En el inverso no hay suelo rígido del 10%: solo lo que el usuario fije en
+    // wants actúa como mínimo. La cobertura del target INE se comprueba aparte
+    // en isIncomeFeasible (criterio d).
+    wantsFloor: 0,
   });
 
-  return { lpResult, targets, insufficientBudget, explanation };
+  return { lpResult, targets, wantsFixedPct, insufficientBudget, explanation };
 }
 
 /**
@@ -135,7 +145,10 @@ function runLP(profile, income, specifiedAmounts) {
  *      (a) Cada necesidad NO fijada recibe ≥ 80% de su target escalado.
  *      (b) El total de ahorro NO fijado representa ≥ 70% de la suma de
  *          targets de ahorro no fijados.
- *      (c) El total de deseos asignado por el LP es ≥ 3% del ingreso.
+ *      (d) El bloque deseos cubre ≥ 60% del target INE residual (target del
+ *          bloque − lo ya fijado en wants por el usuario). Sustituye al antiguo
+ *          suelo rígido del 10%, que inflaba el ingreso cuando los wants fijados
+ *          sumaban poco.
  *
  * @param {object} profile          — perfil clonado con fase "completo"
  * @param {number} income           — ingreso candidato
@@ -155,7 +168,7 @@ function isIncomeFeasible(profile, income, specifiedAmounts, baseTargetMap) {
   }
 
   // ── Condición 1: ejecutar el LP y verificar el resultado ────────────────
-  const { lpResult, targets } = runLP(profile, income, specifiedAmounts);
+  const { lpResult, targets, wantsFixedPct } = runLP(profile, income, specifiedAmounts);
   if (!lpResult.feasible) return false;
 
   const { distribution } = lpResult;
@@ -190,8 +203,12 @@ function isIncomeFeasible(profile, income, specifiedAmounts, baseTargetMap) {
     return false;
   }
 
-  // (c) Total de deseos asignado ≥ 3% del ingreso
-  if ((distribution.wants ?? 0) < MIN_WANTS_PCT) return false;
+  // (d) El bloque deseos alcanza suficiente cobertura del target INE ajustado.
+  //     Se trabaja sobre el residuo (target − fijado por el usuario) para no
+  //     penalizar a quien ya cubre parte del bloque con sus importes fijados.
+  const wantsResidualTarget = Math.max(0, WANTS_BLOCK_TARGET_INE - (wantsFixedPct || 0));
+  const wantsResidualActual = Math.max(0, (distribution.wants ?? 0) - (wantsFixedPct || 0));
+  if (wantsResidualActual < MIN_WANTS_COVERAGE * wantsResidualTarget) return false;
 
   return true;
 }
