@@ -337,17 +337,30 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
 
       {/* ── IndicatorCards — grid 2×2 ────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-2">
-        {/* DTI — presente en todos los modos */}
-        <IndicatorCard
-          compact
-          label={dtiLabel}
-          abbr={{ text: "BdE", title: "Banco de España" }}
-          value={showSkeleton ? "—" : `${dtiIndicator?.value?.toFixed(1)}%`}
-          status={showSkeleton ? "info" : (dtiIndicator?.status ?? "info")}
-          description={dtiDescription}
-          tooltip={dtiTooltip}
-          skeleton={showSkeleton}
-        />
+        {/* DTI — N/A en modo inverse (deuda siempre 0 por diseño del flujo); activo en recommended y real */}
+        {mode === "inverse" ? (
+          <IndicatorCard
+            compact
+            label="DTI HIPOTÉTICO"
+            abbr={{ text: "BdE", title: "Banco de España" }}
+            value="N/A"
+            status="na"
+            description={null}
+            tooltip="El flujo inverso no recoge datos de deuda existente — asume distribución saludable sin cargas. El DTI no es calculable en este contexto."
+            skeleton={false}
+          />
+        ) : (
+          <IndicatorCard
+            compact
+            label={dtiLabel}
+            abbr={{ text: "BdE", title: "Banco de España" }}
+            value={showSkeleton ? "—" : `${dtiIndicator?.value?.toFixed(1)}%`}
+            status={showSkeleton ? "info" : (dtiIndicator?.status ?? "info")}
+            description={dtiDescription}
+            tooltip={dtiTooltip}
+            skeleton={showSkeleton}
+          />
+        )}
 
         {/* Tasa de ahorro — presente en todos los modos */}
         <IndicatorCard
@@ -373,8 +386,8 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
           skeleton={showSkeleton}
         />
 
-        {/* Cobertura emergencia — en recommended e inverse (calculable); en real: N/A */}
-        {mode !== "real" && (
+        {/* Cobertura emergencia — recommended: proyección de contribución mensual */}
+        {mode === "recommended" && (
           <IndicatorCard
             compact
             label="COBERTURA EMERGENCIA"
@@ -382,16 +395,26 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
             value={showSkeleton ? "—" : emergencyIndicator?.formatted ?? "—"}
             status={showSkeleton ? "info" : (emergencyIndicator?.status ?? "info")}
             description="≥ 6 m BdE"
-            tooltip={
-              mode === "inverse"
-                ? "Estima cuántos meses de gastos esenciales cubriría el fondo de emergencia con las aportaciones de la distribución hipotética calculada. El Banco de España aconseja mantener entre 3 y 6 meses cubiertos."
-                : "Estima cuántos meses de gastos esenciales cubriría tu fondo de emergencia con las aportaciones mensuales recomendadas. El Banco de España aconseja mantener entre 3 y 6 meses cubiertos."
-            }
+            tooltip="Estima cuántos meses de gastos esenciales cubriría tu fondo de emergencia con las aportaciones mensuales recomendadas. El Banco de España aconseja mantener entre 3 y 6 meses cubiertos."
             skeleton={showSkeleton}
           />
         )}
 
-        {/* Cobertura emergencia — modo real: sin dato disponible */}
+        {/* Cobertura emergencia — inverse: N/A (fondo asumido ya completo por diseño del flujo) */}
+        {mode === "inverse" && (
+          <IndicatorCard
+            compact
+            label="COBERTURA EMERGENCIA"
+            abbr={{ text: "BdE", title: "Banco de España" }}
+            value="N/A"
+            status="na"
+            description={null}
+            tooltip="El flujo inverso asume que tu fondo de emergencia ya está constituido. La cobertura no se calcula en este contexto."
+            skeleton={false}
+          />
+        )}
+
+        {/* Cobertura emergencia — real: N/A (saldo del fondo no disponible en diagnóstico) */}
         {mode === "real" && (
           <IndicatorCard
             compact
