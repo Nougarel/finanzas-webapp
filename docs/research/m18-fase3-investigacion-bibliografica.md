@@ -7,8 +7,8 @@ author_agent: investigador-academico (effortLevel: xhigh)
 status: completed
 related:
   - supabase/migrations/20260524131051_initial_research_schema.sql
-  - KnowledgeBase/01-proyectos/personales/finanzas-webapp/roadmap/plan-m18-supabase-research.md
-  - KnowledgeBase/01-proyectos/personales/finanzas-webapp/arquitectura/decisiones-diseno.md
+  - KnowledgeBase/01-proyectos/personales/flouss/roadmap/plan-m18-supabase-research.md
+  - KnowledgeBase/01-proyectos/personales/flouss/arquitectura/decisiones-diseno.md
 ---
 
 # Investigación bibliográfica M-D1 — Fase 3 de M18

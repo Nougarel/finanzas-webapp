@@ -7,8 +7,8 @@ status: approved (pendiente implementación)
 related:
   - docs/planning/m18-fase4-frontend.md
   - docs/dossier/m18-cuestionario-md1.md
-  - KnowledgeBase/01-proyectos/personales/finanzas-webapp/roadmap/plan-m18-supabase-research.md
-  - KnowledgeBase/01-proyectos/personales/finanzas-webapp/arquitectura/decisiones-diseno.md
+  - KnowledgeBase/01-proyectos/personales/flouss/roadmap/plan-m18-supabase-research.md
+  - KnowledgeBase/01-proyectos/personales/flouss/arquitectura/decisiones-diseno.md
 ---
 
 # Plan consolidado Fase 4 M18 — Funnel `/study` (Modo testing guiado)
@@ -359,5 +359,5 @@ La fase se considera completa cuando:
 - `docs/planning/m18-fase4-arquitecto.md` — plan arquitectónico detallado (se guardará al confirmar)
 - `docs/dossier/m18-cuestionario-md1.md` — contrato vinculante del cuestionario
 - `docs/research/m18-fase3-investigacion-bibliografica.md` — material bibliográfico de Fase 3
-- `KnowledgeBase/01-proyectos/personales/finanzas-webapp/roadmap/plan-m18-supabase-research.md` — master plan M18
-- `KnowledgeBase/01-proyectos/personales/finanzas-webapp/arquitectura/decisiones-diseno.md` — ADR-01 a ADR-06 vigentes
+- `KnowledgeBase/01-proyectos/personales/flouss/roadmap/plan-m18-supabase-research.md` — master plan M18
+- `KnowledgeBase/01-proyectos/personales/flouss/arquitectura/decisiones-diseno.md` — ADR-01 a ADR-06 vigentes

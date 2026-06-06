@@ -1,4 +1,4 @@
-# Reporte de testing funcional -- finanzas-webapp
+# Reporte de testing funcional -- flouss
 
 Generado: 2026-06-04T16:23:42
 

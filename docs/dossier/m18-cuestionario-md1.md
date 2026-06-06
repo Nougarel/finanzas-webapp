@@ -7,7 +7,7 @@ author_agent: redactor-academico (skill etse-uv-tfg)
 status: completed
 related:
   - docs/research/m18-fase3-investigacion-bibliografica.md
-  - KnowledgeBase/01-proyectos/personales/finanzas-webapp/roadmap/plan-m18-supabase-research.md
+  - KnowledgeBase/01-proyectos/personales/flouss/roadmap/plan-m18-supabase-research.md
 ---
 
 # Dossier de cuestionarios M-D1 — TFG Ingeniería Multimedia ETSE-UV
