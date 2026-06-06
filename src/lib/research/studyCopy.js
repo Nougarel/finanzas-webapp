@@ -334,7 +334,7 @@ export const CLOSING = Object.freeze({
 
 export const FINISH_CONFIRM = Object.freeze({
   title: "¿Listo para terminar la prueba?",
-  body: "Has probado los tres flujos. A partir de aquí pasarás a la valoración final y no podrás volver a usar la herramienta en esta sesión.",
+  body: "Has completado la fase de exploración. A partir de aquí pasarás a la valoración final y no podrás volver a usar la herramienta en esta sesión.",
   cancel: "Seguir probando",
   confirm: "Sí, ir a la valoración",
 });
