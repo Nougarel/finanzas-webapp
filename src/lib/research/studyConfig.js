@@ -18,6 +18,18 @@ export const FLOW_TYPES = Object.freeze(["direct", "inverse", "diagnosis"]);
 // Mínimo de flujos completados para habilitar "He terminado".
 export const MIN_FLOWS_TO_FINISH = 3;
 
+// Mínimo de flujos por cohorte. Las cohortes async/pilot exigen menos para no
+// penalizar la finalización en escenarios sin acompañamiento presencial.
+export const MIN_FLOWS_BY_COHORT = Object.freeze({
+  presencial: 3,
+  async_masivo: 1,
+  pilot: 1,
+});
+
+export function minFlowsForCohort(cohort) {
+  return MIN_FLOWS_BY_COHORT[cohort] ?? MIN_FLOWS_BY_COHORT.async_masivo;
+}
+
 // Cohortes de estudio (se almacenan en research_sessions.metadata.cohort).
 export const COHORTS = Object.freeze({
   ASYNC_MASIVO: "async_masivo", // sin query param
@@ -32,14 +44,7 @@ export const PRE_APP_STEPS = Object.freeze([
   "welcome",
   "consent",
   "demographics",
-  "pretest_intro",
-  "pretest_p0",   // división simple (200, no puntúa)
-  "pretest_q1",   // inflación (Big Three)
-  "pretest_p0b",  // interés simple (102, no puntúa)
-  "pretest_q2",   // interés compuesto (Big Three)
-  "pretest_q3",   // diversificación (Big Three)
-  "pretest_q4",   // bonos (Big Five)
-  "pretest_q5",   // hipoteca (Big Five)
+  "pretest_literacy",
   "transition_to_app",
 ]);
 

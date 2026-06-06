@@ -215,6 +215,35 @@ export const BIG_FIVE_QUESTIONS = Object.freeze({
 // Orden de presentación de las preguntas Big Five (coincide con PRE_APP_STEPS).
 export const BIG_FIVE_ORDER = Object.freeze(["p0", "q1", "p0b", "q2", "q3", "q4", "q5"]);
 
+// ─── Pretest: literacia financiera ──────────────────────────────────────────
+
+export const FINANCIAL_LITERACY = Object.freeze({
+  question: "¿Cómo describirías tu relación con los conceptos financieros?",
+  subtitle: "No es un examen. Elige la opción que mejor refleje tu nivel de comodidad con temas de dinero, ahorro e inversión.",
+  options: Object.freeze([
+    {
+      value: 1,
+      label: "Estoy empezando",
+      description: "No he tenido formación específica en finanzas. Términos como inflación, interés compuesto o diversificación me resultan poco familiares.",
+    },
+    {
+      value: 2,
+      label: "Me defiendo con lo básico",
+      description: "Entiendo ideas como que la inflación reduce lo que puedo comprar con el tiempo, pero no me siento seguro con productos como bonos, hipotecas o inversiones.",
+    },
+    {
+      value: 3,
+      label: "Tengo una base sólida",
+      description: "Manejo con soltura el interés compuesto y la diversificación del riesgo, y entiendo cómo funcionan a grandes rasgos los préstamos y las inversiones.",
+    },
+    {
+      value: 4,
+      label: "Me muevo con seguridad",
+      description: "Comprendo conceptos avanzados como la relación entre los tipos de interés y el precio de los bonos, o el coste total de una hipoteca según su plazo.",
+    },
+  ]),
+});
+
 // ─── Transición a la app (dossier §5 fin + §6) ─────────────────────────────
 
 export const TRANSITION_TO_APP = Object.freeze({
@@ -223,7 +252,7 @@ export const TRANSITION_TO_APP = Object.freeze({
     "Has terminado el cuestionario inicial. Tómate tu tiempo para explorar la herramienta.",
     "Cuando hayas terminado, pulsa el botón “He terminado” para pasar a la valoración final.",
   ],
-  flowsListTitle: "Tienes que probar los tres flujos antes de terminar:",
+  flowsListTitle: "Explora la herramienta probando al menos uno de los flujos disponibles:",
   flowsList: [
     "Cálculo directo",
     "Cálculo inverso",

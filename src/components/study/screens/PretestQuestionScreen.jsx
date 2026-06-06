@@ -41,12 +41,9 @@ export default function PretestQuestionScreen({ questionId }) {
 
   const question = BIG_FIVE_QUESTIONS[questionId];
 
-  // Índice 1-based en el orden del Big Five (para mini-indicador "X de 7").
-  const positionLabel = useMemo(() => {
-    const idx = BIG_FIVE_ORDER.indexOf(questionId);
-    if (idx === -1) return null;
-    return `Pregunta ${idx + 1} de ${BIG_FIVE_ORDER.length}`;
-  }, [questionId]);
+  // Índice 0-based en el orden del Big Five (para barra de progreso).
+  const positionIndex = useMemo(() => BIG_FIVE_ORDER.indexOf(questionId), [questionId]);
+  const total = BIG_FIVE_ORDER.length;
 
   useEffect(() => {
     titleRef.current?.focus();
@@ -155,15 +152,30 @@ export default function PretestQuestionScreen({ questionId }) {
 
   return (
     <main className="flex min-h-[100dvh] flex-col items-center justify-center p-4 animate-in fade-in duration-150">
+      {positionIndex !== -1 && (
+        <div
+          className="w-full max-w-lg mb-3 h-1.5 rounded-full bg-muted overflow-hidden"
+          role="progressbar"
+          aria-valuenow={Math.round((positionIndex / total) * 100)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`Pregunta ${positionIndex + 1} de ${total}`}
+        >
+          <div
+            className="h-full bg-primary transition-all duration-300"
+            style={{ width: `${(positionIndex / total) * 100}%` }}
+          />
+        </div>
+      )}
       <Card className="w-full max-w-lg">
         <CardHeader>
           <div className="flex items-start justify-between gap-3">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">
               Conceptos financieros
             </p>
-            {positionLabel && (
-              <span className="text-xs text-muted-foreground shrink-0">
-                {positionLabel}
+            {positionIndex !== -1 && (
+              <span className="text-xs text-muted-foreground shrink-0" aria-hidden="true">
+                {positionIndex + 1} / {total}
               </span>
             )}
           </div>
@@ -249,7 +261,7 @@ export default function PretestQuestionScreen({ questionId }) {
               : submitError
               ? MESSAGES.networkRetry
               : isLastQuestion
-              ? "Finalizar cuestionario"
+              ? "Listo, ir a la herramienta →"
               : "Confirmar respuesta"}
           </Button>
         </CardContent>

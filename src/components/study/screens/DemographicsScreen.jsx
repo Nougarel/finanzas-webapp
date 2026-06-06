@@ -66,7 +66,7 @@ export default function DemographicsScreen() {
     // Persistir en el contexto para que PretestQuestionScreen pueda armar
     // el payload final de pretest_responses en la última pregunta.
     setPretestAnswer(DEMOGRAPHICS_KEY, state);
-    goToStep("pretest_intro");
+    goToStep("pretest_literacy");
   };
 
   return (
@@ -123,20 +123,24 @@ export default function DemographicsScreen() {
               <legend className="text-sm font-medium">
                 {DEMOGRAPHICS.questions.gender.label}
               </legend>
-              <RadioGroup
-                value={state.gender}
-                onValueChange={(v) => setField("gender", v)}
-                className="flex flex-wrap gap-4"
-              >
+              <div className="flex flex-wrap gap-2" role="group">
                 {DEMOGRAPHICS.questions.gender.options.map((opt) => (
-                  <div key={opt.value} className="flex items-center gap-2 min-h-[44px]">
-                    <RadioGroupItem id={`gender-${opt.value}`} value={opt.value} />
-                    <Label htmlFor={`gender-${opt.value}`} className="cursor-pointer">
-                      {opt.label}
-                    </Label>
-                  </div>
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setField("gender", opt.value)}
+                    aria-pressed={state.gender === opt.value}
+                    className={[
+                      "px-3 py-1.5 rounded-full text-sm border transition-colors",
+                      state.gender === opt.value
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background text-foreground border-border hover:border-primary/50",
+                    ].join(" ")}
+                  >
+                    {opt.label}
+                  </button>
                 ))}
-              </RadioGroup>
+              </div>
               {errors.gender && (
                 <p className="text-xs text-destructive">{errors.gender}</p>
               )}
@@ -238,29 +242,24 @@ export default function DemographicsScreen() {
               <legend className="text-sm font-medium">
                 {DEMOGRAPHICS.questions.prior_financial_app_use.label}
               </legend>
-              <RadioGroup
-                value={
-                  state.prior_financial_app_use === true
-                    ? "true"
-                    : state.prior_financial_app_use === false
-                    ? "false"
-                    : ""
-                }
-                onValueChange={(v) => setField("prior_financial_app_use", v === "true")}
-                className="flex flex-wrap gap-4"
-              >
+              <div className="flex flex-wrap gap-2" role="group">
                 {DEMOGRAPHICS.questions.prior_financial_app_use.options.map((opt) => (
-                  <div key={String(opt.value)} className="flex items-center gap-2 min-h-[44px]">
-                    <RadioGroupItem
-                      id={`prior-${String(opt.value)}`}
-                      value={String(opt.value)}
-                    />
-                    <Label htmlFor={`prior-${String(opt.value)}`} className="cursor-pointer">
-                      {opt.label}
-                    </Label>
-                  </div>
+                  <button
+                    key={String(opt.value)}
+                    type="button"
+                    onClick={() => setField("prior_financial_app_use", opt.value)}
+                    aria-pressed={state.prior_financial_app_use === opt.value}
+                    className={[
+                      "px-3 py-1.5 rounded-full text-sm border transition-colors",
+                      state.prior_financial_app_use === opt.value
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background text-foreground border-border hover:border-primary/50",
+                    ].join(" ")}
+                  >
+                    {opt.label}
+                  </button>
                 ))}
-              </RadioGroup>
+              </div>
               {errors.prior_financial_app_use && (
                 <p className="text-xs text-destructive">{errors.prior_financial_app_use}</p>
               )}

@@ -9,7 +9,7 @@
  *   3. Posttest (POSTTEST_STEPS): single-route /study/posttest con state interno
  */
 
-import { PRE_APP_STEPS, POSTTEST_STEPS, MIN_FLOWS_TO_FINISH } from "./studyConfig";
+import { PRE_APP_STEPS, POSTTEST_STEPS, minFlowsForCohort } from "./studyConfig";
 
 /**
  * Siguiente step en el funnel pre-app, o null si es el último.
@@ -35,14 +35,15 @@ export function nextPosttestStep(currentStep) {
  *
  * Escala:
  *   - Pre-app  → 0-40%
- *   - App      → 40-70% (proporcional a flujos: 0/3 = 40, 1/3 = 50, 2/3 = 60, 3/3 = 70)
+ *   - App      → 40-70% (proporcional a flujos sobre minFlowsForCohort(cohort))
  *   - Posttest → 70-100%
  *
  * @param {string} currentStep - id del step actual (puede ser de pre-app, "app" o posttest)
  * @param {{direct:boolean, inverse:boolean, diagnosis:boolean}} completedFlows
+ * @param {string} cohort - cohorte de estudio que determina el mínimo de flujos
  * @returns {number} 0-100
  */
-export function progressOf(currentStep, completedFlows) {
+export function progressOf(currentStep, completedFlows, cohort) {
   // Tramo pre-app: progreso lineal 0-40 según índice en PRE_APP_STEPS.
   const preIdx = PRE_APP_STEPS.indexOf(currentStep);
   if (preIdx !== -1) {
@@ -59,10 +60,12 @@ export function progressOf(currentStep, completedFlows) {
     return Math.round(70 + (postIdx / (n - 1)) * 30);
   }
 
-  // Tramo app: 40 + 10 puntos por flujo completado.
+  // Tramo app: 40-70 proporcional a flujos completados sobre el mínimo de la cohorte.
   if (currentStep === "app" || isAppPhase(currentStep)) {
     const done = countCompletedFlows(completedFlows);
-    return 40 + done * 10;
+    const minFlows = minFlowsForCohort(cohort);
+    const ratio = minFlows > 0 ? Math.min(done / minFlows, 1) : 1;
+    return Math.round(40 + ratio * 30);
   }
 
   return 0;
@@ -91,6 +94,6 @@ export function countCompletedFlows(completedFlows) {
 /**
  * ¿Se cumple la condición para habilitar "He terminado"?
  */
-export function canFinishApp(completedFlows) {
-  return countCompletedFlows(completedFlows) >= MIN_FLOWS_TO_FINISH;
+export function canFinishApp(completedFlows, cohort) {
+  return countCompletedFlows(completedFlows) >= minFlowsForCohort(cohort);
 }

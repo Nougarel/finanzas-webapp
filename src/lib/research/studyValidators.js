@@ -135,6 +135,16 @@ export function validateQualitative(positive, improvement) {
 }
 
 /**
+ * Literacia financiera autopercibida: selección entre 4 niveles (1-4).
+ */
+export function validateFinancialLiteracyLevel(level) {
+  if (![1, 2, 3, 4].includes(level)) {
+    return { valid: false, error: "Selecciona una opción" };
+  }
+  return { valid: true, error: null };
+}
+
+/**
  * Helper para derivar el booleano "correcto" en una respuesta single de Big Five.
  * Devuelve false si la pregunta es numérica o no existe.
  */

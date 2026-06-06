@@ -22,6 +22,9 @@ import {
 } from "lucide-react";
 import { PROFILE_COPY } from "@/lib/copy/profileCopy";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
+import { useStudyContextOptional } from "@/lib/research/useStudyContext";
+import { mapDemographicAgeToProfile } from "@/lib/research/demographicsMapping";
+import { DEMOGRAPHICS_KEY } from "@/lib/research/studyConfig";
 
 // ─── Preguntas y opciones por sección ───────────────────────────────────────
 // Cada pregunta: { field, helpText?, optional?, modes?, options: [{ value, label, subtext?, Icon }] }
@@ -304,10 +307,16 @@ function ProfileForm() {
   // currentStep: 0-3 → secciones del cuestionario, 4 → pantalla de resumen
   const [currentStep, setCurrentStep] = useState(0);
 
+  // Prefill silencioso desde datos demográficos del estudio (si estamos en el funnel).
+  const study = useStudyContextOptional();
+  const prefilledAge = study
+    ? mapDemographicAgeToProfile(study.pretestAnswers?.[DEMOGRAPHICS_KEY]?.age_range)
+    : null;
+
   const [profileData, setProfileData] = useState({
     // Sección 0 — Sobre ti
     employmentStatus:    null, // 'permanent' | 'temporary' | 'freelance' | 'unemployed'
-    ageRange:            null, // 'under35' | '35to50' | 'over50'
+    ageRange:            prefilledAge, // 'under35' | '35to50' | 'over50'
     dependents:          null, // 0 | 1 | 2 | 3 | 4 | 5
     hasPartner:          null, // true | false — visible si dependents > 0
     partnerHasIncome:    null, // true | false — visible si dependents > 0

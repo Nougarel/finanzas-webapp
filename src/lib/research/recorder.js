@@ -52,10 +52,17 @@ function mapSupabaseError(error) {
 
 /**
  * Inserta una fila en pretest_responses.
+ *
+ * El payload se construye por spread de `data` (recorder agnóstico al contenido):
+ * la pantalla de pretest debe incluir `financial_literacy_level` (1-4) en `data`
+ * para que llegue al upsert. Las columnas big_three_q1/q2/q3 ya no se rellenan
+ * (se conservan nullable en la DB como datos históricos legacy).
+ *
  * @param {object} client - cliente Supabase con auth activa
  * @param {string} sessionId - UUID de la sesión asociada
  * @param {object} data - { age_range, gender, education_level, employment_status,
- *                          big_three_q1, big_three_q2, big_three_q3, extra_responses }
+ *                          household_composition, prior_financial_app_use,
+ *                          financial_literacy_level, extra_responses }
  */
 export async function submitPretest(client, sessionId, data) {
   if (!isNonEmptyString(sessionId)) {

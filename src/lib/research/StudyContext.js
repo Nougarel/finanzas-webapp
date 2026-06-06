@@ -116,8 +116,8 @@ export function StudyProvider({ children, cohort = DEFAULT_COHORT }) {
   // ─── Valor del contexto ───────────────────────────────────────────────────
 
   const value = useMemo(() => {
-    const canFinish = canFinishApp(completedFlows);
-    const progressPct = progressOf(currentStep, completedFlows);
+    const canFinish = canFinishApp(completedFlows, cohort);
+    const progressPct = progressOf(currentStep, completedFlows, cohort);
     return {
       // Identidad de sesión.
       sessionId,
