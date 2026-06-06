@@ -1,4 +1,4 @@
-# CLAUDE.md — finanzas-webapp
+# CLAUDE.md — flouss
 
 ## Qué es este proyecto
 
@@ -179,5 +179,5 @@ curl -s -X POST http://localhost:3000/api/calculate-inverse \
 ## Contexto profundo
 
 Para decisiones de arquitectura, historial del proyecto o contexto de negocio más detallado, consultar el vault:
-- `KnowledgeBase/01-proyectos/personales/finanzas-webapp` — contexto del Proyecto Manhattan
+- `KnowledgeBase/01-proyectos/personales/flouss` — contexto del Proyecto Manhattan
 - `KnowledgeBase/03-conocimiento/tech/` — decisiones técnicas y ADRs

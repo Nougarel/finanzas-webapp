@@ -323,7 +323,7 @@ def write_report():
     PIPE = chr(124)
     BSL = chr(92)
     with open(REPORT_PATH,"w",encoding="utf-8") as f:
-        f.write("# Reporte de testing funcional -- finanzas-webapp" + NL + NL)
+        f.write("# Reporte de testing funcional -- flouss" + NL + NL)
         f.write("Generado: " + datetime.now().isoformat(timespec="seconds") + NL + NL)
         f.write("Servidor: " + BASE_URL + NL + NL)
         f.write("## Resumen" + NL + NL)
