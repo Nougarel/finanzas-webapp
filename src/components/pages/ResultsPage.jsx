@@ -21,6 +21,7 @@ import { useStudyContextOptional } from "@/lib/research/useStudyContext";
 import { useStudyAwareRouter, useStudyAwareHref } from "@/lib/research/useStudyAwareRouter";
 import { useMounted } from "@/lib/hooks/useMounted";
 import { cn } from "@/lib/utils";
+import { CalculationLoader } from "@/components/ui/calculation-loader";
 
 const BLOCK_ORDER = ["needs", "wants", "savings"];
 
@@ -124,6 +125,8 @@ function ResultsContent() {
     if (typeof window === "undefined") return false;
     return !!localStorage.getItem(STORAGE_KEYS.profileCurrent);
   });
+  const [showLoader, setShowLoader] = useState(true);
+  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
   const [calcError, setCalcError] = useState(null);
   const [insolvencyError, setInsolvencyError] = useState(false);
 
@@ -152,6 +155,17 @@ function ResultsContent() {
       study.notifyCalculation("direct", profile, { income }, result);
     }
   }, [study, result, profile, income]);
+
+  // Timer mínimo del loader narrativo: activa minTimeElapsed a los 2000ms.
+  useEffect(() => {
+    const t = setTimeout(() => setMinTimeElapsed(true), 2000);
+    return () => clearTimeout(t);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Dismiss del loader: cuando el tiempo mínimo Y la API han terminado.
+  useEffect(() => {
+    if (minTimeElapsed && !loading) setShowLoader(false);
+  }, [minTimeElapsed, loading]);
 
   useEffect(() => {
     if (!profile || !income || isNaN(income) || income <= 0) return;
@@ -286,11 +300,12 @@ function ResultsContent() {
     );
   }
 
-  if (loading || (!result && !calcError && !insolvencyError)) {
+  if (showLoader) {
     return (
-      <main className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground">Calculando tu distribución...</p>
-      </main>
+      <CalculationLoader
+        flow="direct"
+        isApiDone={!loading}
+      />
     );
   }
 

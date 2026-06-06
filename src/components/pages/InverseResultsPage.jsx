@@ -19,6 +19,7 @@ import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useStudyContextOptional } from "@/lib/research/useStudyContext";
 import { useStudyAwareRouter, useStudyAwareHref } from "@/lib/research/useStudyAwareRouter";
 import CoherenceWarningScreen from "@/components/pages/CoherenceWarningScreen";
+import { CalculationLoader } from "@/components/ui/calculation-loader";
 import { useMounted } from "@/lib/hooks/useMounted";
 import { cn } from "@/lib/utils";
 
@@ -56,6 +57,8 @@ export default function InverseResultsPage() {
     if (typeof window === "undefined") return false;
     return !!localStorage.getItem(STORAGE_KEYS.specifiedAmounts);
   });
+  const [showLoader, setShowLoader] = useState(true);
+  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
   const [result,    setResult]    = useState(null);
   const [calcError, setCalcError] = useState(null);
   const [coherenceOutliers, setCoherenceOutliers] = useState(null);
@@ -146,6 +149,19 @@ export default function InverseResultsPage() {
         .finally(() => setLoading(false));
     });
   }, []);
+
+  // Timer mínimo del loader narrativo: activa minTimeElapsed a los 2000ms.
+  // Solo controla la primera carga — si runCalculation se relanza (force=true),
+  // showLoader ya es false y el usuario ve el estado normal de recarga.
+  useEffect(() => {
+    const t = setTimeout(() => setMinTimeElapsed(true), 2000);
+    return () => clearTimeout(t);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Dismiss del loader: cuando el tiempo mínimo Y la API han terminado.
+  useEffect(() => {
+    if (minTimeElapsed && !loading) setShowLoader(false);
+  }, [minTimeElapsed, loading]);
 
   useEffect(() => {
     runCalculation(false);
@@ -241,11 +257,12 @@ export default function InverseResultsPage() {
   if (amountsMissing) {
     return <ErrorCard title="Sin datos" message="No se han recibido importes." onBack={() => router.push("/inverse-calculator")} />;
   }
-  if (loading) {
+  if (showLoader) {
     return (
-      <main className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground">Calculando ingreso mínimo...</p>
-      </main>
+      <CalculationLoader
+        flow="inverse"
+        isApiDone={!loading}
+      />
     );
   }
   if (coherenceOutliers && coherenceOutliers.length > 0) {
