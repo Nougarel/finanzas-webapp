@@ -223,23 +223,23 @@ export const FINANCIAL_LITERACY = Object.freeze({
   options: Object.freeze([
     {
       value: 1,
-      label: "Estoy empezando",
-      description: "No he tenido formación específica en finanzas. Términos como inflación, interés compuesto o diversificación me resultan poco familiares.",
+      label: "Básico",
+      description: "No he tenido formación en finanzas, pero entiendo conceptos básicos como que hay que ahorrar o qué es un préstamo.",
     },
     {
       value: 2,
-      label: "Me defiendo con lo básico",
-      description: "Entiendo ideas como que la inflación reduce lo que puedo comprar con el tiempo, pero no me siento seguro con productos como bonos, hipotecas o inversiones.",
+      label: "Me defiendo",
+      description: "Entiendo conceptos como la inflación o los tipos de interés, y sé cómo afectan a mi dinero en el día a día.",
     },
     {
       value: 3,
-      label: "Tengo una base sólida",
-      description: "Manejo con soltura el interés compuesto y la diversificación del riesgo, y entiendo cómo funcionan a grandes rasgos los préstamos y las inversiones.",
+      label: "Con base sólida",
+      description: "Gestiono activamente mis finanzas y entiendo productos como fondos de inversión o planes de pensiones, o conceptos como la diversificación del riesgo.",
     },
     {
       value: 4,
       label: "Me muevo con seguridad",
-      description: "Comprendo conceptos avanzados como la relación entre los tipos de interés y el precio de los bonos, o el coste total de una hipoteca según su plazo.",
+      description: "Me muevo con soltura entre productos financieros complejos — bonos, hipotecas, carteras diversificadas — y los gestiono activamente como parte de mi estrategia financiera.",
     },
   ]),
 });
