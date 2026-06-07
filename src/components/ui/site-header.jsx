@@ -39,7 +39,8 @@ export default function SiteHeader() {
   const pathname = usePathname();
 
   // El funnel /study/* tiene su propio layout (StudyBar) — ocultar este header
-  if (pathname?.startsWith("/study")) return null;
+  // Las rutas /dev/* son pantallas de desarrollo a pantalla completa — ocultar también
+  if (pathname?.startsWith("/study") || pathname?.startsWith("/dev")) return null;
 
   return (
     <header

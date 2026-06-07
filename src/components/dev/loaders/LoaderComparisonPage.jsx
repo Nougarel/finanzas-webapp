@@ -35,6 +35,11 @@ export default function LoaderComparisonPage() {
           <p className="text-sm text-muted-foreground mt-1">
             Ruta de desarrollo — {LOADER_VARIANTS.length} variantes en paralelo
           </p>
+          <div className="flex gap-3 flex-wrap text-sm mt-2">
+            <a href="/dev/loaders/barras" className="text-primary hover:underline">→ Barras</a>
+            <a href="/dev/loaders/wireframe" className="text-primary hover:underline">→ Wireframe</a>
+            <a href="/dev/loaders/radar" className="text-primary hover:underline">→ Radar</a>
+          </div>
         </div>
 
         {/* Controles globales */}
