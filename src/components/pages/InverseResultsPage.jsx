@@ -150,11 +150,11 @@ export default function InverseResultsPage() {
     });
   }, []);
 
-  // Timer mínimo del loader narrativo: activa minTimeElapsed a los 2000ms.
+  // Timer mínimo del loader narrativo: activa minTimeElapsed a los 4000ms.
   // Solo controla la primera carga — si runCalculation se relanza (force=true),
   // showLoader ya es false y el usuario ve el estado normal de recarga.
   useEffect(() => {
-    const t = setTimeout(() => setMinTimeElapsed(true), 2000);
+    const t = setTimeout(() => setMinTimeElapsed(true), 7000);
     return () => clearTimeout(t);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

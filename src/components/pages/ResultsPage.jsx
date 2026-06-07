@@ -156,9 +156,9 @@ function ResultsContent() {
     }
   }, [study, result, profile, income]);
 
-  // Timer mínimo del loader narrativo: activa minTimeElapsed a los 2000ms.
+  // Timer mínimo del loader narrativo: activa minTimeElapsed a los 7000ms.
   useEffect(() => {
-    const t = setTimeout(() => setMinTimeElapsed(true), 2000);
+    const t = setTimeout(() => setMinTimeElapsed(true), 7000);
     return () => clearTimeout(t);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

@@ -39,6 +39,7 @@ export default function LoaderComparisonPage() {
             <a href="/dev/loaders/barras" className="text-primary hover:underline">→ Barras</a>
             <a href="/dev/loaders/wireframe" className="text-primary hover:underline">→ Wireframe</a>
             <a href="/dev/loaders/radar" className="text-primary hover:underline">→ Radar</a>
+            <a href="/dev/loaders/polytope" className="text-primary hover:underline">→ Politopos</a>
           </div>
         </div>
 
