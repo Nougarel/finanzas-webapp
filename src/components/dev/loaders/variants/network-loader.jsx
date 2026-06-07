@@ -183,15 +183,15 @@ export function NetworkLoader({ flow, progress, phase, isApiDone, size = 240 }) 
           let stroke, strokeOpacity, strokeWidth;
 
           if (bothActive) {
-            stroke = "hsl(var(--primary))";
+            stroke = "var(--primary)";
             strokeOpacity = isDone ? 0.55 : isConverging ? 0.45 : 0.35;
             strokeWidth = isDone ? 1.2 : 0.9;
           } else if (eitherActive) {
-            stroke = "hsl(var(--muted-foreground))";
+            stroke = "var(--muted-foreground)";
             strokeOpacity = 0.25;
             strokeWidth = 0.7;
           } else {
-            stroke = "hsl(var(--border))";
+            stroke = "var(--border)";
             strokeOpacity = 0.3;
             strokeWidth = 0.6;
           }
@@ -221,13 +221,13 @@ export function NetworkLoader({ flow, progress, phase, isApiDone, size = 240 }) 
 
           if (isPulsing) {
             // Nodo actualmente siendo calculado: pulsa con keyframe CSS
-            fill = "hsl(var(--primary))";
+            fill = "var(--primary)";
             opacity = 0.9;
             r = nodeR;
             style = { animation: "nw-pulse 0.9s ease-in-out infinite" };
           } else if (isDoneNode) {
             // Fase done: todos los activos pulsan suavemente
-            fill = "hsl(var(--primary))";
+            fill = "var(--primary)";
             opacity = 1;
             r = nodeRDone;
             style = {
@@ -236,13 +236,13 @@ export function NetworkLoader({ flow, progress, phase, isApiDone, size = 240 }) 
             };
           } else if (isActive) {
             // Nodo iluminado (ya calculado): primary fijo
-            fill = "hsl(var(--primary))";
+            fill = "var(--primary)";
             opacity = isConverging ? 0.85 : 0.75;
             r = nodeR;
             style = {};
           } else {
             // Nodo inactivo: muted-foreground tenue
-            fill = "hsl(var(--muted-foreground))";
+            fill = "var(--muted-foreground)";
             opacity = 0.25;
             r = nodeR * 0.7;
             style = {};
@@ -268,7 +268,7 @@ export function NetworkLoader({ flow, progress, phase, isApiDone, size = 240 }) 
             cy={nodes[pulsingNodeId].y.toFixed(2)}
             r={nodeR * 2.2}
             fill="none"
-            stroke="hsl(var(--primary))"
+            stroke="var(--primary)"
             strokeWidth="0.8"
             opacity="0.2"
             style={{ animation: "nw-pulse 0.9s ease-in-out infinite" }}
@@ -280,7 +280,7 @@ export function NetworkLoader({ flow, progress, phase, isApiDone, size = 240 }) 
           cx={cx.toFixed(2)}
           cy={cy.toFixed(2)}
           r={Math.max(2, size * 0.015)}
-          fill={isDone ? "hsl(var(--primary))" : "hsl(var(--border))"}
+          fill={isDone ? "var(--primary)" : "var(--border)"}
           opacity={isDone ? 0.8 : 0.5}
         />
       </svg>

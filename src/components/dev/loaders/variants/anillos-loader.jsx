@@ -43,11 +43,11 @@ export function AnillosLoader({ flow, progress, phase, isApiDone, size = 240 }) 
 
   // Color del anillo según fase
   function getRingColor(ringIndex) {
-    if (phase === "done") return "hsl(var(--primary))";
+    if (phase === "done") return "var(--primary)";
     // Alternar entre primary y muted-foreground según índice y progreso
     const fadeIn = Math.max(0, (progress * rings.length) - ringIndex);
-    if (fadeIn >= 1) return "hsl(var(--primary))";
-    return "hsl(var(--muted-foreground))";
+    if (fadeIn >= 1) return "var(--primary)";
+    return "var(--muted-foreground)";
   }
 
   // Opacidad base del anillo según posición (exterior más tenue)
@@ -163,8 +163,8 @@ export function AnillosLoader({ flow, progress, phase, isApiDone, size = 240 }) 
           height: nodeSize,
           borderRadius: "50%",
           background: phase === "done"
-            ? "hsl(var(--primary))"
-            : "hsl(var(--muted-foreground))",
+            ? "var(--primary)"
+            : "var(--muted-foreground)",
           animation: phase === "done"
             ? `${uid}-pulse-done 2s ease-in-out infinite`
             : `${uid}-pulse 1.4s ease-in-out infinite`,

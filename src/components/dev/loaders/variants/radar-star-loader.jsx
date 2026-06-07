@@ -106,21 +106,21 @@ export function RadarStarLoader({ flow, progress, phase, isApiDone, size = 240 }
 
         // Color y relleno según fase
         if (currentPhase === "calculating") {
-          valuePolyEl.setAttribute("fill", "hsl(var(--primary) / 0.15)");
-          valuePolyEl.setAttribute("stroke", "hsl(var(--muted-foreground) / 0.6)");
+          valuePolyEl.setAttribute("fill", "color-mix(in oklch, var(--primary) 15%, transparent)");
+          valuePolyEl.setAttribute("stroke", "color-mix(in oklch, var(--muted-foreground) 60%, transparent)");
           valuePolyEl.setAttribute("stroke-width", "1.5");
         } else if (currentPhase === "converging") {
           // Transición progresiva hacia primary
           const cp = Math.min((currentProgress - 0.6) / 0.35, 1);
-          const fillAlpha = (0.15 + cp * 0.10).toFixed(2);
-          const strokeAlpha = (0.6 + cp * 0.4).toFixed(2);
-          valuePolyEl.setAttribute("fill", `hsl(var(--primary) / ${fillAlpha})`);
-          valuePolyEl.setAttribute("stroke", `hsl(var(--primary) / ${strokeAlpha})`);
+          const fillPct = Math.round((15 + cp * 10));
+          const strokePct = Math.round((60 + cp * 40));
+          valuePolyEl.setAttribute("fill", `color-mix(in oklch, var(--primary) ${fillPct}%, transparent)`);
+          valuePolyEl.setAttribute("stroke", `color-mix(in oklch, var(--primary) ${strokePct}%, transparent)`);
           valuePolyEl.setAttribute("stroke-width", String(1.5 + cp * 0.5));
         } else {
           // "done"
-          valuePolyEl.setAttribute("fill", "hsl(var(--primary) / 0.3)");
-          valuePolyEl.setAttribute("stroke", "hsl(var(--primary))");
+          valuePolyEl.setAttribute("fill", "color-mix(in oklch, var(--primary) 30%, transparent)");
+          valuePolyEl.setAttribute("stroke", "var(--primary)");
           valuePolyEl.setAttribute("stroke-width", "2");
         }
       }
@@ -174,7 +174,7 @@ export function RadarStarLoader({ flow, progress, phase, isApiDone, size = 240 }
             key={fraction}
             points={gridPolygon(CENTER, MAX_R, fraction)}
             fill="none"
-            stroke="hsl(var(--border))"
+            stroke="var(--border)"
             strokeWidth={fraction === 1 ? "1" : "0.75"}
             opacity={fraction === 1 ? "0.6" : "0.4"}
           />
@@ -190,7 +190,7 @@ export function RadarStarLoader({ flow, progress, phase, isApiDone, size = 240 }
               y1={CENTER}
               x2={outer.x.toFixed(2)}
               y2={outer.y.toFixed(2)}
-              stroke="hsl(var(--border))"
+              stroke="var(--border)"
               strokeWidth="0.75"
               opacity="0.5"
             />
@@ -201,8 +201,8 @@ export function RadarStarLoader({ flow, progress, phase, isApiDone, size = 240 }
         <polygon
           data-value-poly
           points={initialPoints}
-          fill="hsl(var(--primary) / 0.15)"
-          stroke="hsl(var(--muted-foreground) / 0.6)"
+          fill="color-mix(in oklch, var(--primary) 15%, transparent)"
+          stroke="color-mix(in oklch, var(--muted-foreground) 60%, transparent)"
           strokeWidth="1.5"
           strokeLinejoin="round"
         />
@@ -217,7 +217,7 @@ export function RadarStarLoader({ flow, progress, phase, isApiDone, size = 240 }
               cx={p.x.toFixed(2)}
               cy={p.y.toFixed(2)}
               r={dotRadius}
-              fill="hsl(var(--primary))"
+              fill="var(--primary)"
               opacity="0"
             />
           );
@@ -228,7 +228,7 @@ export function RadarStarLoader({ flow, progress, phase, isApiDone, size = 240 }
           cx={CENTER}
           cy={CENTER}
           r={centerRadius}
-          fill="hsl(var(--primary))"
+          fill="var(--primary)"
           opacity="0.5"
         />
       </svg>

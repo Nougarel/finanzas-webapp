@@ -102,7 +102,7 @@ export function BarrasLoader({ flow, progress, phase, isApiDone, size = 240 }) {
 
         // Color según fase
         if (currentPhase === "done") {
-          rect.setAttribute("fill", "hsl(var(--primary))");
+          rect.setAttribute("fill", "var(--primary)");
           rect.setAttribute("opacity", "1");
         } else if (currentPhase === "converging") {
           // Transición de muted-foreground/40 a primary según convergingProgress
@@ -111,14 +111,14 @@ export function BarrasLoader({ flow, progress, phase, isApiDone, size = 240 }) {
             1
           );
           if (convergingProgress > 0.5) {
-            rect.setAttribute("fill", "hsl(var(--primary))");
+            rect.setAttribute("fill", "var(--primary)");
             rect.setAttribute("opacity", String(0.6 + convergingProgress * 0.4));
           } else {
-            rect.setAttribute("fill", "hsl(var(--muted-foreground))");
+            rect.setAttribute("fill", "var(--muted-foreground)");
             rect.setAttribute("opacity", "0.45");
           }
         } else {
-          rect.setAttribute("fill", "hsl(var(--muted-foreground))");
+          rect.setAttribute("fill", "var(--muted-foreground)");
           rect.setAttribute("opacity", "0.4");
         }
       });
@@ -167,7 +167,7 @@ export function BarrasLoader({ flow, progress, phase, isApiDone, size = 240 }) {
               width={Math.round(barWidth)}
               height={0}
               rx={Math.max(1, Math.round(barWidth * 0.18))}
-              fill="hsl(var(--muted-foreground))"
+              fill="var(--muted-foreground)"
               opacity="0.4"
             />
           );
