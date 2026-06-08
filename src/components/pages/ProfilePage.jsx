@@ -22,6 +22,7 @@ import {
   Building2, MapPin, Leaf,
   Bus, Car, CreditCard, RotateCcw,
   Shield, ShieldCheck, ShieldPlus,
+  Pencil,
   BookOpen, GraduationCap, School,
   AlertCircle, CheckCircle2, Sparkles,
   X, TrendingDown, Minus,
@@ -824,18 +825,17 @@ function ProfileForm() {
         </p>
       </div>
 
-      {/* Tarjeta de perfil — 4 bloques con dividers */}
-      <div className="max-w-2xl mx-auto bg-card border border-border rounded-xl card-elevated overflow-hidden">
+      {/* Tarjeta de perfil — 4 bloques con dividers, alineada con el título */}
+      <div className="bg-card border border-border rounded-xl card-elevated overflow-hidden">
         {SUMMARY_SECTIONS.map(({ sectionIndex, fields }, idx) => {
           const rows = buildSectionRows(sectionIndex, fields);
           const SectionIcon = SECTION_ICONS[sectionIndex];
           return (
             <div key={sectionIndex}>
-              {/* Divider entre bloques (no antes del primero) */}
               {idx > 0 && <div className="border-t border-border/60" />}
 
               <div className="px-6 py-4">
-                {/* Cabecera de sección: icono + meta-label + botón editar */}
+                {/* Cabecera de sección: icono + meta-label + botón editar con lapiz */}
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <SectionIcon size={14} className="text-primary shrink-0" aria-hidden />
@@ -846,33 +846,27 @@ function ProfileForm() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-6 text-xs px-2 transition-colors duration-200"
+                    className="h-6 text-xs px-2 gap-1 transition-colors duration-200"
                     onClick={() => { setCurrentStep(sectionIndex); window.scrollTo({ top: 0, behavior: "instant" }); }}
                   >
+                    <Pencil size={11} aria-hidden />
                     Editar
                   </Button>
                 </div>
 
-                {/* Pills de respuestas — coloreados por sección */}
+                {/* Pills de respuestas — color uniforme */}
                 {rows.length === 0 ? (
                   <p className="text-xs text-muted-foreground italic">Sin datos</p>
                 ) : (
                   <div className="flex flex-wrap gap-2">
-                    {rows.map((row, rowIdx) => {
-                      const pillClass =
-                        sectionIndex === 0 ? "bg-primary/10 text-primary" :
-                        sectionIndex === 1 ? "bg-chart-2/15 text-chart-2" :
-                        sectionIndex === 2 ? "bg-chart-3/15 text-chart-3" :
-                                             "bg-chart-1/10 text-chart-1";
-                      return (
-                        <span
-                          key={rowIdx}
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${pillClass}`}
-                        >
-                          {row.label}
-                        </span>
-                      );
-                    })}
+                    {rows.map((row, rowIdx) => (
+                      <span
+                        key={rowIdx}
+                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary"
+                      >
+                        {row.label}
+                      </span>
+                    ))}
                   </div>
                 )}
               </div>
