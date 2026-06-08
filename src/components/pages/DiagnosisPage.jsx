@@ -4,7 +4,7 @@ import { useState, useEffect, useLayoutEffect, useCallback, Suspense, useRef, us
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CollapsibleHint } from "@/components/ui/collapsible-hint";
-import { Check, ArrowUp, ArrowDown, AlertCircle, Info } from "lucide-react";
+import { Check, ArrowUp, ArrowDown, AlertCircle, Info, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
@@ -410,6 +410,18 @@ function DiagnosisContent() {
             </Button>
           </CardContent>
         </Card>
+      </main>
+    );
+  }
+
+  // Guard: esperando respuesta de la API — diagnosis aun no está disponible
+  if (loading || !diagnosis) {
+    return (
+      <main className="flex min-h-screen items-center justify-center">
+        <div className="flex flex-col items-center justify-center h-64 gap-3">
+          <Loader2 className="animate-spin text-muted-foreground" size={32} />
+          <p className="text-sm text-muted-foreground font-light">Calculando diagnóstico...</p>
+        </div>
       </main>
     );
   }

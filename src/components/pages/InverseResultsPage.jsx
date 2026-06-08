@@ -386,7 +386,7 @@ export default function InverseResultsPage() {
           </Tooltip>
         </TooltipProvider>
       ),
-      className: "text-right",
+      className: "text-right whitespace-nowrap",
       render: (val) => <MoneyValue amount={val} size="table" />,
     },
     {
@@ -406,7 +406,7 @@ export default function InverseResultsPage() {
           </Tooltip>
         </TooltipProvider>
       ),
-      className: "text-right",
+      className: "text-right whitespace-nowrap",
       render: (val, row) => {
         // null para wants — no tienen target de perfil independiente
         if (val == null) {
@@ -432,12 +432,12 @@ export default function InverseResultsPage() {
               </span>
             </TooltipTrigger>
             <TooltipContent className="max-w-xs text-xs">
-              Gasto medio de un hogar español similar según la Encuesta de Presupuestos Familiares del INE
+              Gasto promedio español basado sobre el ingreso calculado
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
       ),
-      className: "text-right",
+      className: "text-right whitespace-nowrap",
       render: (val, row) => {
         // null para savings — sin referencia INE
         if (val == null) {
@@ -463,12 +463,12 @@ export default function InverseResultsPage() {
               </span>
             </TooltipTrigger>
             <TooltipContent className="max-w-xs text-xs">
-              Especificado menos Recomendado. Positivo: gastas o ahorras más de lo recomendado. Negativo: menos.
+              Diferencia entre gasto especificado y gasto recomendado
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
       ),
-      className: "text-right",
+      className: "text-right whitespace-nowrap",
       render: (diff) => {
         if (diff === 0) {
           return (

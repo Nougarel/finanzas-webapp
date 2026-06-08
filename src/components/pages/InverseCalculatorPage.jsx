@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown, ChevronUp, UserX, Target } from "lucide-react";
+import { ChevronDown, ChevronUp, UserX } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
@@ -86,20 +85,6 @@ export default function InverseCalculatorPage() {
     } catch { return null; }
   });
   const profileMissing = profile === null;
-
-  // Disclaimer modal — aparece solo la primera vez (flag en localStorage)
-  const [showDisclaimer, setShowDisclaimer] = useState(false);
-  useEffect(() => {
-    const seen = localStorage.getItem("inverse_disclaimer_seen");
-    if (!seen) {
-      const t = setTimeout(() => setShowDisclaimer(true), 400);
-      return () => clearTimeout(t);
-    }
-  }, []);
-  const handleDisclaimerClose = () => {
-    localStorage.setItem("inverse_disclaimer_seen", "true");
-    setShowDisclaimer(false);
-  };
 
   // touched: Set de categoryIds que el usuario ha escrito algo (incluso "0")
   // Inicializado desde localStorage si hay importes previos guardados
@@ -230,28 +215,6 @@ export default function InverseCalculatorPage() {
 
   return (
     <main className="flex flex-1 flex-col">
-      {/* Disclaimer modal — primera visita al calculador inverso */}
-      <Dialog open={showDisclaimer} onOpenChange={(open) => { if (!open) handleDisclaimerClose(); }}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <div className="flex justify-center mb-3">
-              <Target className="size-8 text-primary" aria-hidden />
-            </div>
-            <DialogTitle className="text-center text-xl font-bold">
-              Calcula tu ingreso ideal
-            </DialogTitle>
-            <DialogDescription className="text-center text-sm leading-relaxed mt-2">
-              Estás a punto de calcular el ingreso que necesitarías para sostener el estilo de vida que deseas. Rellena tu perfil pensando en cómo quieres vivir, no en cómo vives hoy. Si ya tienes pareja, hijos o una vivienda en mente, inclúyelos.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-center mt-4">
-            <Button onClick={handleDisclaimerClose} className="w-full">
-              Entendido, continuar
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       <PageShell variant="profile">
         <div className="space-y-6">
 

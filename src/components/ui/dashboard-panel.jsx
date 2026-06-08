@@ -43,6 +43,7 @@
  */
 
 import { useMemo } from "react";
+import { HelpCircle } from "lucide-react";
 import { MacroPiechart } from "./macro-piechart";
 import { BlockBudgetBars } from "./block-budget-bars";
 import { IndicatorCard } from "./indicator-card";
@@ -310,20 +311,18 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
           Distribución próxima al modelo{" "}
           <TooltipProvider>
             <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="font-medium text-foreground underline decoration-dotted cursor-help">
+              <span className="inline-flex items-center gap-1 align-middle">
+                <span className="font-medium text-foreground">
                   {dataset.modelClosest.label}
                 </span>
-              </TooltipTrigger>
+                <TooltipTrigger asChild>
+                  <button type="button" className="inline-flex items-center text-muted-foreground/50 hover:text-muted-foreground transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded-sm" aria-label="Información sobre el modelo">
+                    <HelpCircle size={12} aria-hidden />
+                  </button>
+                </TooltipTrigger>
+              </span>
               <TooltipContent className="max-w-xs text-xs" side="bottom">
-                <p className="font-semibold mb-1">{dataset.modelClosest.label}</p>
-                <p>Propuesto por Elizabeth Warren en &ldquo;All Your Worth&rdquo; (2005). Sugiere distribuir el ingreso neto en:</p>
-                <ul className="mt-1 space-y-0.5 list-disc pl-3">
-                  <li>50% Necesidades (vivienda, alimentacion, suministros...)</li>
-                  <li>30% Deseos (ocio, restaurantes, suscripciones...)</li>
-                  <li>20% Ahorro e inversion</li>
-                </ul>
-                <p className="mt-1">flouss adapta estos porcentajes a tu perfil especifico.</p>
+                <p>Modelo de distribución financiera</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
