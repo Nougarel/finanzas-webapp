@@ -3,7 +3,7 @@
 import { useState, useEffect, useLayoutEffect, useCallback, Suspense, useRef, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Pencil, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
@@ -104,8 +104,7 @@ function buildCategoryColumns(result, blockKey, formatPct) {
 
 function ResultsContent() {
   const router = useStudyAwareRouter();
-  const calculatorHref    = useStudyAwareHref("/calculator");
-  const diagnosisFormHref = useStudyAwareHref("/diagnosis-form");
+  const calculatorHref = useStudyAwareHref("/calculator");
   const searchParams = useSearchParams();
   const mounted = useMounted();
 
@@ -132,6 +131,16 @@ function ResultsContent() {
 
   const incomeParam = searchParams.get("income");
   const income = parseFloat(incomeParam);
+
+  // Refs para el count-up animado del ingreso en el hero
+  const incomeElRef   = useRef(null);
+  const incomeAnimRef = useRef(null);
+
+  // Refs para el pill animado del segmented control (Mejora 1)
+  const tabContainerRef = useRef(null);
+  const tabDetailedRef  = useRef(null);
+  const tabMacroRef     = useRef(null);
+  const pillRef         = useRef(null);
 
   // Refs para alineación dinámica col 2 con el banner navy (Fix M37).
   // bannerRef      → div navy de ingreso en col 1.
@@ -261,6 +270,52 @@ function ResultsContent() {
     return () => window.removeEventListener("resize", recalcCol2Alignment);
   }, [recalcCol2Alignment]);
 
+  // Count-up animado del ingreso en el hero — sincronizado con el fade del banner (Mejora 3).
+  // delay 80ms: el número empieza a contar cuando el banner ya es visible.
+  // duration 420ms: termina cuando el fade-slide-up de 500ms del banner acaba.
+  useEffect(() => {
+    if (!income || isNaN(income) || income <= 0) return;
+    const delay    = 80;
+    const duration = 420;
+    let rafId;
+    const timeout = setTimeout(() => {
+      const start = performance.now();
+      function tick(now) {
+        const t      = Math.min((now - start) / duration, 1);
+        const eased  = 1 - (1 - t) * (1 - t); // easeOutQuad
+        const current = Math.round(eased * income);
+        if (incomeElRef.current)
+          incomeElRef.current.textContent = current.toLocaleString("es-ES") + " €";
+        if (t < 1) rafId = requestAnimationFrame(tick);
+      }
+      rafId = requestAnimationFrame(tick);
+    }, delay);
+    return () => { clearTimeout(timeout); cancelAnimationFrame(rafId); };
+  }, [income]);
+
+  // Posiciona el pill del segmented control en la tab activa (Mejora 1).
+  // useLayoutEffect garantiza que el pill esté posicionado antes del primer paint,
+  // evitando el flash de pill sin posición en el render inicial.
+  // getBoundingClientRect() en lugar de offsetLeft: la diferencia entre el left del
+  // botón y el left del contenedor da siempre la posición correcta relativa al
+  // contenedor, independientemente de la jerarquía de `position` de los ancestros.
+  // showLoader en deps: cuando el loader desaparece el toggle se monta por primera
+  // vez y los refs pasan de null a válidos — sin esta dep el effect no se re-ejecuta
+  // porque viewMode no cambia, y el pill queda con width 0 y sin posición.
+  useLayoutEffect(() => {
+    const activeRef = viewMode === "detailed" ? tabDetailedRef : tabMacroRef;
+    const el        = activeRef.current;
+    const pill      = pillRef.current;
+    const container = tabContainerRef.current;
+    if (!el || !pill || !container) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const elRect        = el.getBoundingClientRect();
+
+    pill.style.width     = `${elRect.width}px`;
+    pill.style.transform = `translateX(${elRect.left - containerRect.left}px)`;
+  }, [viewMode, showLoader]);
+
   if (!mounted) {
     return (
       <main className="flex min-h-screen items-center justify-center">
@@ -366,6 +421,7 @@ function ResultsContent() {
               profile={profile}
               mode="direct"
               onEdit={() => router.push("/profile")}
+              healthScore={result?.healthScore?.score ?? null}
             />
           </div>
         </aside>
@@ -378,12 +434,12 @@ function ResultsContent() {
           {(budgetAlert || debtAlert) && (
             <div className="space-y-2">
               {budgetAlert && (
-                <Alert variant={alertVariantFromLevel(budgetAlert.level)} size="sm">
+                <Alert variant={alertVariantFromLevel(budgetAlert.level)} size="sm" style={{ animation: "fade-in 300ms ease-out both" }}>
                   {budgetAlert.message}
                 </Alert>
               )}
               {debtAlert && (
-                <Alert variant={alertVariantFromLevel(debtAlert.level)} size="sm">
+                <Alert variant={alertVariantFromLevel(debtAlert.level)} size="sm" style={{ animation: "fade-in 300ms ease-out both" }}>
                   {debtAlert.message}
                 </Alert>
               )}
@@ -413,14 +469,16 @@ function ResultsContent() {
 
           {/* Ingreso mensual — hero invertido (navy) */}
           {/* bannerRef: referencia para calcular la alineación dinámica de col 2 */}
-          <div ref={bannerRef} className="relative rounded-2xl bg-primary px-6 py-8 space-y-3 transition-colors duration-200">
-            {/* Botón discreto "Cambiar ingreso" — esquina superior derecha del banner */}
+          <div ref={bannerRef} className="relative rounded-2xl bg-primary px-6 py-8 space-y-3 transition-colors duration-200" style={{ animation: "fade-slide-up 500ms ease-out both" }}>
+            {/* Botón icono "Cambiar ingreso" — esquina superior derecha del banner (Mejora 5) */}
             <button
               type="button"
               onClick={() => router.push("/calculator")}
-              className="absolute top-3 right-4 text-xs text-primary-foreground/70 hover:text-primary-foreground transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
+              className="absolute top-3 right-3 p-1.5 rounded-md text-primary-foreground/60 hover:text-primary-foreground hover:bg-white/10 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring cursor-pointer"
+              aria-label="Cambiar ingreso"
+              title="Cambiar ingreso"
             >
-              Cambiar ingreso →
+              <Pencil size={15} aria-hidden="true" />
             </button>
             {/* Label en blanco puro (sin opacity attenuation) — el /70 anterior
                 se percibía azul-grisáceo sobre el navy en lugar de blanco.
@@ -428,11 +486,16 @@ function ResultsContent() {
             <p className="mt-6 sm:mt-0 text-xs font-normal uppercase tracking-meta text-primary-foreground">
               Ingreso mensual neto de referencia
             </p>
-            <MoneyValue
-              amount={income}
-              size="hero"
-              className="text-5xl text-primary-foreground"
-            />
+            {/* span con ref para el count-up animado — reemplaza MoneyValue en el hero.
+                Mismas clases que MoneyValue size="hero" + text-5xl + text-primary-foreground.
+                aria-label con el valor real para lectores de pantalla. */}
+            <span
+              ref={incomeElRef}
+              className="tabular-nums text-4xl font-black font-display tracking-display text-5xl text-primary-foreground"
+              aria-label={`${income.toLocaleString("es-ES")} euros`}
+            >
+              {income.toLocaleString("es-ES")} €
+            </span>
             {result.monthlyDebtPayment > 0 && (
               <div className="mt-1 space-y-1 border-t border-primary-foreground/20 pt-3">
                 <div className="flex justify-between text-sm text-primary-foreground/80">
@@ -460,17 +523,24 @@ function ResultsContent() {
               Las alertas estructurales (_budget_block, _debt_block) ya se muestran
               en la sección de alertas críticas de sistema al inicio de col 1. */}
 
-          {/* Selector de vista — pill toggle segmented control */}
+          {/* Selector de vista — pill toggle segmented control (Mejora 1: pill animado) */}
           <div className="space-y-2">
             <div role="group" aria-label="Modo de visualización">
-              <div className="inline-flex rounded-full border border-border bg-muted/40 p-0.5 gap-0.5">
+              <div
+                ref={tabContainerRef}
+                className="relative inline-flex rounded-full border border-border bg-muted/40 p-0.5 gap-0.5"
+                style={{ position: "relative" }}
+              >
+                {/* Pill deslizante — se posiciona y anima vía useEffect */}
+                <div ref={pillRef} className="tab-pill bg-primary" aria-hidden="true" />
                 <button
+                  ref={tabDetailedRef}
                   type="button"
                   onClick={() => setViewMode("detailed")}
                   className={cn(
-                    "rounded-full px-4 py-1.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                    "relative z-10 rounded-full px-4 py-1.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
                     viewMode === "detailed"
-                      ? "bg-primary text-primary-foreground"
+                      ? "text-primary-foreground"
                       : "text-muted-foreground hover:text-foreground"
                   )}
                   aria-pressed={viewMode === "detailed"}
@@ -478,12 +548,13 @@ function ResultsContent() {
                   Por categorías
                 </button>
                 <button
+                  ref={tabMacroRef}
                   type="button"
                   onClick={() => setViewMode("macro")}
                   className={cn(
-                    "rounded-full px-4 py-1.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                    "relative z-10 rounded-full px-4 py-1.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
                     viewMode === "macro"
-                      ? "bg-primary text-primary-foreground"
+                      ? "text-primary-foreground"
                       : "text-muted-foreground hover:text-foreground"
                   )}
                   aria-pressed={viewMode === "macro"}
@@ -533,13 +604,13 @@ function ResultsContent() {
 
                 {/* Hint clicable — solo en vista detallada, desaparece cuando el panel está abierto */}
                 {!selectedCategoryId && (
-                  <p className="hidden sm:flex text-xs text-muted-foreground items-center gap-1.5">
-                    <span aria-hidden="true">›</span>
-                    Toca cualquier categoría para ver el respaldo institucional de su cálculo.
+                  <p className="hidden sm:flex items-center gap-1.5 bg-muted rounded-md px-3 py-2 text-sm text-muted-foreground">
+                    <Info size={16} className="shrink-0 text-muted-foreground" aria-hidden="true" />
+                    Toca cualquier categoría para ver en base a qué se ha calculado.
                   </p>
                 )}
 
-                {BLOCK_ORDER.map((blockKey) => {
+                {BLOCK_ORDER.map((blockKey, blockIndex) => {
                   const block = result.blocks[blockKey];
                   const cats = Object.values(result.categories).filter((c) => c.block === blockKey);
                   const blockAlert = result.alerts?.[`_${blockKey}_block`];
@@ -558,7 +629,11 @@ function ResultsContent() {
                   const columns = buildCategoryColumns(result, blockKey, formatPct);
 
                   return (
-                    <section key={blockKey} aria-labelledby={`block-${blockKey}-heading`}>
+                    <section
+                      key={blockKey}
+                      aria-labelledby={`block-${blockKey}-heading`}
+                      style={{ animation: `fade-slide-up 400ms cubic-bezier(0.16, 1, 0.3, 1) ${blockIndex * 80}ms both` }}
+                    >
                       {/* Banner navy de bloque — reemplaza la cabecera anterior.
                           rounded-t-lg en el banner + DataTable sin margen superior
                           → visualmente se leen como una unidad. */}
@@ -580,7 +655,11 @@ function ResultsContent() {
                       {/* Alerta de bloque */}
                       {blockAlert && (
                         <div className="mb-3">
-                          <Alert variant={alertVariantFromLevel(blockAlert.level)} size="sm">
+                          <Alert
+                            variant={alertVariantFromLevel(blockAlert.level)}
+                            size="sm"
+                            style={{ animation: "fade-in 300ms ease-out both" }}
+                          >
                             {block.label}: {blockAlert.message}
                           </Alert>
                         </div>
@@ -659,26 +738,31 @@ function ResultsContent() {
             </div>
           )}
 
-          {/* Botones de acción */}
-          <div className="flex flex-wrap gap-3 justify-center pt-2">
-            <Button variant="outline" onClick={() => router.push("/calculator")}>
-              Calcular de nuevo
-            </Button>
-            {!study && (
-              <Button variant="outline" onClick={() => router.push("/")}>
-                Volver al inicio
-              </Button>
-            )}
-            {study && (
-              <Button variant="outline" onClick={() => router.push("/study/home")}>
-                Volver al menú del estudio
-              </Button>
-            )}
+          {/* Botones de acción — jerarquía primario / secundario / terciario */}
+          <div className="flex flex-col gap-3 w-full pt-2">
+            {/* Primario */}
             <Button
               onClick={() => router.push(`/diagnosis-form?income=${income}`)}
+              className="w-full sm:w-auto"
             >
               Analizar mi situación real
             </Button>
+            {/* Secundarios */}
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={() => router.push("/calculator")}>
+                Calcular de nuevo
+              </Button>
+              {!study && (
+                <Button variant="ghost" onClick={() => router.push("/")}>
+                  Volver al inicio
+                </Button>
+              )}
+              {study && (
+                <Button variant="ghost" onClick={() => router.push("/study/home")}>
+                  Volver al menú del estudio
+                </Button>
+              )}
+            </div>
           </div>
 
           </div>{/* fin space-y-8 de col 1 */}
@@ -699,7 +783,6 @@ function ResultsContent() {
             <DashboardPanel
               dataset={dashboardDataset}
               mode="recommended"
-              secondaryCta={{ href: `${diagnosisFormHref}?income=${income}`, label: "Compara tu situación real" }}
             />
             {/* Colofón tipográfico — puramente decorativo, excluido del árbol de accesibilidad */}
             <div className="mt-8 border-t border-border/20 py-3 text-center" aria-hidden="true">

@@ -79,7 +79,7 @@ const SECTION_QUESTIONS = [
     {
       field: "geographicZone",
       options: [
-        { value: "expensive_city", label: "Ciudad con alto coste de vida",     subtext: "Madrid, Barcelona, San Sebastián, Bilbao y similares",            Icon: Building2 },
+        { value: "expensive_city", label: "Ciudad con alto coste de vida",     subtext: "Madrid, Barcelona, Valencia, Bilbao y similares",                 Icon: Building2 },
         { value: "standard",       label: "Ciudad o zona urbana estándar",     subtext: "Resto de capitales de provincia y ciudades medias",               Icon: MapPin    },
         { value: "rural",          label: "Zona rural o municipio pequeño",    subtext: "Pueblos, municipios rurales o zonas con baja densidad",           Icon: Leaf      },
       ],
@@ -262,13 +262,13 @@ function ProgressBar({ currentStep, sections }) {
           <div
             key={i}
             className={`h-1.5 flex-1 rounded-full transition-colors duration-300 ${
-              i <= currentStep ? "bg-primary" : "bg-muted"
+              i <= currentStep ? "bg-primary" : "bg-muted-foreground/30"
             }`}
           />
         ))}
       </div>
       <p className="text-xs font-light text-muted-foreground">
-        Paso {currentStep + 1} de {sections.length} — {sections[currentStep].title}
+        {currentStep + 1}/{sections.length} · {sections[currentStep].title}
       </p>
     </div>
   );
@@ -517,8 +517,8 @@ function ProfileForm() {
         <ModeBadge mode={currentMode} />
 
         <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <SectionIcon className="size-5 text-muted-foreground shrink-0" aria-hidden />
+          <div className="flex items-start gap-3">
+            <SectionIcon className="size-8 text-primary shrink-0 mt-1" aria-hidden />
             <h1 className="font-display font-black tracking-display text-3xl sm:text-4xl text-foreground">
               {section.title}
             </h1>
@@ -746,6 +746,47 @@ function ProfileForm() {
     );
   };
 
+  // ── Helpers para el resumen rediseñado ──────────────────────────────────
+
+  // Devuelve el label legible de un campo dado su valor
+  const getSummaryLabel = (field, value) => {
+    if (value === null || value === undefined) return null;
+    return LABEL_MAP[field]?.[value] ?? String(value);
+  };
+
+  // Construye las filas de una sección del resumen: [{ Icon, label }]
+  const buildSectionRows = (sectionIndex, fields) => {
+    const rows = [];
+    const SectionIcon = SECTION_ICONS[sectionIndex];
+
+    for (const field of fields) {
+      if (!isFieldVisibleInMode(findFieldDef(field), currentMode)) continue;
+      const value = profileData[field];
+      if (value === null || value === undefined) continue;
+      const label = getSummaryLabel(field, value);
+      if (!label) continue;
+      rows.push({ Icon: SectionIcon, label });
+    }
+
+    // Filas adicionales de la sección 0 (subpreguntas condicionales)
+    if (sectionIndex === 0) {
+      if (profileData.dependents > 0 && profileData.hasPartner === true)
+        rows.push({ Icon: Heart, label: "Incluye pareja" });
+      if (profileData.dependents > 0 && profileData.hasPartner !== null && profileData.partnerHasIncome === true)
+        rows.push({ Icon: TrendingUp, label: "Pareja con ingresos" });
+      if ((profileData.childrenAtUniversity ?? 0) > 0)
+        rows.push({ Icon: GraduationCap, label: `${profileData.childrenAtUniversity} ${profileData.childrenAtUniversity === 1 ? "hijo" : "hijos"} en universidad` });
+      if ((profileData.childrenStudyingAway ?? 0) > 0)
+        rows.push({ Icon: MapPin, label: `${profileData.childrenStudyingAway} ${profileData.childrenStudyingAway === 1 ? "estudia" : "estudian"} fuera de casa` });
+    }
+
+    // Fila adicional para cuota de deuda en sección 3 (solo modo directo)
+    if (sectionIndex === 3 && currentMode === "direct" && profileData.monthlyDebtPayment > 0)
+      rows.push({ Icon: CreditCard, label: `Cuota deuda: ${profileData.monthlyDebtPayment} €/mes` });
+
+    return rows;
+  };
+
   // ── Renderizado de la pantalla de resumen ────────────────────────────────
 
   const renderSummary = () => (
@@ -754,83 +795,60 @@ function ProfileForm() {
       <ModeBadge mode={currentMode} />
 
       <div className="space-y-1">
-        <h1 className="font-display font-black tracking-display text-3xl sm:text-4xl text-foreground">
-          {copy.summary.title}
-        </h1>
+        <div className="flex items-center gap-2.5">
+          <CheckCircle2 className="size-7 text-[color:var(--success-foreground)] shrink-0" aria-hidden style={{ animation: "fade-in 300ms ease-out both" }} />
+          <h1 className="font-display font-black tracking-display text-3xl sm:text-4xl text-foreground">
+            {copy.summary.title}
+          </h1>
+        </div>
         <p className="text-base font-light text-muted-foreground">
           {copy.summary.subtitle}
         </p>
       </div>
 
-      {SUMMARY_SECTIONS.map(({ sectionIndex, fields }) => (
-        <div key={sectionIndex} className="space-y-3">
-          {/* Cabecera de sección */}
-          <div className="flex items-center justify-between border-b pb-2">
-            <h2 className="text-sm font-medium text-foreground">{copy.sections[sectionIndex].title}</h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs transition-colors duration-200"
-              onClick={() => { setCurrentStep(sectionIndex); window.scrollTo({ top: 0, behavior: "instant" }); }}
-            >
-              Editar
-            </Button>
-          </div>
+      {/* Tarjeta de perfil — 4 bloques con dividers */}
+      <div className="max-w-md mx-auto bg-card border border-border rounded-xl card-elevated overflow-hidden">
+        {SUMMARY_SECTIONS.map(({ sectionIndex, fields }, idx) => {
+          const rows = buildSectionRows(sectionIndex, fields);
+          return (
+            <div key={sectionIndex}>
+              {/* Divider entre bloques (no antes del primero) */}
+              {idx > 0 && <div className="border-t border-border/60" />}
 
-          {/* Chips de respuestas */}
-          <div className="flex flex-wrap gap-2">
-            {fields
-              // Excluimos del resumen los campos ocultos en el modo actual
-              .filter((field) => isFieldVisibleInMode(findFieldDef(field), currentMode))
-              .map((field) => {
-                const value = profileData[field];
-                if (value === null) return null;
-                const label = LABEL_MAP[field]?.[value] ?? String(value);
-                return (
-                  <span
-                    key={field}
-                    className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium bg-muted text-foreground"
+              <div className="px-6 py-4">
+                {/* Meta-label de sección + botón editar */}
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                    {copy.sections[sectionIndex].title}
+                  </p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-xs px-2 transition-colors duration-200"
+                    onClick={() => { setCurrentStep(sectionIndex); window.scrollTo({ top: 0, behavior: "instant" }); }}
                   >
-                    {label}
-                  </span>
-                );
-              })}
+                    Editar
+                  </Button>
+                </div>
 
-            {/* Chips adicionales para las subpreguntas condicionales de la sección 0 */}
-            {sectionIndex === 0 && (
-              <>
-                {profileData.dependents > 0 && profileData.hasPartner === true && (
-                  <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium bg-muted text-foreground">
-                    Incluye pareja
-                  </span>
-                )}
-                {profileData.dependents > 0 && profileData.hasPartner !== null && profileData.partnerHasIncome === true && (
-                  <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium bg-muted text-foreground">
-                    Pareja con ingresos
-                  </span>
-                )}
-                {(profileData.childrenAtUniversity ?? 0) > 0 && (
-                  <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium bg-muted text-foreground">
-                    {profileData.childrenAtUniversity} en universidad
-                  </span>
-                )}
-                {(profileData.childrenStudyingAway ?? 0) > 0 && (
-                  <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium bg-muted text-foreground">
-                    {profileData.childrenStudyingAway} fuera de casa
-                  </span>
-                )}
-              </>
-            )}
-
-            {/* Chip adicional para cuota de deuda en sección 3 (solo modo directo) */}
-            {sectionIndex === 3 && currentMode === "direct" && profileData.monthlyDebtPayment > 0 && (
-              <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium bg-muted text-foreground">
-                Cuota deuda: {profileData.monthlyDebtPayment}€/mes
-              </span>
-            )}
-          </div>
-        </div>
-      ))}
+                {/* Filas icono + texto */}
+                <div className="flex flex-col gap-1.5">
+                  {rows.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic">Sin datos</p>
+                  ) : (
+                    rows.map((row, rowIdx) => (
+                      <div key={rowIdx} className="flex items-start gap-2">
+                        <row.Icon size={14} className="text-muted-foreground shrink-0 mt-0.5" aria-hidden />
+                        <span className="text-sm font-medium text-foreground leading-snug">{row.label}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
 
       {/* Navegación final — sticky en móvil */}
       <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm pt-3 pb-4 -mx-4 px-4 sm:static sm:bg-transparent sm:backdrop-blur-none sm:pt-2 sm:pb-0 sm:mx-0 sm:px-0 border-t border-border sm:border-0 mt-2">

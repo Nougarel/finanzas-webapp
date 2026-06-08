@@ -8,9 +8,10 @@
  * ocupar col-span-2 en el grid de 12 columnas de PageShell variant="dashboard".
  *
  * @param {Object} props
- * @param {Object|null} props.profile  - Objeto de perfil de localStorage (profileData).
+ * @param {Object|null} props.profile      - Objeto de perfil de localStorage (profileData).
  * @param {"direct"|"inverse"} [props.mode="direct"] - Modo del cuestionario.
- * @param {Function} [props.onEdit]   - Callback al pulsar "Editar".
+ * @param {Function} [props.onEdit]        - Callback al pulsar "Editar".
+ * @param {number|null} [props.healthScore] - Puntuación 0–100 de salud financiera (opcional).
  */
 
 import {
@@ -56,53 +57,99 @@ function getChipIcon(sectionIndex, chipIndex) {
   return icons[Math.min(chipIndex, icons.length - 1)];
 }
 
-export function ProfilePanel({ profile, mode = "direct", onEdit }) {
+/**
+ * Devuelve variante de color para la pill del health score según el valor.
+ * - 75+: success (verde)
+ * - 50–74: warning (ámbar)
+ * - <50: error (rojo)
+ */
+function getScoreVariant(score) {
+  if (score >= 75) return "success";
+  if (score >= 50) return "warning";
+  return "error";
+}
+
+const SCORE_STYLES = {
+  success: {
+    bg: "var(--success-subtle)",
+    color: "var(--success-foreground)",
+  },
+  warning: {
+    bg: "var(--warning-subtle)",
+    color: "var(--warning-foreground)",
+  },
+  error: {
+    bg: "oklch(0.97 0.02 25)",
+    color: "var(--destructive)",
+  },
+};
+
+export function ProfilePanel({ profile, mode = "direct", onEdit, healthScore }) {
   if (!profile) return null;
 
   const sections = buildProfileSummary(profile, { mode });
 
+  const scoreVariant = healthScore != null ? getScoreVariant(healthScore) : null;
+  const scoreStyle   = scoreVariant ? SCORE_STYLES[scoreVariant] : null;
+
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-5">
       {/* Card 1 — Cabecera de identidad */}
       <div className="bg-card border border-border rounded-lg px-4 py-4 card-elevated">
         <div className="flex items-center gap-3">
           {/* Avatar circular */}
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <User size={20} className="text-primary" />
+          <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <User size={18} className="text-primary" />
           </div>
 
           <div className="min-w-0 flex-1">
             <p
-              className="font-sans font-medium uppercase text-primary"
-              style={{ fontSize: 11, letterSpacing: "0.05em" }}
+              className="font-sans font-semibold uppercase tracking-meta text-primary"
+              style={{ fontSize: 11 }}
             >
               Tu perfil
             </p>
+            {/* Pill de health score — solo si se pasa el valor */}
+            {healthScore != null && scoreStyle && (
+              <div
+                className="inline-flex items-center rounded-full px-2 py-0.5 mt-1"
+                style={{
+                  backgroundColor: scoreStyle.bg,
+                  color: scoreStyle.color,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  lineHeight: 1.4,
+                }}
+              >
+                Score {healthScore}/100
+              </div>
+            )}
           </div>
 
           {onEdit && (
             <button
               type="button"
               onClick={onEdit}
+              aria-label="Editar perfil"
               className="flex-shrink-0 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
-              <Pencil size={12} />
+              <Pencil size={12} aria-hidden />
               <span>Editar</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Cards 2-5 — Secciones con filas icono+texto */}
+      {/* Secciones 2-5 — borde izquierdo en primary, filas compactas */}
       {sections.map(({ sectionTitle, chips }, sectionIndex) => (
         <div
           key={sectionTitle}
-          className="bg-card border border-border rounded-lg px-4 py-4 card-elevated"
+          className="border-l-2 border-primary pl-3"
         >
-          {/* Label de sección */}
+          {/* Meta-label de sección */}
           <p
-            className="font-sans font-medium uppercase text-muted-foreground mb-2"
-            style={{ fontSize: 11, letterSpacing: "0.05em" }}
+            className="font-semibold uppercase tracking-meta text-muted-foreground mb-2"
+            style={{ fontSize: 10 }}
           >
             {sectionTitle}
           </p>
@@ -116,10 +163,10 @@ export function ProfilePanel({ profile, mode = "direct", onEdit }) {
                 return (
                   <div
                     key={chip}
-                    className="flex items-start gap-2 py-0.5"
+                    className="flex items-start gap-2 py-1"
                   >
                     <span className="text-muted-foreground mt-0.5 flex-shrink-0">
-                      <IconComponent size={13} />
+                      <IconComponent size={13} aria-hidden />
                     </span>
                     <span className="text-xs text-foreground leading-snug">
                       {chip}

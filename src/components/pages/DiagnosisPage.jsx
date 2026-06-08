@@ -4,7 +4,7 @@ import { useState, useEffect, useLayoutEffect, useCallback, Suspense, useRef, us
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CollapsibleHint } from "@/components/ui/collapsible-hint";
-import { Check, ArrowUp, ArrowDown, AlertCircle } from "lucide-react";
+import { Check, ArrowUp, ArrowDown, AlertCircle, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
@@ -22,7 +22,6 @@ import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useStudyContextOptional } from "@/lib/research/useStudyContext";
 import { useStudyAwareRouter, useStudyAwareHref } from "@/lib/research/useStudyAwareRouter";
 import { useMounted } from "@/lib/hooks/useMounted";
-import { CalculationLoader } from "@/components/ui/calculation-loader";
 
 const BLOCK_ORDER = ["needs", "wants", "savings"];
 
@@ -202,8 +201,9 @@ function DiagnosisContent() {
       !!localStorage.getItem(STORAGE_KEYS.diagnosisAmounts)
     );
   });
-  const [showLoader, setShowLoader] = useState(true);
-  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
+  // El diagnóstico compara datos de localStorage con una API determinista —
+  // no hay operación asíncrona perceptible. El loader se omite completamente.
+  const [showLoader] = useState(false);
   const [calcError, setCalcError] = useState(null);
   const [insolvencyError, setInsolvencyError] = useState(false);
   // Estado efímero del panel de detalle (ADR-11 — no en URL)
@@ -232,17 +232,6 @@ function DiagnosisContent() {
       );
     }
   }, [study, diagnosis, profile, income, realAmounts]);
-
-  // Timer mínimo del loader narrativo: activa minTimeElapsed a los 2000ms.
-  useEffect(() => {
-    const t = setTimeout(() => setMinTimeElapsed(true), 2000);
-    return () => clearTimeout(t);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Dismiss del loader: cuando el tiempo mínimo Y la API han terminado.
-  useEffect(() => {
-    if (minTimeElapsed && !loading) setShowLoader(false);
-  }, [minTimeElapsed, loading]);
 
   useEffect(() => {
     if (!profile || !income || isNaN(income) || income <= 0 || !realAmounts) return;
@@ -380,15 +369,6 @@ function DiagnosisContent() {
     );
   }
 
-  if (showLoader) {
-    return (
-      <CalculationLoader
-        flow="diagnosis"
-        isApiDone={!loading}
-      />
-    );
-  }
-
   if (insolvencyError) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center px-4 py-12">
@@ -466,6 +446,7 @@ function DiagnosisContent() {
               profile={profile}
               mode="direct"
               onEdit={() => router.push("/profile")}
+              healthScore={diagnosis?.healthScore?.score ?? null}
             />
           </div>
         </aside>
@@ -625,9 +606,9 @@ function DiagnosisContent() {
 
               {/* Hint clicable — desaparece cuando el panel está abierto */}
               {!selectedCategoryId && (
-                <p className="hidden sm:flex text-xs text-muted-foreground items-center gap-1.5">
-                  <span aria-hidden="true">›</span>
-                  Toca cualquier categoría para ver el respaldo institucional de su cálculo.
+                <p className="hidden sm:flex items-center gap-1.5 bg-muted rounded-md px-3 py-2 text-sm text-muted-foreground">
+                  <Info size={16} className="shrink-0 text-muted-foreground" aria-hidden="true" />
+                  Toca cualquier categoría para ver en base a qué se ha calculado.
                 </p>
               )}
 
