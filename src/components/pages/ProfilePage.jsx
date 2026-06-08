@@ -1,10 +1,18 @@
 "use client";
 
-import { Fragment, useState, Suspense } from "react";
+import { Fragment, useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { PageShell } from "@/components/ui/page-shell";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { useStudyAwareRouter } from "@/lib/research/useStudyAwareRouter";
 import {
   Briefcase, Clock, Laptop, PauseCircle,
@@ -343,6 +351,16 @@ function ProfileForm() {
 
   // Error de validación del input de cuota mensual de deuda
   const [debtError, setDebtError] = useState("");
+
+  // Modal de aviso para el flujo inverso
+  const [showInverseDisclaimer, setShowInverseDisclaimer] = useState(false);
+
+  useEffect(() => {
+    if (currentMode === "inverse" && currentStep === 0) {
+      const timer = setTimeout(() => setShowInverseDisclaimer(true), 300);
+      return () => clearTimeout(timer);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Lógica de selección con limpieza de campos dependientes ─────────────
 
@@ -754,10 +772,10 @@ function ProfileForm() {
     return LABEL_MAP[field]?.[value] ?? String(value);
   };
 
-  // Construye las filas de una sección del resumen: [{ Icon, label }]
+  // Construye las filas de una sección del resumen: [{ label }]
+  // El icono de sección aparece solo en la cabecera, no en cada fila.
   const buildSectionRows = (sectionIndex, fields) => {
     const rows = [];
-    const SectionIcon = SECTION_ICONS[sectionIndex];
 
     for (const field of fields) {
       if (!isFieldVisibleInMode(findFieldDef(field), currentMode)) continue;
@@ -765,24 +783,24 @@ function ProfileForm() {
       if (value === null || value === undefined) continue;
       const label = getSummaryLabel(field, value);
       if (!label) continue;
-      rows.push({ Icon: SectionIcon, label });
+      rows.push({ label });
     }
 
     // Filas adicionales de la sección 0 (subpreguntas condicionales)
     if (sectionIndex === 0) {
       if (profileData.dependents > 0 && profileData.hasPartner === true)
-        rows.push({ Icon: Heart, label: "Incluye pareja" });
+        rows.push({ label: "Incluye pareja" });
       if (profileData.dependents > 0 && profileData.hasPartner !== null && profileData.partnerHasIncome === true)
-        rows.push({ Icon: TrendingUp, label: "Pareja con ingresos" });
+        rows.push({ label: "Pareja con ingresos" });
       if ((profileData.childrenAtUniversity ?? 0) > 0)
-        rows.push({ Icon: GraduationCap, label: `${profileData.childrenAtUniversity} ${profileData.childrenAtUniversity === 1 ? "hijo" : "hijos"} en universidad` });
+        rows.push({ label: `${profileData.childrenAtUniversity} ${profileData.childrenAtUniversity === 1 ? "hijo" : "hijos"} en universidad` });
       if ((profileData.childrenStudyingAway ?? 0) > 0)
-        rows.push({ Icon: MapPin, label: `${profileData.childrenStudyingAway} ${profileData.childrenStudyingAway === 1 ? "estudia" : "estudian"} fuera de casa` });
+        rows.push({ label: `${profileData.childrenStudyingAway} ${profileData.childrenStudyingAway === 1 ? "estudia" : "estudian"} fuera de casa` });
     }
 
     // Fila adicional para cuota de deuda en sección 3 (solo modo directo)
     if (sectionIndex === 3 && currentMode === "direct" && profileData.monthlyDebtPayment > 0)
-      rows.push({ Icon: CreditCard, label: `Cuota deuda: ${profileData.monthlyDebtPayment} €/mes` });
+      rows.push({ label: `Cuota deuda: ${profileData.monthlyDebtPayment} €/mes` });
 
     return rows;
   };
@@ -807,20 +825,24 @@ function ProfileForm() {
       </div>
 
       {/* Tarjeta de perfil — 4 bloques con dividers */}
-      <div className="max-w-md mx-auto bg-card border border-border rounded-xl card-elevated overflow-hidden">
+      <div className="max-w-2xl mx-auto bg-card border border-border rounded-xl card-elevated overflow-hidden">
         {SUMMARY_SECTIONS.map(({ sectionIndex, fields }, idx) => {
           const rows = buildSectionRows(sectionIndex, fields);
+          const SectionIcon = SECTION_ICONS[sectionIndex];
           return (
             <div key={sectionIndex}>
               {/* Divider entre bloques (no antes del primero) */}
               {idx > 0 && <div className="border-t border-border/60" />}
 
               <div className="px-6 py-4">
-                {/* Meta-label de sección + botón editar */}
+                {/* Cabecera de sección: icono + meta-label + botón editar */}
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
-                    {copy.sections[sectionIndex].title}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <SectionIcon size={14} className="text-primary shrink-0" aria-hidden />
+                    <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                      {copy.sections[sectionIndex].title}
+                    </p>
+                  </div>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -831,19 +853,28 @@ function ProfileForm() {
                   </Button>
                 </div>
 
-                {/* Filas icono + texto */}
-                <div className="flex flex-col gap-1.5">
-                  {rows.length === 0 ? (
-                    <p className="text-xs text-muted-foreground italic">Sin datos</p>
-                  ) : (
-                    rows.map((row, rowIdx) => (
-                      <div key={rowIdx} className="flex items-start gap-2">
-                        <row.Icon size={14} className="text-muted-foreground shrink-0 mt-0.5" aria-hidden />
-                        <span className="text-sm font-medium text-foreground leading-snug">{row.label}</span>
-                      </div>
-                    ))
-                  )}
-                </div>
+                {/* Pills de respuestas — coloreados por sección */}
+                {rows.length === 0 ? (
+                  <p className="text-xs text-muted-foreground italic">Sin datos</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {rows.map((row, rowIdx) => {
+                      const pillClass =
+                        sectionIndex === 0 ? "bg-primary/10 text-primary" :
+                        sectionIndex === 1 ? "bg-chart-2/15 text-chart-2" :
+                        sectionIndex === 2 ? "bg-chart-3/15 text-chart-3" :
+                                             "bg-chart-1/10 text-chart-1";
+                      return (
+                        <span
+                          key={rowIdx}
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${pillClass}`}
+                        >
+                          {row.label}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -878,13 +909,34 @@ function ProfileForm() {
   );
 
   return (
-    <main className="flex flex-1 flex-col">
-      <PageShell variant="profile">
-        <div className="space-y-6 pb-24 sm:pb-0">
-          {currentStep < 4 ? renderSection(currentStep) : renderSummary()}
-        </div>
-      </PageShell>
-    </main>
+    <>
+      <Dialog open={showInverseDisclaimer} onOpenChange={setShowInverseDisclaimer}>
+        <DialogContent showCloseButton={false} className="max-w-sm text-center">
+          <DialogHeader className="items-center gap-3">
+            <Target size={32} className="text-primary" aria-hidden />
+            <DialogTitle className="text-xl font-semibold">
+              Calcula tu ingreso ideal
+            </DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
+              Estas a punto de calcular el ingreso que necesitarias para sostener el estilo de vida que deseas. Rellena tu perfil pensando en como quieres vivir, no en como vives hoy. Si ya tienes pareja, hijos o una vivienda en mente, incluyelos.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="sm:justify-center">
+            <Button onClick={() => setShowInverseDisclaimer(false)} className="w-full sm:w-auto">
+              Entendido, continuar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <main className="flex flex-1 flex-col">
+        <PageShell variant="profile">
+          <div className="space-y-6 pb-24 sm:pb-0">
+            {currentStep < 4 ? renderSection(currentStep) : renderSummary()}
+          </div>
+        </PageShell>
+      </main>
+    </>
   );
 }
 
