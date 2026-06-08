@@ -195,6 +195,16 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Cursor pointer global para todos los elementos interactivos */
+  button,
+  [role="button"],
+  a,
+  label[for],
+  select,
+  [data-clickable],
+  [data-state] {
+    cursor: pointer;
+  }
 }
 
 /* ── Token de elevación para cards protagonistas (M36) ──────────────────────
@@ -261,4 +271,50 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 input[type="number"] {
   -moz-appearance: textfield;
+}
+
+/* ── Pill animado del segmented control (Mejora 1) ──────────────────────────
+   El pill es un div absoluto que se traslada con transform para evitar
+   reflows de layout. La transición combina transform y width para que el
+   deslizamiento sea fluido cuando los dos botones tienen distinto ancho.
+   border-radius: inherit toma el radio del contenedor padre (rounded-full). */
+.tab-pill {
+  transition: transform 180ms cubic-bezier(0.4, 0, 0.2, 1),
+              width    180ms cubic-bezier(0.4, 0, 0.2, 1);
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 0;
+  border-radius: inherit;
+}
+
+/* ── Keyframes de animaciones de entrada ────────────────────────────────────
+   Usados en ResultsPage e InverseResultsPage para animar la aparición inicial
+   de bloques, filas de tabla e indicadores. animation-fill-mode: both garantiza
+   que los elementos sean invisibles antes de la animación y mantengan el estado
+   final después. */
+@keyframes fade-slide-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes bar-grow {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+/* ── Variables de animación de entrada (M38) ────────────────────────────────
+   Duración base 400ms con easing expo-out natural para fade-slide-up.
+   Stagger de bloques: 0ms / 80ms / 160ms.
+   Stagger de filas: index * 50ms, cap a 600ms. */
+:root {
+  --anim-duration-enter: 400ms;
+  --anim-easing-enter: cubic-bezier(0.16, 1, 0.3, 1);
+  --anim-stagger-block: 80ms;
+  --anim-stagger-row: 50ms;
 }

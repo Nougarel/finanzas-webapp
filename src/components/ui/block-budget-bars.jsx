@@ -45,11 +45,12 @@ const BLOCK_ORDER = ["needs", "wants", "savings"];
  * El color de la barra es el del bloque (todas las categorías de un bloque
  * comparten color — la distinción es el label, no el color).
  */
-function CategoryRow({ cat, blockTotal, blockColor }) {
+function CategoryRow({ cat, blockTotal, blockColor, barIndex }) {
+  const isZero = cat.value < 0.01;
   const pctOfBlock =
     blockTotal > 0 ? Math.round((cat.value / blockTotal) * 100) : 0;
 
-  const barWidth = `${Math.min(pctOfBlock, 100)}%`;
+  const barWidth = isZero ? "2px" : `${Math.min(pctOfBlock, 100)}%`;
 
   const formattedAmount = new Intl.NumberFormat("es-ES", {
     style: "currency",
@@ -59,9 +60,9 @@ function CategoryRow({ cat, blockTotal, blockColor }) {
 
   return (
     <div className="flex items-center gap-2">
-      {/* Label — ancho fijo, truncado */}
+      {/* Label — ancho fijo, truncado; dimmed si valor 0 */}
       <span
-        className="text-foreground font-normal overflow-hidden text-ellipsis whitespace-nowrap flex-shrink-0"
+        className={`overflow-hidden text-ellipsis whitespace-nowrap flex-shrink-0 ${isZero ? "text-muted-foreground/50" : "text-foreground"} font-normal`}
         style={{ fontSize: 12, width: 110 }}
         title={cat.label}
       >
@@ -72,36 +73,48 @@ function CategoryRow({ cat, blockTotal, blockColor }) {
       <div
         className="flex-1 min-w-0"
         role="img"
-        aria-label={`${cat.label}: ${pctOfBlock}% del bloque — ${formattedAmount}`}
+        aria-label={`${cat.label}: ${isZero ? "0%" : `${pctOfBlock}% del bloque`}`}
       >
         <div
           className="relative"
           style={{ height: 6 }}
-          title={`${formattedAmount} · ${pctOfBlock}% del bloque`}
+          title={isZero ? "0 €" : `${formattedAmount} · ${pctOfBlock}% del bloque`}
         >
           {/* Fondo de la barra */}
           <div
             className="absolute inset-0 rounded-full"
             style={{ backgroundColor: "oklch(0.92 0 0)" }}
           />
-          {/* Relleno de la barra — color del bloque (categorías distintas por label) */}
-          <div
-            className="absolute inset-y-0 left-0 rounded-full"
-            style={{
-              width: barWidth,
-              backgroundColor: blockColor,
-              transition: "width 400ms ease-out",
-            }}
-          />
+          {/* Relleno de la barra */}
+          {isZero ? (
+            /* Barra mínima de 2px para valor 0 — en bg-border para señalizar que la categoría existe */
+            <div
+              className="absolute inset-y-0 left-0 rounded-full bg-border"
+              style={{ width: "3px" }}
+            />
+          ) : (
+            /* Barra normal — animación bar-grow con stagger por índice */
+            <div
+              className="absolute inset-y-0 left-0 rounded-full"
+              style={{
+                width: barWidth,
+                backgroundColor: blockColor,
+                transformOrigin: "left",
+                animation: "bar-grow 600ms ease-out both",
+                animationDelay: `calc(var(--bar-index, 0) * 60ms)`,
+                "--bar-index": barIndex ?? 0,
+              }}
+            />
+          )}
         </div>
       </div>
 
-      {/* Porcentaje dentro del bloque */}
+      {/* Porcentaje dentro del bloque; dimmed si valor 0 */}
       <span
-        className="tabular-nums text-muted-foreground font-medium text-right flex-shrink-0"
+        className={`tabular-nums font-medium text-right flex-shrink-0 ${isZero ? "text-muted-foreground/40" : "text-muted-foreground"}`}
         style={{ fontSize: 11, width: 32 }}
       >
-        {pctOfBlock}%
+        {isZero ? "0%" : `${pctOfBlock}%`}
       </span>
     </div>
   );
@@ -111,17 +124,18 @@ function CategoryRow({ cat, blockTotal, blockColor }) {
 
 /**
  * Sección completa de un bloque: header + barra macro + filas de categorías.
- * Las categorías se ordenan por valor descendente; las de valor 0 se omiten.
+ * Las categorías se ordenan por valor descendente; las de valor 0 se muestran
+ * en estado desactivado (grayed out) para que el usuario vea el scope completo del modelo.
  */
 function BlockSection({ blockKey, categories, blockPctOfTotal }) {
   const config = BLOCK_CONFIG[blockKey];
 
-  // Ordenar descendente por valor y filtrar valor 0
+  // Ordenar descendente por valor; las de valor 0 van al final (no se filtran)
   const sorted = [...categories]
-    .filter((cat) => cat.value > 0)
     .sort((a, b) => b.value - a.value);
 
-  const blockTotal = sorted.reduce((acc, cat) => acc + cat.value, 0);
+  // blockTotal solo sobre categorías con valor (para que los % sumen bien)
+  const blockTotal = sorted.filter(c => c.value > 0).reduce((acc, cat) => acc + cat.value, 0);
 
   return (
     <div>
@@ -164,8 +178,8 @@ function BlockSection({ blockKey, categories, blockPctOfTotal }) {
 
       {/* Filas de categorías */}
       <div className="flex flex-col gap-y-1.5">
-        {sorted.map((cat) => (
-          <CategoryRow key={cat.id} cat={cat} blockTotal={blockTotal} blockColor={config.color} />
+        {sorted.map((cat, idx) => (
+          <CategoryRow key={cat.id} cat={cat} blockTotal={blockTotal} blockColor={config.color} barIndex={idx} />
         ))}
       </div>
     </div>

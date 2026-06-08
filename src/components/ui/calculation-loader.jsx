@@ -60,10 +60,10 @@ export function CalculationLoader({ flow, isApiDone }) {
   }, []);
 
   const phaseLabel = (phase === "converging" || phase === "done")
-    ? "— convergiendo —"
+    ? "convergiendo"
     : progress < 0.15
-    ? "— aplicando restricciones basadas en tu perfil —"
-    : "— explorando distribuciones posibles —";
+    ? "aplicando restricciones basadas en tu perfil"
+    : "explorando distribuciones posibles";
 
   return (
     <div

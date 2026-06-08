@@ -105,6 +105,24 @@ export function DetailPanelLayout({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
+  // Mejora 7: fade del contenido del panel al cambiar de categoría.
+  // isTransitioning → opacity 0 durante 120ms → opacity 1 con nuevo contenido.
+  const [isTransitioning, setIsTransitioning] = React.useState(false);
+  const prevCategoryRef = React.useRef(selectedCategoryId);
+
+  React.useEffect(() => {
+    if (prevCategoryRef.current !== selectedCategoryId && selectedCategoryId !== null) {
+      setIsTransitioning(true);
+      const t = setTimeout(() => {
+        setIsTransitioning(false);
+        prevCategoryRef.current = selectedCategoryId;
+      }, 120);
+      return () => clearTimeout(t);
+    } else {
+      prevCategoryRef.current = selectedCategoryId;
+    }
+  }, [selectedCategoryId]);
+
   return (
     <>
       {/* ── Contenido principal ────────────────────────────────────────────────
@@ -198,8 +216,11 @@ export function DetailPanelLayout({
               animate-in + fade-in-0 vienen de tw-animate-css (ya en el proyecto).
             */}
             <div
-              key={selectedCategoryId}
-              className="flex flex-col overflow-hidden flex-1 min-h-0 animate-in fade-in-0 duration-150"
+              style={{
+                transition: "opacity 120ms ease",
+                opacity: isTransitioning ? 0 : 1,
+              }}
+              className="flex flex-col overflow-hidden flex-1 min-h-0"
             >
               {panelContent}
             </div>

@@ -144,6 +144,7 @@ function DataTable({
                       onRowClick(row);
                     }
                   } : undefined}
+                  style={{ animation: `fade-in 400ms cubic-bezier(0.16, 1, 0.3, 1) ${Math.min(rowIdx * 50, 600)}ms both` }}
                   className={cn(
                     "border-b border-border last:border-0 transition-colors",
                     isInteractive
@@ -166,10 +167,10 @@ function DataTable({
                   ))}
                   {/* Chevron solo en filas interactivas — columna extra al final */}
                   {isInteractive && (
-                    <td className="px-2 py-4 text-muted-foreground/50 w-6" aria-hidden="true">
+                    <td className="px-2 py-4 w-6" aria-hidden="true">
                       <ChevronRight
                         className={cn(
-                          "h-4 w-4 transition-colors",
+                          "size-5 text-primary/70 transition-colors group-hover:text-primary",
                           isActive && "text-primary"
                         )}
                       />
@@ -202,6 +203,7 @@ function DataTable({
                     onRowClick(row);
                   }
                 } : undefined}
+                style={{ animation: `fade-in 400ms cubic-bezier(0.16, 1, 0.3, 1) ${Math.min(rowIdx * 50, 600)}ms both` }}
                 className={cn(
                   "rounded-lg border border-border bg-card p-3 text-sm transition-colors",
                   isInteractive && "cursor-pointer hover:bg-muted/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
@@ -217,7 +219,7 @@ function DataTable({
                   {isInteractive && (
                     <ChevronRight
                       className={cn(
-                        "h-4 w-4 text-muted-foreground/50 shrink-0",
+                        "size-5 text-primary/70 shrink-0 transition-colors",
                         isActive && "text-primary"
                       )}
                       aria-hidden="true"
@@ -270,6 +272,7 @@ function DataTable({
                     onRowClick(row);
                   }
                 } : undefined}
+                style={{ animation: `fade-in 400ms cubic-bezier(0.16, 1, 0.3, 1) ${Math.min(rowIdx * 50, 600)}ms both` }}
                 className={cn(
                   "grid items-center gap-x-2 px-3 py-3 transition-colors",
                   // 4 cols con chevron si hay onRowClick, 3 sin él
@@ -304,7 +307,7 @@ function DataTable({
                 {isInteractive && (
                   <ChevronRight
                     className={cn(
-                      "size-3.5 text-muted-foreground/50 flex-shrink-0",
+                      "size-5 text-primary/70 flex-shrink-0 transition-colors",
                       isActive && "text-primary"
                     )}
                     aria-hidden="true"

@@ -47,6 +47,7 @@ import { MacroPiechart } from "./macro-piechart";
 import { BlockBudgetBars } from "./block-budget-bars";
 import { IndicatorCard } from "./indicator-card";
 import { DashboardSecondaryCta } from "./dashboard-secondary-cta";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "./tooltip";
 import {
   calculateSavingsRate,
   calculateNeedsRatio,
@@ -307,7 +308,25 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
       {dataset?.modelClosest?.label && (
         <p className="text-xs text-muted-foreground text-center px-1">
           Distribución próxima al modelo{" "}
-          <span className="font-medium text-foreground">{dataset.modelClosest.label}</span>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="font-medium text-foreground underline decoration-dotted cursor-help">
+                  {dataset.modelClosest.label}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs text-xs" side="bottom">
+                <p className="font-semibold mb-1">{dataset.modelClosest.label}</p>
+                <p>Propuesto por Elizabeth Warren en &ldquo;All Your Worth&rdquo; (2005). Sugiere distribuir el ingreso neto en:</p>
+                <ul className="mt-1 space-y-0.5 list-disc pl-3">
+                  <li>50% Necesidades (vivienda, alimentacion, suministros...)</li>
+                  <li>30% Deseos (ocio, restaurantes, suscripciones...)</li>
+                  <li>20% Ahorro e inversion</li>
+                </ul>
+                <p className="mt-1">flouss adapta estos porcentajes a tu perfil especifico.</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </p>
       )}
 
@@ -338,114 +357,88 @@ export function DashboardPanel({ dataset, mode = "recommended", secondaryCta, sk
       {/* ── IndicatorCards — grid 2×2 ────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-2">
         {/* DTI — N/A en modo inverse (deuda siempre 0 por diseño del flujo); activo en recommended y real */}
-        {mode === "inverse" ? (
-          <IndicatorCard
-            compact
-            label="DTI HIPOTÉTICO"
-            abbr={{ text: "BdE", title: "Banco de España" }}
-            value="N/A"
-            status="na"
-            description={null}
-            tooltip="El flujo inverso no recoge datos de deuda existente — asume distribución saludable sin cargas. El DTI no es calculable en este contexto."
-            skeleton={false}
-          />
-        ) : (
-          <IndicatorCard
-            compact
-            label={dtiLabel}
-            abbr={{ text: "BdE", title: "Banco de España" }}
-            value={showSkeleton ? "—" : `${dtiIndicator?.value?.toFixed(1)}%`}
-            status={showSkeleton ? "info" : (dtiIndicator?.status ?? "info")}
-            description={dtiDescription}
-            tooltip={dtiTooltip}
-            skeleton={showSkeleton}
-          />
+        {mode !== "inverse" && (
+          <div style={{ animation: "fade-in 400ms ease-out 0ms both" }}>
+            <IndicatorCard
+              compact
+              label={dtiLabel}
+              abbr={{ text: "BdE", title: "Banco de España" }}
+              value={showSkeleton ? "—" : `${dtiIndicator?.value?.toFixed(1)}%`}
+              status={showSkeleton ? "info" : (dtiIndicator?.status ?? "info")}
+              description={dtiDescription}
+              tooltip={dtiTooltip}
+              skeleton={showSkeleton}
+            />
+          </div>
         )}
 
         {/* Tasa de ahorro — presente en todos los modos */}
-        <IndicatorCard
-          compact
-          label="TASA DE AHORRO"
-          abbr={{ text: "BdE", title: "Banco de España" }}
-          value={showSkeleton ? "—" : savingsIndicator?.formatted ?? "—"}
-          status={showSkeleton ? "info" : (savingsIndicator?.status ?? "info")}
-          description="≥ 20% BdE"
-          tooltip="Porcentaje del ingreso mensual destinado a ahorro total. El Banco de España recomienda ahorrar al menos un 20% para construir patrimonio y mantener capacidad de respuesta ante imprevistos."
-          skeleton={showSkeleton}
-        />
+        <div style={{ animation: "fade-in 400ms ease-out 80ms both" }}>
+          <IndicatorCard
+            compact
+            label="TASA DE AHORRO"
+            abbr={{ text: "BdE", title: "Banco de España" }}
+            value={showSkeleton ? "—" : savingsIndicator?.formatted ?? "—"}
+            status={showSkeleton ? "info" : (savingsIndicator?.status ?? "info")}
+            description="≥ 20% BdE"
+            tooltip="Porcentaje del ingreso mensual destinado a ahorro total. El Banco de España recomienda ahorrar al menos un 20% para construir patrimonio y mantener capacidad de respuesta ante imprevistos."
+            skeleton={showSkeleton}
+          />
+        </div>
 
         {/* Ratio necesidades — presente en todos los modos */}
-        <IndicatorCard
-          compact
-          label="RATIO NECESIDADES"
-          abbr={{ text: "BdE", title: "Banco de España — Finanzas para Todos" }}
-          value={showSkeleton ? "—" : needsIndicator?.formatted ?? "—"}
-          status={showSkeleton ? "info" : (needsIndicator?.status ?? "info")}
-          description="≤ 50% ideal · > 70% crítico"
-          tooltip="Porcentaje del ingreso en gastos esenciales. El ideal es ≤ 50% (regla 50/30/20, BdE/CNMV). En economías modernas y ciudades de alto coste de vida superar el 50% es habitual — la regla 60/20/20 lo reconoce. Se considera crítico superar el 70%."
-          skeleton={showSkeleton}
-        />
+        <div style={{ animation: "fade-in 400ms ease-out 160ms both" }}>
+          <IndicatorCard
+            compact
+            label="RATIO NECESIDADES"
+            abbr={{ text: "BdE", title: "Banco de España, Finanzas para Todos" }}
+            value={showSkeleton ? "—" : needsIndicator?.formatted ?? "—"}
+            status={showSkeleton ? "info" : (needsIndicator?.status ?? "info")}
+            description="≤ 50% ideal · > 70% crítico"
+            tooltip="Porcentaje del ingreso en gastos esenciales. El ideal es ≤ 50% (regla 50/30/20, BdE/CNMV). En economías modernas y ciudades de alto coste de vida superar el 50% es habitual; la regla 60/20/20 lo reconoce. Se considera crítico superar el 70%."
+            skeleton={showSkeleton}
+          />
+        </div>
 
         {/* Cobertura emergencia — recommended: proyección de contribución mensual */}
         {mode === "recommended" && (
-          <IndicatorCard
-            compact
-            label="COBERTURA EMERGENCIA"
-            abbr={{ text: "BdE", title: "Banco de España" }}
-            value={showSkeleton ? "—" : emergencyIndicator?.formatted ?? "—"}
-            status={showSkeleton ? "info" : (emergencyIndicator?.status ?? "info")}
-            description="≥ 6 m BdE"
-            tooltip="Estima cuántos meses de gastos esenciales cubriría tu fondo de emergencia con las aportaciones mensuales recomendadas. El Banco de España aconseja mantener entre 3 y 6 meses cubiertos."
-            skeleton={showSkeleton}
-          />
+          <div style={{ animation: "fade-in 400ms ease-out 240ms both" }}>
+            <IndicatorCard
+              compact
+              label="COBERTURA EMERGENCIA"
+              abbr={{ text: "BdE", title: "Banco de España" }}
+              value={showSkeleton ? "—" : emergencyIndicator?.formatted ?? "—"}
+              status={showSkeleton ? "info" : (emergencyIndicator?.status ?? "info")}
+              description="≥ 6 m BdE"
+              tooltip="Estima cuántos meses de gastos esenciales cubriría tu fondo de emergencia con las aportaciones mensuales recomendadas. El Banco de España aconseja mantener entre 3 y 6 meses cubiertos."
+              skeleton={showSkeleton}
+            />
+          </div>
         )}
 
-        {/* Cobertura emergencia — inverse: N/A (fondo asumido ya completo por diseño del flujo) */}
-        {mode === "inverse" && (
-          <IndicatorCard
-            compact
-            label="COBERTURA EMERGENCIA"
-            abbr={{ text: "BdE", title: "Banco de España" }}
-            value="N/A"
-            status="na"
-            description={null}
-            tooltip="El flujo inverso asume que tu fondo de emergencia ya está constituido. La cobertura no se calcula en este contexto."
-            skeleton={false}
-          />
-        )}
 
-        {/* Cobertura emergencia — real: N/A (saldo del fondo no disponible en diagnóstico) */}
-        {mode === "real" && (
-          <IndicatorCard
-            compact
-            label="COBERTURA EMERGENCIA"
-            abbr={{ text: "BdE", title: "Banco de España" }}
-            value="N/A"
-            status="na"
-            description={null}
-            tooltip="El cálculo requiere conocer el saldo actual de tu fondo de emergencia, que no está disponible en el flujo de diagnóstico. Introdúcelo en tu perfil para activar este indicador."
-            skeleton={false}
-          />
-        )}
+
+
 
         {/* ── Indicadores por categoría (Vivienda, Salud) — presentes en todos los modos ─── */}
         {/* Muestran la distancia al umbral institucional aunque estén en verde */}
-        {!showSkeleton && categoryIndicators.map((ind) => (
-          <IndicatorCard
-            key={ind.id}
-            compact
-            label={ind.label}
-            abbr={ind.abbr ?? undefined}
-            value={`${ind.percentage.toFixed(1)}%`}
-            status={ind.status}
-            description={ind.description}
-            tooltip={ind.tooltip}
-          />
+        {!showSkeleton && categoryIndicators.map((ind, idx) => (
+          <div key={ind.id} style={{ animation: `fade-in 400ms ease-out ${(idx + 4) * 80}ms both` }}>
+            <IndicatorCard
+              compact
+              label={ind.label}
+              abbr={ind.abbr ?? undefined}
+              value={`${ind.percentage.toFixed(1)}%`}
+              status={ind.status}
+              description={ind.description}
+              tooltip={ind.tooltip}
+            />
+          </div>
         ))}
 
         {/* ── Seguros — full-width (col-span-2), solo en recommended ─────── */}
         {mode === "recommended" && (
-          <div className="col-span-2">
+          <div className="col-span-2" style={{ animation: "fade-in 400ms ease-out 480ms both" }}>
             <IndicatorCard
               compact
               label="ESTIMADO DE SEGUROS"

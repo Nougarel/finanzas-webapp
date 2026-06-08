@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from "react";
-import { TrendingUp, TrendingDown, Minus, Info } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Info, Pencil, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -17,7 +17,7 @@ import { MobileResultsSummary } from "@/components/ui/mobile-results-summary";
 import { CATEGORIES_UI, CATEGORIES_META, CATEGORIES_CATALOG } from "@/lib/models/categories";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 import { useStudyContextOptional } from "@/lib/research/useStudyContext";
-import { useStudyAwareRouter, useStudyAwareHref } from "@/lib/research/useStudyAwareRouter";
+import { useStudyAwareRouter } from "@/lib/research/useStudyAwareRouter";
 import CoherenceWarningScreen from "@/components/pages/CoherenceWarningScreen";
 import { CalculationLoader } from "@/components/ui/calculation-loader";
 import { useMounted } from "@/lib/hooks/useMounted";
@@ -46,7 +46,6 @@ function ErrorCard({ title, message, onBack }) {
 
 export default function InverseResultsPage() {
   const router = useStudyAwareRouter();
-  const inverseCalcHref = useStudyAwareHref("/inverse-calculator");
   const mounted = useMounted();
 
   const [amountsMissing] = useState(() => {
@@ -79,6 +78,10 @@ export default function InverseResultsPage() {
   const col2Ref       = useRef(null);
   const profileColRef = useRef(null);
   const [col2PaddingTop, setCol2PaddingTop] = useState(0);
+
+  // Refs para el count-up animado del ingreso requerido en el hero
+  const incomeElRef   = useRef(null);
+  const incomeAnimRef = useRef(null);
 
   // Modo testing guiado (M18 Fase 4): notificar cálculo completado al
   // sistema research si el contexto /study está activo.
@@ -246,6 +249,30 @@ export default function InverseResultsPage() {
     return () => window.removeEventListener("resize", recalcCol2Alignment);
   }, [recalcCol2Alignment]);
 
+  // Count-up animado del ingreso requerido en el hero — sincronizado con fade del banner (Mejora 3).
+  // delay 80ms: el número empieza a contar cuando el banner ya es visible.
+  // duration 420ms: termina cuando el fade-slide-up de 500ms del banner acaba.
+  useEffect(() => {
+    if (!result?.requiredIncome || result.requiredIncome <= 0) return;
+    const target   = result.requiredIncome;
+    const delay    = 80;
+    const duration = 420;
+    let rafId;
+    const timeout = setTimeout(() => {
+      const start = performance.now();
+      function tick(now) {
+        const t      = Math.min((now - start) / duration, 1);
+        const eased  = 1 - (1 - t) * (1 - t); // easeOutQuad
+        const current = Math.round(eased * target);
+        if (incomeElRef.current)
+          incomeElRef.current.textContent = current.toLocaleString("es-ES") + " €";
+        if (t < 1) rafId = requestAnimationFrame(tick);
+      }
+      rafId = requestAnimationFrame(tick);
+    }, delay);
+    return () => { clearTimeout(timeout); cancelAnimationFrame(rafId); };
+  }, [result?.requiredIncome]);
+
   if (!mounted) {
     return (
       <main className="flex min-h-screen items-center justify-center">
@@ -326,17 +353,59 @@ export default function InverseResultsPage() {
   const comparisonColumns = [
     {
       key: "label",
-      header: "Categoría",
+      header: (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-flex items-center gap-1 cursor-help">
+                Categoría
+                <HelpCircle className="size-3 text-muted-foreground" aria-hidden />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs text-xs">
+              La categoría de gasto o ahorro según el modelo flouss
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      ),
     },
     {
       key: "specifiedAmount",
-      header: "Especificado",
+      header: (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-flex items-center gap-1 cursor-help justify-end w-full">
+                Especificado
+                <HelpCircle className="size-3 text-muted-foreground" aria-hidden />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs text-xs">
+              El importe que has indicado para esta categoría
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      ),
       className: "text-right",
       render: (val) => <MoneyValue amount={val} size="table" />,
     },
     {
       key: "targetAmount",
-      header: "Target",
+      header: (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-flex items-center gap-1 cursor-help justify-end w-full">
+                Recomendado
+                <HelpCircle className="size-3 text-muted-foreground" aria-hidden />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs text-xs">
+              Lo que flouss calcula como óptimo para tu perfil con este ingreso
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      ),
       className: "text-right",
       render: (val, row) => {
         // null para wants — no tienen target de perfil independiente
@@ -353,7 +422,21 @@ export default function InverseResultsPage() {
     },
     {
       key: "healthyAmount",
-      header: "Ref. INE",
+      header: (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-flex items-center gap-1 cursor-help justify-end w-full">
+                Ref. INE
+                <HelpCircle className="size-3 text-muted-foreground" aria-hidden />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs text-xs">
+              Gasto medio de un hogar español similar según la Encuesta de Presupuestos Familiares del INE
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      ),
       className: "text-right",
       render: (val, row) => {
         // null para savings — sin referencia INE
@@ -370,7 +453,21 @@ export default function InverseResultsPage() {
     },
     {
       key: "diff",
-      header: "Diferencia",
+      header: (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-flex items-center gap-1 cursor-help justify-end w-full">
+                Diferencia
+                <HelpCircle className="size-3 text-muted-foreground" aria-hidden />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs text-xs">
+              Especificado menos Recomendado. Positivo: gastas o ahorras más de lo recomendado. Negativo: menos.
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      ),
       className: "text-right",
       render: (diff) => {
         if (diff === 0) {
@@ -521,25 +618,31 @@ export default function InverseResultsPage() {
 
           {/* Hero: ingreso requerido — bloque invertido (navy) */}
           {/* bannerRef: referencia para calcular la alineación dinámica de col 2 */}
-          <div ref={bannerRef} className="relative rounded-2xl bg-primary px-6 py-8 space-y-3 transition-colors duration-200">
-            {/* Botón discreto "Ajustar importes" — esquina superior derecha del banner */}
+          <div ref={bannerRef} className="relative rounded-2xl bg-primary px-6 py-8 space-y-3 transition-colors duration-200" style={{ animation: "fade-slide-up 500ms ease-out both" }}>
+            {/* Botón icono "Ajustar importes" — esquina superior derecha del banner (Mejora 5) */}
             <button
               type="button"
               onClick={() => router.push("/inverse-calculator")}
-              className="absolute top-3 right-4 text-xs text-primary-foreground/70 hover:text-primary-foreground transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded"
+              className="absolute top-3 right-3 p-1.5 rounded-md text-primary-foreground/60 hover:text-primary-foreground hover:bg-white/10 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring cursor-pointer"
+              aria-label="Ajustar importes"
+              title="Ajustar importes"
             >
-              Ajustar importes →
+              <Pencil size={15} aria-hidden="true" />
             </button>
             {/* Label blanco puro — el /70 anterior daba sensación gris-azulada.
                 mt-6 sm:mt-0: separa el label del botón en mobile sin afectar desktop. */}
             <p className="mt-6 sm:mt-0 text-xs font-normal uppercase tracking-meta text-primary-foreground">
               Ingreso mínimo necesario
             </p>
-            <MoneyValue
-              amount={requiredIncome}
-              size="hero"
-              className="text-5xl text-primary-foreground"
-            />
+            {/* span con ref para el count-up animado — reemplaza MoneyValue en el hero.
+                aria-label con el valor real para lectores de pantalla. */}
+            <span
+              ref={incomeElRef}
+              className="tabular-nums text-4xl font-black font-display tracking-display text-5xl text-primary-foreground"
+              aria-label={`${requiredIncome.toLocaleString("es-ES")} euros`}
+            >
+              {requiredIncome.toLocaleString("es-ES")} €
+            </span>
             <p className="text-sm text-primary-foreground/80 font-light">
               Con este ingreso neto mensual, los importes que has fijado son financieramente sostenibles.
             </p>
@@ -563,7 +666,7 @@ export default function InverseResultsPage() {
           {warnings && warnings.length > 0 && (
             <div className="space-y-2">
               {warnings.map((w, i) => (
-                <Alert key={i} variant="warning">
+                <Alert key={i} variant="warning" style={{ animation: "fade-in 300ms ease-out both" }}>
                   {w}
                 </Alert>
               ))}
@@ -620,15 +723,15 @@ export default function InverseResultsPage() {
 
               {/* Hint clicable — desaparece cuando el panel está abierto */}
               {!selectedCategoryId && (
-                <p className="hidden sm:flex text-xs text-muted-foreground items-center gap-1.5">
-                  <span aria-hidden="true">›</span>
-                  Toca cualquier categoría para ver el respaldo institucional de su cálculo.
+                <p className="hidden sm:flex items-center gap-1.5 bg-muted rounded-md px-3 py-2 text-sm text-muted-foreground">
+                  <Info size={16} className="shrink-0 text-muted-foreground" aria-hidden="true" />
+                  Toca cualquier categoría para ver en base a qué se ha calculado.
                 </p>
               )}
 
               {/* Comparativa: especificado vs. saludable */}
               {comparisonData.length > 0 && (
-                <section aria-labelledby="comparison-heading">
+                <section aria-labelledby="comparison-heading" style={{ animation: "fade-slide-up 400ms ease-out 0ms both" }}>
                   <div className="mb-4 space-y-1">
                     <h2 id="comparison-heading" className="font-display font-black tracking-display text-xl text-foreground">
                       Comparativa
@@ -639,7 +742,7 @@ export default function InverseResultsPage() {
                   </div>
                   {/* Mini-leyenda Comparativa — oculta en mobile, visible en sm+ */}
                   <p className="hidden sm:block text-xs text-muted-foreground mb-4">
-                    Diferencia = Especificado − Target
+                    Diferencia = Especificado - Recomendado
                     {" · "}
                     <span className="text-[color:var(--warning-foreground)] font-medium">↑</span> más de lo recomendado
                     {" · "}
@@ -670,7 +773,7 @@ export default function InverseResultsPage() {
                   </h2>
                 </div>
                 <div className="space-y-6">
-                  {BLOCK_ORDER.map(block => {
+                  {BLOCK_ORDER.map((block, blockIdx) => {
                     const blockData = catsByBlock[block]
                       .map(cat => {
                         const h = healthyDistribution[cat.id];
@@ -687,7 +790,7 @@ export default function InverseResultsPage() {
                       .filter(Boolean);
 
                     return (
-                      <div key={block}>
+                      <div key={block} style={{ animation: `fade-slide-up 400ms cubic-bezier(0.16, 1, 0.3, 1) ${blockIdx * 80}ms both` }}>
                         {/* Banner navy de bloque — rounded-t-lg pegado a la DataTable
                             para que se lean como una unidad visual. */}
                         <h3 className="flex items-center justify-between rounded-t-lg bg-primary px-4 py-3 text-sm font-bold uppercase tracking-meta text-primary-foreground">
@@ -696,7 +799,7 @@ export default function InverseResultsPage() {
                         <DataTable
                           columns={buildDistributionColumns()}
                           data={blockData}
-                          caption={`Distribución saludable — ${BLOCK_LABELS[block]}`}
+                          caption={`Distribución saludable: ${BLOCK_LABELS[block]}`}
                           rowKey="id"
                           flushTop
                           mobileMode="rows"
@@ -718,21 +821,23 @@ export default function InverseResultsPage() {
             </div>
           </DetailPanelLayout>
 
-          {/* Acciones */}
-          <div className="flex gap-3 justify-center pt-2">
-            <Button variant="outline" onClick={goBack}>
-              Volver y ajustar
-            </Button>
-            {!study && (
-              <Button variant="outline" onClick={() => router.push("/")}>
-                Inicio
+          {/* Acciones — jerarquía secundario / terciario (no hay flujo siguiente obligatorio) */}
+          <div className="flex flex-col gap-3 w-full pt-2">
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={goBack}>
+                Calcular de nuevo
               </Button>
-            )}
-            {study && (
-              <Button variant="outline" onClick={() => router.push("/study/home")}>
-                Volver al menú del estudio
-              </Button>
-            )}
+              {!study && (
+                <Button variant="ghost" onClick={() => router.push("/")}>
+                  Volver al inicio
+                </Button>
+              )}
+              {study && (
+                <Button variant="ghost" onClick={() => router.push("/study/home")}>
+                  Volver al menú del estudio
+                </Button>
+              )}
+            </div>
           </div>
 
           </div>{/* fin space-y-8 de col 1 */}
@@ -755,7 +860,6 @@ export default function InverseResultsPage() {
             <DashboardPanel
               dataset={dashboardDataset}
               mode="inverse"
-              secondaryCta={{ href: inverseCalcHref, label: "Calcular de nuevo" }}
             />
             {/* Colofón tipográfico — puramente decorativo, excluido del árbol de accesibilidad */}
             <div className="mt-8 border-t border-border/20 py-3 text-center" aria-hidden="true">
